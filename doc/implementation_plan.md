@@ -41,11 +41,13 @@
    - **所见即所得 A4 排版**：标准试卷抬头、印刷体排版、几何插图自适应、预留网格答题区；
    - **无截断分页防护**：`break-inside: avoid` + 手动分页控制；
    - 浏览器原生一键打印 / 另存为 PDF / 手机 AirPrint 无线打印。
-4. **定时督促与主动提醒**：
+4. **定时督促与每日综合晚报**：
    - APScheduler 后端定时巡检（显式 `Asia/Shanghai` 时区，默认 17:30 / 19:30 / 21:00）；
+   - 分时分级策略：中途催办时段满卡自动跳过免打扰；晚间 21:00 依然发送结构化每日作业完成日报（包含连续天数、各科打卡状态与用时）；
    - 任务防重复调度（幂等记录表 `NotificationLog` + dev 模式文件锁）；
    - 多渠道分发器：企微/钉钉/飞书群机器人 + iOS Bark 推送 + iOS PWA Web Push。
-5. **成绩记录与学情分析**：
+5. **成绩记录与学情月度看板**：
+   - 月度作业打卡日历（作业页轻量红黄绿月历浮窗快速切日期；家长空间整月打卡率与学科遗漏深度看板）；
    - 单元测验/期中/期末成绩台账；
    - 本地纯离线 ECharts 图表（按需引入，单科与总分起伏折线图、各科均衡雷达图、薄弱学科预警）。
 6. **专注与数据安全**：
@@ -140,7 +142,7 @@ study_trace/
 │   │   ├── scheduler.py               # APScheduler 作业巡检（带文件锁与幂等）
 │   │   ├── auth.py                    # 家庭访问口令校验（bcrypt）
 │   │   ├── routers/
-│   │   │   ├── homework.py            # 作业增删改查、打勾、Streak 聚合、一键转错题
+│   │   │   ├── homework.py            # 作业增删改查、打勾、Streak 聚合、月度打卡日历接口(/calendar)、一键转错题
 │   │   │   ├── mistakes.py            # 错题上传、艾宾浩斯复习流、来源打标
 │   │   │   ├── ocr.py                 # 异步 OCR 任务提交与结果轮询
 │   │   │   ├── exams.py               # 考试成绩管理、本地聚合统计接口
@@ -170,15 +172,16 @@ study_trace/
 │       ├── utils/
 │       │   └── imageCompress.js       # Canvas 解码 HEIC、旋转矫正、生成缩略图与原图
 │       ├── views/
-│       │   ├── HomeworkView.vue       # 今日作业打卡、打勾动效、Streak、番茄钟、一键转错题
+│       │   ├── HomeworkView.vue       # 今日作业打卡、打勾动效、Streak、月历浮窗、番茄钟、一键转错题
 │       │   ├── MistakeView.vue        # 错题本（学科/状态/来源筛选、艾宾浩斯复习队列）
 │       │   ├── PaperCenterView.vue    # 周末快捷组卷中心（本周/待复习快捷选中）
 │       │   ├── PaperPrintView.vue     # A4 专用打印排版视图（CSS @media print，防跨页截断）
-│       │   ├── ExamView.vue           # 考试台账、ECharts 走势图与均衡雷达图
+│       │   ├── ExamView.vue           # 考试台账、ECharts 走势图与均衡雷达图、月度打卡看板
 │       │   └── SettingsView.vue       # 家长管理视图、提醒渠道设置与测试、备份还原
 │       ├── components/
 │       │   ├── PomodoroTimer.vue      # 25分钟专注倒计时组件
 │       │   ├── QuickAddModal.vue      # 拍照/文字录入弹窗与异步识别编辑确认
+│       │   ├── CalendarModal.vue      # 月度作业打卡热力圆点与快速切日浮窗组件
 │       │   ├── ImageCropper.vue       # 几何配图交互式裁剪框选组件
 │       │   └── ChartCard.vue          # ECharts 按需引入卡片封装
 │       ├── composables/
