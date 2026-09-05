@@ -100,34 +100,13 @@
       </van-button>
     </div>
 
-    <!-- 录入作业弹窗 -->
-    <van-popup v-model:show="showAddModal" position="bottom" round :style="{ maxHeight: '80%' }">
-      <div class="modal-content">
-        <h3>录入作业</h3>
-        <div class="sub-select-grid">
-          <div
-            v-for="sub in subjects"
-            :key="sub.id"
-            class="sub-pill"
-            :class="{ active: newHw.subject_id === sub.id }"
-            @click="newHw.subject_id = sub.id"
-          >
-            {{ sub.name }}
-          </div>
-        </div>
-        <van-field
-          v-model="newHw.content"
-          type="textarea"
-          rows="3"
-          autosize
-          placeholder="填写作业内容（如：数学练习册 P45 第 1-5 题）"
-        />
-        <div class="modal-btns">
-          <van-button block @click="showAddModal = false">取消</van-button>
-          <van-button type="primary" block :loading="saving" @click="submitAdd">保存作业</van-button>
-        </div>
-      </div>
-    </van-popup>
+    <!-- 录入作业弹窗（支持手动 / 拍照 OCR 批量录入） -->
+    <QuickAddModal
+      v-model:show="showAddModal"
+      :subjects="subjects"
+      :date-str="currentDate"
+      @added="fetchHomework"
+    />
   </div>
 </template>
 
@@ -135,6 +114,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { showToast, showConfirmDialog } from 'vant';
 import { homeworkApi, settingsApi } from '../api';
+import QuickAddModal from '../components/QuickAddModal.vue';
 
 const currentDate = ref(new Date().toISOString().split('T')[0]);
 const streak = ref(0);
@@ -146,12 +126,6 @@ const subjects = ref([]);
 const selectedSubject = ref(null);
 const refreshing = ref(false);
 const showAddModal = ref(false);
-const saving = ref(false);
-
-const newHw = ref({
-  subject_id: 1,
-  content: ''
-});
 
 const isToday = computed(() => {
   return currentDate.value === new Date().toISOString().split('T')[0];
@@ -180,9 +154,6 @@ const fetchSubjects = async () => {
   try {
     const res = await settingsApi.getSubjects();
     subjects.value = res.data;
-    if (subjects.value.length > 0) {
-      newHw.value.subject_id = subjects.value[0].id;
-    }
   } catch (e) {
     console.error(e);
   }
@@ -240,30 +211,6 @@ const handleDelete = (item) => {
       showToast('删除失败');
     }
   });
-};
-
-const submitAdd = async () => {
-  if (!newHw.value.content.trim()) {
-    showToast('请填写作业内容');
-    return;
-  }
-  saving.value = true;
-  try {
-    await homeworkApi.create({
-      subject_id: newHw.value.subject_id,
-      date: currentDate.value,
-      content: newHw.value.content.trim(),
-      is_completed: false
-    });
-    showToast({ message: '作业已添加', icon: 'success' });
-    newHw.value.content = '';
-    showAddModal.value = false;
-    fetchHomework();
-  } catch (e) {
-    showToast('添加失败');
-  } finally {
-    saving.value = false;
-  }
 };
 
 onMounted(async () => {
@@ -522,33 +469,5 @@ onMounted(async () => {
   margin-bottom: 1rem;
   font-size: 1.15rem;
   color: #0f172a;
-}
-
-.sub-select-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.sub-pill {
-  padding: 0.4rem 0.8rem;
-  background: #f1f5f9;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  color: #475569;
-  cursor: pointer;
-}
-
-.sub-pill.active {
-  background: #2563eb;
-  color: white;
-  font-weight: 600;
-}
-
-.modal-btns {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 1.25rem;
 }
 </style>

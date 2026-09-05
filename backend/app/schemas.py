@@ -111,3 +111,34 @@ class MistakeReviewOut(BaseModel):
     result: str
     next_review_date: Optional[date]
     model_config = ConfigDict(from_attributes=True)
+
+
+# OCR 识别契约（为 M2 预置）
+class OcrLineOut(BaseModel):
+    text: str
+    confidence: float
+    box: List[List[int]] = []
+
+
+class OcrResultOut(BaseModel):
+    lines: List[OcrLineOut]
+    text: str
+    confidence: float
+    engine: str
+    cost_ms: int
+
+
+class OcrTaskOut(BaseModel):
+    task_id: str
+    status: str  # pending / processing / succeeded / failed
+    progress: int = 0
+    engine: Optional[str] = None
+    result: Optional[OcrResultOut] = None
+    error: Optional[str] = None
+    created_at: float
+    cost_ms: Optional[int] = None
+
+
+class OcrEnginesOut(BaseModel):
+    default: str
+    detail: dict

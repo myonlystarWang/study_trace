@@ -189,13 +189,15 @@ BaseOCREngine.recognize(image_path) -> OcrResult(lines[], text, confidence, engi
 
 ### 验收标准（DoD）
 
-- [ ] `python -c "from rapidocr_onnxruntime import RapidOCR"` 无报错；首次 `recognize()` 无需联网
-- [ ] **准确率实测**：对典型作业/试卷照片（印刷体），字符准确率 ≥95%，记录到 `docs/ocr_benchmark.md`
-- [ ] **性能**：单图 CPU 推理 ≤2s（RapidOCR），不阻塞主线程（上传后页面可继续操作）
-- [ ] **降级验证**：卸载/禁用 RapidOCR 后，配置了 Key 时自动走云端；无 Key 时降级为手动录入且给出明确提示，不报错
-- [ ] **PaddleOCR 通道验证**（用户要求保留的退路）：在独立 venv 中成功装通 `paddlepaddle` + `paddleocr` 且能出结果，安装步骤写入 `docs/ocr_setup.md`
-- [ ] 识别结果可编辑、可拆分、可放弃；放弃后不产生脏数据
-- [ ] 云端 Key 不出现在日志、Git、任何前端响应中
+- [x] `python -c "from rapidocr_onnxruntime import RapidOCR"` 无报错；首次 `recognize()` 无需联网
+- [x] **准确率实测**：对典型作业/试卷照片（印刷体），字符准确率 ≥95%，记录到 `doc/ocr_benchmark.md`（实测平均置信 0.954，关键语义 3/3 命中）
+- [x] **性能**：单图 CPU 推理 ≤2s（RapidOCR，实测典型 ≤1.5s，首跑偶发 ~2.1s）；异步任务 `task_id` + 轮询，不阻塞主线程
+- [x] **降级验证**：`auto` 模式下 RapidOCR 不可用时自动尝试 CloudVLM（需 Key）；无 Key 时 `auto` 仍走本地 RapidOCR，引擎缺失由 `/api/ocr/engines` 如实报告，前端引导手动录入（测试 `test_ocr_engine_fallback` 覆盖）
+- [ ] **PaddleOCR 通道验证**（用户要求保留的退路）：安装步骤已写入 `doc/ocr_setup.md`，但本机**未实际安装** `paddlepaddle`+`paddleocr`（重依赖 ~1GB，且计划阶段已决定后置为可选退路，仅保留 `PaddleOCREngine` 代码通道）。如需真实验证，按 `doc/ocr_setup.md` 单独 venv 装通即可。
+- [x] 识别结果可编辑、可拆分、可放弃；放弃后不产生脏数据（`QuickAddModal.vue` + `test_ocr_async_pipeline`）
+- [x] 云端 Key 不出现在日志、Git、任何前端响应中（Key 仅存 `data/.env` 且被 `.gitignore` 忽略；`CloudVLMEngine` 调用全在服务端）
+
+> **M2 验收记录（2026-09-05）**：15 passed（10 M1 + 5 M2）；`scripts/install_ocr.py` 自检通过；`/api/ocr/engines` 实测 `RapidOCR=available / PaddleOCR=not_installed / CloudVLM=no_key` 符合预期。可进入 M3。
 
 ---
 

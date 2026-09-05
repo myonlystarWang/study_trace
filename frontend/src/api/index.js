@@ -39,4 +39,13 @@ export const backupApi = {
   })
 };
 
+export const ocrApi = {
+  createTask: (formData) =>
+    api.post('/ocr/tasks', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  getTask: (taskId) => api.get(`/ocr/tasks/${taskId}`),
+  getEngines: () => api.get('/ocr/engines')
+};
+
 export default api;

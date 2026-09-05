@@ -157,12 +157,23 @@
 
         <div class="form-group">
           <label>题干文字（可编辑）</label>
+          <van-button
+            size="small"
+            type="primary"
+            plain
+            :loading="ocrLoading"
+            :disabled="!uploadedFile"
+            class="ocr-extract-btn"
+            @click="extractText"
+          >
+            🔍 一键提取题干
+          </van-button>
           <van-field
             v-model="newMistake.extracted_text"
             type="textarea"
             rows="3"
             autosize
-            placeholder="填写或粘贴题目文本内容..."
+            placeholder="填写、粘贴，或先上传图片后点「一键提取题干」"
           />
         </div>
 
@@ -181,9 +192,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { showToast } from 'vant';
-import { mistakeApi, settingsApi } from '../api';
+import { mistakeApi, settingsApi, ocrApi } from '../api';
 import { compressImage } from '../utils/imageCompress';
 
 const activeTab = ref('review');
@@ -199,6 +210,9 @@ const submitting = ref(false);
 const fileList = ref([]);
 const showPreview = ref(false);
 const previewUrl = ref('');
+const ocrLoading = ref(false);
+const uploadedFile = ref(null);
+let pollTimerM = null;
 
 const newMistake = ref({
   subject_id: 1,
@@ -279,6 +293,7 @@ const handleUpload = async (fileItem) => {
   showToast({ message: '正在压缩图片...', duration: 1000 });
   try {
     const compressed = await compressImage(fileItem.file, 1600, 0.82);
+    uploadedFile.value = compressed.file;
     const formData = new FormData();
     formData.append('file', compressed.file);
     const res = await mistakeApi.uploadImage(formData);
@@ -287,6 +302,48 @@ const handleUpload = async (fileItem) => {
     showToast({ message: '图片上传成功', icon: 'success' });
   } catch (e) {
     showToast('上传失败');
+  }
+};
+
+const extractText = async () => {
+  if (!uploadedFile.value) {
+    showToast('请先上传错题图片');
+    return;
+  }
+  ocrLoading.value = true;
+  if (pollTimerM) clearInterval(pollTimerM);
+  try {
+    const fd = new FormData();
+    fd.append('file', uploadedFile.value);
+    fd.append('mode', 'auto');
+    const res = await ocrApi.createTask(fd);
+    const taskId = res.data.task_id;
+    pollTimerM = setInterval(async () => {
+      try {
+        const r = await ocrApi.getTask(taskId);
+        const t = r.data;
+        if (t.status === 'succeeded') {
+          clearInterval(pollTimerM);
+          pollTimerM = null;
+          ocrLoading.value = false;
+          newMistake.value.extracted_text = t.result.text;
+          showToast({ message: `识别完成（${t.result.engine}）`, icon: 'success' });
+        } else if (t.status === 'failed') {
+          clearInterval(pollTimerM);
+          pollTimerM = null;
+          ocrLoading.value = false;
+          showToast('识别失败，请手动输入题干');
+        }
+      } catch (e) {
+        clearInterval(pollTimerM);
+        pollTimerM = null;
+        ocrLoading.value = false;
+        showToast('查询识别状态失败');
+      }
+    }, 600);
+  } catch (e) {
+    ocrLoading.value = false;
+    showToast('提交识别失败');
   }
 };
 
@@ -323,6 +380,14 @@ const previewImage = (url) => {
   previewUrl.value = url;
   showPreview.value = true;
 };
+
+watch(showAddModal, (v) => {
+  if (!v && pollTimerM) {
+    clearInterval(pollTimerM);
+    pollTimerM = null;
+    ocrLoading.value = false;
+  }
+});
 
 onMounted(async () => {
   await fetchSubjects();
@@ -540,6 +605,10 @@ onMounted(async () => {
   font-weight: 600;
   color: #475569;
   margin-bottom: 0.4rem;
+}
+
+.ocr-extract-btn {
+  margin-bottom: 0.5rem;
 }
 
 .sub-grid, .error-types-grid {
