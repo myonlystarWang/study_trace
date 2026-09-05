@@ -101,7 +101,7 @@ class NotificationLog(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     date = Column(Date, nullable=False, index=True)
-    slot = Column(String(20), nullable=False)  # "17:30", "19:30", "21:00"
+    slot = Column(String(20), nullable=False)  # "20:10", "21:10", "21:50"
     channel = Column(String(30), nullable=False)  # "webhook", "bark", "webpush"
     sent_at = Column(DateTime, default=datetime.now)
 
