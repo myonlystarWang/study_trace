@@ -1,6 +1,13 @@
 <template>
   <div class="app-container">
     <router-view />
+
+    <!-- 底部常驻导航 Tabbar -->
+    <van-tabbar route active-color="#2563eb" inactive-color="#94a3b8" placeholder>
+      <van-tabbar-item to="/" icon="passed">作业打卡</van-tabbar-item>
+      <van-tabbar-item to="/mistakes" icon="records-o">错题本</van-tabbar-item>
+      <van-tabbar-item to="/settings" icon="setting-o">家长空间</van-tabbar-item>
+    </van-tabbar>
   </div>
 </template>
 
@@ -16,19 +23,27 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  background-color: #f8fafc;
-  color: #1e293b;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
+  background-color: #f1f5f9;
+  color: #0f172a;
   min-height: 100vh;
   padding-bottom: env(safe-area-inset-bottom);
 }
 
 .app-container {
-  max-width: 480px;
+  max-width: 500px;
   margin: 0 auto;
   min-height: 100vh;
   position: relative;
-  background-color: #ffffff;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.03);
+  background-color: #f8fafc;
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.05);
+}
+
+/* 覆盖 Vant 部分高对比度主题样式 */
+:root {
+  --van-primary-color: #2563eb;
+  --van-success-color: #10b981;
+  --van-warning-color: #f59e0b;
+  --van-danger-color: #ef4444;
 }
 </style>
