@@ -14,7 +14,7 @@
 | --- | --- | --- | --- |
 | 1 | **npm registry 指向已废弃源** | `npm config get registry` = `registry.npm.taobao.org`，curl 实测 `000` 不可达（该源 2024 年已停服） | 改为 `https://registry.npmmirror.com`，`npm install` 才能跑 |
 | 2 | **`.git` remote 指错仓库** | 当前 remote = `xstongxue/study_trace`；`.git` 创建于 21:23，晚于文档 21:10 | 核实 `myonlystarWang/study_trace` **存在且为空仓**，remote 改回该地址 |
-| 3 | **本机 Git 连不上 GitHub** | `git ls-remote` 连续 3 次失败（`CONNECT tunnel failed 502` / `schannel SSL handshake failed`） | 阶段 6 前配置 SSH key 或走 token；push 放在最后一步，不阻塞主线 |
+| 3 | **本机 Git 连不上 GitHub** | `git ls-remote` 连续 3 次失败（`CONNECT tunnel failed 502` / `schannel SSL handshake failed`） | 【已解决】改用已配置的本机 SSH Key (`git@github.com:...`)，规避国内 HTTPS/SSL 握手超时；已验证 push 与 tag 成功 |
 | 4 | **`uv`、`fnm` 均未安装** | `command -v uv` / `fnm` 均 MISSING | 阶段 0 安装；`uv` 经 pip（阿里源），`fnm` 经 npm 或 winget |
 | 5 | **无 Python 3.11** | 本机仅 3.13.12（workbuddy 托管）与 3.9.6（系统），`py --list` 只见 3.9 | 由 `uv` 下载并锁定 3.11 |
 | 6 | **系统 Node 是 14.16.0，会干扰构建** | `D:\Program Files\nodejs` 为 v14，Vite 6 要求 Node ≥18 | 装 `fnm` 锁定 22 LTS；`start.bat` 加版本守卫（`node -v` <20 直接报错退出） |
@@ -86,7 +86,7 @@
 1. **修 npm 源**：`npm config set registry https://registry.npmmirror.com`
 2. **装 uv**：`pip install uv -i https://mirrors.aliyun.com/pypi/simple/`（用现有 3.13.12 装）
 3. **配置 Node 22 LTS**：升级/重装系统 Node 至 22 LTS，或通过 `npm i -g fnm` 并执行 `fnm install 22` + `fnm use 22`（`start.bat` 保留 Node <20 守卫）
-4. **修 git remote**：`git remote set-url origin https://github.com/myonlystarWang/study_trace.git`
+4. **修 git remote**：`git remote set-url origin git@github.com:myonlystarWang/study_trace.git`（走 SSH 协议直连，规避 HTTPS/SSL 代理握手超时）
 5. **建 Python 3.11 环境**：`uv python install 3.11` + `uv venv --python 3.11`；`pyproject.toml` 声明依赖
 6. **配置镜像**：`[tool.uv] index-url = "https://mirrors.aliyun.com/pypi/simple/"`
 7. **后端骨架**：FastAPI + SQLAlchemy + Alembic + SQLite，含 `config.py` / `database.py` / `models.py`（先只建 `Students`、`Subjects`）
@@ -103,7 +103,7 @@
 
 - [x] `npm config get registry` = `https://registry.npmmirror.com/`
 - [x] `node -v` = v22.x；`python -V` = 3.11.x（在 `uv run` 环境下）
-- [x] `git remote -v` = `myonlystarWang/study_trace`
+- [x] `git remote -v` = `git@github.com:myonlystarWang/study_trace.git`（SSH 密钥已互通验证）
 - [x] `uv run uvicorn backend.app.main:app` 启动无报错，浏览器 `http://127.0.0.1:8000/api/health` 返回 `{"status":"ok"}`
 - [x] `start.bat` 双击能起服务，且 Node/Python 版本不对时给出明确中文报错
 - [x] `data/` 目录已自动创建且被 git 忽略（`git status` 干净）
@@ -304,7 +304,7 @@ BaseOCREngine.recognize(image_path) -> OcrResult(lines[], text, confidence, engi
 3. **HTTPS + PWA**：隧道自带 TLS，验证 Web Push 在正式域名下工作
 4. **安全**：门禁口令已启用；`data/` 不对外暴露；API 无未授权访问
 5. **文档**：`README.md`（部署 / 隧道配置 / 备份恢复 / 常见问题）
-6. **推 GitHub**：修好 remote 后推送；若 https 仍失败，改用 SSH key 或 GitHub token
+6. **推 GitHub**：通过 SSH 协议持续推送（`git@github.com:myonlystarWang/study_trace.git`，已于 M0/M1 跑通）
 
 ### 验收标准（DoD）
 
@@ -313,7 +313,7 @@ BaseOCREngine.recognize(image_path) -> OcrResult(lines[], text, confidence, engi
 - [ ] HTTPS 证书有效，浏览器无警告；PWA 推送在正式域名下可送达锁屏
 - [ ] 公司机模拟断网 5 分钟 → 恢复网络 → 隧道自动重连，无需重启
 - [ ] 未带口令直接访问 `/api/mistakes` 返回 401
-- [ ] `git push` 成功，`https://github.com/myonlystarWang/study_trace` 可见完整源码
+- [x] `git push` 成功，`https://github.com/myonlystarWang/study_trace` 可见完整源码与 tags（已于 M1 全量同步至 master 及 m0-done/m1-done）
 - [ ] `README.md` 覆盖：从零部署、备份恢复、OCR 引擎切换、常见问题排查
 
 ---
@@ -336,5 +336,5 @@ BaseOCREngine.recognize(image_path) -> OcrResult(lines[], text, confidence, engi
 ## 十一、待用户提供 / 确认的前置项
 
 1. **Cloudflare 托管域名**（M6 阻塞）：需一个 NS 指向 Cloudflare 的域名。若无，需注册（Cloudflare Registrar 最便宜约 $10/年，或把已有域名 NS 转入）
-2. **GitHub 推送凭证**（M6）：SSH key 或 Personal Access Token（本机 https 实测不通）
+2. ~~**GitHub 推送凭证**（M6）~~：【已解决】本机 SSH key 已完成认证，已切换 remote 为 SSH 协议并成功推送到 GitHub 远端仓库
 3. **OCR 基准测试图**（M2）：20 张真实作业/试卷照片
