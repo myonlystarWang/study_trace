@@ -15,6 +15,13 @@ BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 FRONTEND_DIST = FRONTEND_DIR / "dist"
 
+# 显式将 Node 22 与 uv 路径置顶到进程 PATH 最前端，彻底超越系统 Machine PATH 中的 Node 14
+_node_22_dir = Path(os.environ.get("APPDATA", "")) / "fnm/node-versions/v22.23.2/installation"
+_uv_dir = Path(os.environ.get("USERPROFILE", "")) / ".local/bin"
+_prepend_paths = [str(p) for p in [_node_22_dir, _uv_dir] if p.exists()]
+if _prepend_paths:
+    os.environ["PATH"] = os.pathsep.join(_prepend_paths + [os.environ.get("PATH", "")])
+
 
 def check_python_version():
     """Python 版本守卫：必须为 3.11.x"""

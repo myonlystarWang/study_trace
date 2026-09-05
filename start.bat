@@ -1,25 +1,27 @@
 @echo off
-chcp 65001 >nul
-title 学迹 StudyTrace
+title StudyTrace
 
-set "PATH=%USERPROFILE%\.local\bin;%PATH%"
+set "FNM_NODE_DIR=%APPDATA%\fnm\node-versions\v22.23.2\installation"
+set "FNM_BIN_DIR=%LOCALAPPDATA%\Microsoft\WinGet\Packages\Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe"
+set "UV_BIN_DIR=%USERPROFILE%\.local\bin"
 
-where fnm >nul 2>&1
-if %ERRORLEVEL% equ 0 (
-    for /f "tokens=*" %%i in ('fnm env --use-on-cd') do %%i
+if exist "%FNM_NODE_DIR%" (
+    set "PATH=%FNM_NODE_DIR%;%FNM_BIN_DIR%;%UV_BIN_DIR%;%PATH%"
+) else (
+    set "PATH=%FNM_BIN_DIR%;%UV_BIN_DIR%;%PATH%"
 )
 
 where uv >nul 2>&1
-if %ERRORLEVEL% neq 0 (
-    echo [错误] 未找到 uv 包管理器，请检查是否已正确安装。
+if errorlevel 1 (
+    echo [ERROR] uv is not found in PATH or %UV_BIN_DIR%.
     pause
     exit /b 1
 )
 
-echo [学迹 StudyTrace] 正在启动...
+echo [StudyTrace] Starting service...
 uv run python run.py %*
-if %ERRORLEVEL% neq 0 (
+if errorlevel 1 (
     echo.
-    echo [提示] 程序异常退出，请查看上方报错信息。
+    echo [Notice] Service exited with error. Check logs above.
     pause
 )
