@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from typing import Optional, List
+from typing import Optional, List, Dict
 from pydantic import BaseModel, ConfigDict
 
 
@@ -142,3 +142,43 @@ class OcrTaskOut(BaseModel):
 class OcrEnginesOut(BaseModel):
     default: str
     detail: dict
+
+
+# M3 提醒与通知契约
+class NotificationConfig(BaseModel):
+    enabled_channels: List[str] = ["pushplus"]
+    pushplus_token: Optional[str] = ""
+    serverchan_key: Optional[str] = ""
+    bark_key: Optional[str] = ""
+    webhook_url: Optional[str] = ""
+    reminder_slots: List[str] = ["20:10", "21:10", "21:50"]
+
+
+class NotificationTestIn(BaseModel):
+    channel: str  # pushplus, serverchan, bark, webhook
+    target: Optional[str] = None  # 临时测试用的 Token / Key / URL，若未传则用持久化的配置
+
+
+class NotificationResultOut(BaseModel):
+    channel: str
+    success: bool
+    message: str
+
+
+class NotificationSendOut(BaseModel):
+    success: bool
+    details: Dict[str, NotificationResultOut]
+
+
+# M3 月度作业打卡日历契约
+class CalendarDayStatus(BaseModel):
+    date: str  # YYYY-MM-DD
+    total: int
+    completed: int
+    status: str  # green (100%), yellow (部分), red (0%), gray (无作业)
+
+
+class MonthlyCalendarOut(BaseModel):
+    month: str  # YYYY-MM
+    days: List[CalendarDayStatus]
+

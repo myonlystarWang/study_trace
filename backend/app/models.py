@@ -1,5 +1,6 @@
 from datetime import datetime, date
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Date, ForeignKey, Text
+from zoneinfo import ZoneInfo
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Date, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from backend.app.database import Base
 
@@ -98,12 +99,15 @@ class Setting(Base):
 
 class NotificationLog(Base):
     __tablename__ = "notification_logs"
+    __table_args__ = (
+        UniqueConstraint("date", "slot", "channel", name="uq_notification_date_slot_channel"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     date = Column(Date, nullable=False, index=True)
-    slot = Column(String(20), nullable=False)  # "20:10", "21:10", "21:50"
-    channel = Column(String(30), nullable=False)  # "webhook", "bark", "webpush"
-    sent_at = Column(DateTime, default=datetime.now)
+    slot = Column(String(20), nullable=False)  # "20:10", "21:10", "21:50", "manual"
+    channel = Column(String(30), nullable=False)  # "pushplus", "serverchan", "bark", "webhook", "webpush"
+    sent_at = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Shanghai")))
 
 
 class PushSubscription(Base):

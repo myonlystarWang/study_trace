@@ -1,14 +1,27 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
 from backend.app.config import settings, FRONTEND_DIST, UPLOADS_DIR
 from backend.app.database import engine
+from backend.app.scheduler import start_scheduler, stop_scheduler
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 启动定时调度器 (内部有 Windows 文件锁守护，防 reload 重复)
+    start_scheduler()
+    yield
+    # 关闭定时调度器
+    stop_scheduler()
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="初中生作业打卡与错题本系统 API"
+    description="初中生作业打卡与错题本系统 API",
+    lifespan=lifespan
 )
 
 # CORS 配置
@@ -25,7 +38,7 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 
 from backend.app.schemas import HealthOut
-from backend.app.routers import homework, mistakes, backup, settings as app_settings, ocr as ocr_router
+from backend.app.routers import homework, mistakes, backup, settings as app_settings, ocr as ocr_router, notifications as notifications_router
 from backend.app.seed import seed_database
 
 # 自动填充初始数据（前提是 Alembic 迁移已执行）
@@ -37,6 +50,7 @@ app.include_router(mistakes.router)
 app.include_router(backup.router)
 app.include_router(app_settings.router)
 app.include_router(ocr_router.router)
+app.include_router(notifications_router.router)
 
 
 # 健康检查端点

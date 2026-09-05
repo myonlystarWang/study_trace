@@ -1,11 +1,15 @@
+import calendar
 from datetime import date, datetime, timedelta
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, case
 from backend.app.database import get_db
 from backend.app.models import HomeworkItem, MistakeRecord, Subject
-from backend.app.schemas import HomeworkItemCreate, HomeworkItemUpdate, HomeworkItemOut, MistakeRecordOut
+from backend.app.schemas import (
+    HomeworkItemCreate, HomeworkItemUpdate, HomeworkItemOut, MistakeRecordOut,
+    MonthlyCalendarOut, CalendarDayStatus
+)
 
 router = APIRouter(prefix="/api/homework", tags=["作业打卡"])
 
@@ -196,3 +200,76 @@ def convert_to_mistake(homework_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(mistake)
     return mistake
+
+
+@router.get("/calendar", response_model=MonthlyCalendarOut)
+def get_monthly_calendar(
+    month: str = Query(..., pattern=r"^\d{4}-\d{2}$", description="月份格式 YYYY-MM"),
+    student_id: int = 1,
+    db: Session = Depends(get_db)
+):
+    """
+    月度作业打卡日历接口：
+    高效 SQL 聚合返回当月每日 total、completed 与状态 (green/yellow/red/gray)
+    响应耗时 ≤ 50ms
+    """
+    try:
+        year_str, month_str = month.split("-")
+        year, m = int(year_str), int(month_str)
+        if not (1 <= m <= 12):
+            raise ValueError()
+    except Exception:
+        raise HTTPException(status_code=400, detail="月份格式非法，必须为 YYYY-MM")
+
+    _, last_day = calendar.monthrange(year, m)
+    start_date = date(year, m, 1)
+    end_date = date(year, m, last_day)
+
+    # 单条 SQL GROUP BY 聚合当月各天记录
+    records = db.query(
+        HomeworkItem.date,
+        func.count(HomeworkItem.id).label("total"),
+        func.sum(case((HomeworkItem.is_completed == True, 1), else_=0)).label("completed")
+    ).filter(
+        HomeworkItem.student_id == student_id,
+        HomeworkItem.date >= start_date,
+        HomeworkItem.date <= end_date
+    ).group_by(HomeworkItem.date).all()
+
+    stats_map = {
+        r.date.strftime("%Y-%m-%d"): {
+            "total": int(r.total or 0),
+            "completed": int(r.completed or 0)
+        }
+        for r in records
+    }
+
+    days_list = []
+    for day in range(1, last_day + 1):
+        cur_date_str = f"{year:04d}-{m:02d}-{day:02d}"
+        if cur_date_str in stats_map:
+            tot = stats_map[cur_date_str]["total"]
+            comp = stats_map[cur_date_str]["completed"]
+            if tot == 0:
+                status = "gray"
+            elif comp == tot:
+                status = "green"
+            elif comp == 0:
+                status = "red"
+            else:
+                status = "yellow"
+            days_list.append(CalendarDayStatus(
+                date=cur_date_str,
+                total=tot,
+                completed=comp,
+                status=status
+            ))
+        else:
+            days_list.append(CalendarDayStatus(
+                date=cur_date_str,
+                total=0,
+                completed=0,
+                status="gray"
+            ))
+
+    return MonthlyCalendarOut(month=month, days=days_list)

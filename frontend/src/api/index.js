@@ -7,6 +7,7 @@ const api = axios.create({
 
 export const homeworkApi = {
   getList: (dateStr) => api.get('/homework', { params: { date: dateStr } }),
+  getCalendar: (monthStr) => api.get('/homework/calendar', { params: { month: monthStr } }),
   create: (data) => api.post('/homework', data),
   update: (id, data) => api.put(`/homework/${id}`, data),
   delete: (id) => api.delete(`/homework/${id}`),
@@ -46,6 +47,13 @@ export const ocrApi = {
     }),
   getTask: (taskId) => api.get(`/ocr/tasks/${taskId}`),
   getEngines: () => api.get('/ocr/engines')
+};
+
+export const notificationApi = {
+  getConfig: () => api.get('/notifications/config'),
+  updateConfig: (data) => api.put('/notifications/config', data),
+  testChannel: (channel, target) => api.post(`/notifications/test/${channel}`, { target }),
+  sendSummaryNow: (channels) => api.post('/notifications/send-summary-now', { channels })
 };
 
 export default api;

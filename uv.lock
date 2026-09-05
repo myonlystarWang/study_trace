@@ -674,6 +674,7 @@ dependencies = [
     { name = "apscheduler" },
     { name = "bcrypt" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "pillow" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -686,7 +687,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "httpx" },
     { name = "pytest" },
 ]
 
@@ -696,6 +696,7 @@ requires-dist = [
     { name = "apscheduler", specifier = ">=3.10.4" },
     { name = "bcrypt", specifier = ">=4.2.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
+    { name = "httpx", specifier = ">=0.28.1" },
     { name = "pillow", specifier = ">=11.0.0" },
     { name = "pydantic", specifier = ">=2.10.0" },
     { name = "pydantic-settings", specifier = ">=2.6.0" },
@@ -707,10 +708,7 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "pytest", specifier = ">=8.3.0" },
-]
+dev = [{ name = "pytest", specifier = ">=8.3.0" }]
 
 [[package]]
 name = "tqdm"

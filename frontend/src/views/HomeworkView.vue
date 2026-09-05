@@ -4,7 +4,10 @@
     <div class="header-bar">
       <div class="date-nav">
         <button class="nav-btn" @click="changeDate(-1)">❮</button>
-        <span class="date-text">{{ isToday ? '今日作业' : currentDate }}</span>
+        <span class="date-text" @click="showCalendar = true">
+          {{ isToday ? '今日作业' : currentDate }}
+          <span class="cal-icon" title="打开月历打卡">📅</span>
+        </span>
         <button class="nav-btn" :disabled="isToday" @click="changeDate(1)">❯</button>
       </div>
       <div class="header-right">
@@ -107,6 +110,16 @@
       :date-str="currentDate"
       @added="fetchHomework"
     />
+
+    <!-- 月历打卡浮窗组件 -->
+    <CalendarModal
+      v-model:show="showCalendar"
+      :selected-date="currentDate"
+      @select-date="handleDateSelect"
+    />
+
+    <!-- 25分钟专注番茄钟 -->
+    <PomodoroTimer />
   </div>
 </template>
 
@@ -115,6 +128,8 @@ import { ref, computed, onMounted } from 'vue';
 import { showToast, showConfirmDialog } from 'vant';
 import { homeworkApi, settingsApi } from '../api';
 import QuickAddModal from '../components/QuickAddModal.vue';
+import CalendarModal from '../components/CalendarModal.vue';
+import PomodoroTimer from '../components/PomodoroTimer.vue';
 
 const currentDate = ref(new Date().toISOString().split('T')[0]);
 const streak = ref(0);
@@ -126,6 +141,12 @@ const subjects = ref([]);
 const selectedSubject = ref(null);
 const refreshing = ref(false);
 const showAddModal = ref(false);
+const showCalendar = ref(false);
+
+const handleDateSelect = (dateStr) => {
+  currentDate.value = dateStr;
+  fetchHomework();
+};
 
 const isToday = computed(() => {
   return currentDate.value === new Date().toISOString().split('T')[0];
@@ -259,6 +280,20 @@ onMounted(async () => {
   font-size: 1.15rem;
   font-weight: 700;
   color: #0f172a;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cal-icon {
+  font-size: 1rem;
+  opacity: 0.85;
+  transition: transform 0.2s ease;
+}
+
+.date-text:active .cal-icon {
+  transform: scale(1.2);
 }
 
 .header-right {
