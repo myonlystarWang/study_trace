@@ -101,13 +101,13 @@
 
 ### 验收标准（DoD）
 
-- [ ] `npm config get registry` = `https://registry.npmmirror.com/`
-- [ ] `node -v` = v22.x；`python -V` = 3.11.x（在 `uv run` 环境下）
-- [ ] `git remote -v` = `myonlystarWang/study_trace`
-- [ ] `uv run uvicorn backend.app.main:app` 启动无报错，浏览器 `http://127.0.0.1:8000/api/health` 返回 `{"status":"ok"}`
-- [ ] `start.bat` 双击能起服务，且 Node/Python 版本不对时给出明确中文报错
-- [ ] `data/` 目录已自动创建且被 git 忽略（`git status` 干净）
-- [ ] M0 代码已 commit（本地提交，不强制 push）
+- [x] `npm config get registry` = `https://registry.npmmirror.com/`
+- [x] `node -v` = v22.x；`python -V` = 3.11.x（在 `uv run` 环境下）
+- [x] `git remote -v` = `myonlystarWang/study_trace`
+- [x] `uv run uvicorn backend.app.main:app` 启动无报错，浏览器 `http://127.0.0.1:8000/api/health` 返回 `{"status":"ok"}`
+- [x] `start.bat` 双击能起服务，且 Node/Python 版本不对时给出明确中文报错
+- [x] `data/` 目录已自动创建且被 git 忽略（`git status` 干净）
+- [x] M0 代码已 commit（commit hash `1129152`，Tag `m0-done`）
 
 ---
 
