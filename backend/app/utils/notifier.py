@@ -1,5 +1,6 @@
 import re
 import uuid
+import asyncio
 import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -107,10 +108,12 @@ async def send_bark(key: str, title: str, content: str) -> Tuple[bool, str]:
         async with httpx.AsyncClient(timeout=TIMEOUT) as client:
             resp = await client.post(base_url, json=payload)
             data = resp.json()
-            if data.get("code") == 200 or resp.status_code == 200:
+            code = data.get("code")
+            if resp.status_code == 200 and (code is None or code == 200):
                 return True, "Bark 推送成功"
             else:
-                return False, f"Bark 错误: {data.get('message', resp.text)}"
+                errmsg = data.get("message") or resp.text
+                return False, f"Bark 错误 [{code}]: {errmsg}"
     except httpx.TimeoutException:
         return False, "Bark 请求超时 (5s)"
     except Exception as e:
@@ -203,16 +206,15 @@ async def dispatch_notification(
     config: Optional[dict] = None
 ) -> Dict[str, dict]:
     """
-    多渠道并行分发器 (容错隔离)
+    多渠道并行分发器 (asyncio.gather 真正的并行并发触发，容错隔离)
     单个渠道异常不影响其他渠道
     """
     if config is None:
         config = {}
 
     target_channels = channels or config.get("enabled_channels", ["pushplus"])
-    results = {}
 
-    for ch in target_channels:
+    async def _send_single(ch: str) -> Tuple[str, dict]:
         try:
             if ch == "pushplus":
                 token = config.get("pushplus_token", "")
@@ -231,20 +233,22 @@ async def dispatch_notification(
             else:
                 success, msg = False, f"未知的推送渠道: {ch}"
 
-            results[ch] = {
+            return ch, {
                 "channel": ch,
                 "success": success,
                 "message": msg
             }
         except Exception as e:
             logger.error(f"Channel {ch} unhandled error: {e}")
-            results[ch] = {
+            return ch, {
                 "channel": ch,
                 "success": False,
                 "message": f"渠道处理异常: {str(e)}"
             }
 
-    return results
+    tasks = [_send_single(ch) for ch in target_channels]
+    results_list = await asyncio.gather(*tasks)
+    return dict(results_list)
 
 
 def build_reminder_message(
@@ -256,7 +260,7 @@ def build_reminder_message(
 ) -> Tuple[str, str]:
     """构建中途催办提醒模板 (20:10 / 21:10)"""
     percent = int((completed / total * 100)) if total > 0 else 0
-    title = f"⏰【学迹作业提醒】{student_name} 今日作业待完成"
+    title = f"⏰【学迹作业提醒】{student_name} 今日作业待完成 ({today_str})"
 
     lines = [
         f"**亲爱的家长**：",
@@ -290,11 +294,14 @@ def build_summary_message(
     completed = len(completed_items)
     is_all_done = (total > 0 and completed == total)
 
-    if is_all_done:
-        title = f"🎉【学迹今日战报】{student_name} 今日作业满卡完成！"
+    if force:
+        title = f"🚀【学迹即时战报】{student_name} 今日作业与复习快报 ({today_str})"
+        status_banner = f"⚡ **即时同步快报** ｜ 连续打卡：第 **{streak_days}** 天 ｜ 完成度：**{completed}/{total}**"
+    elif is_all_done:
+        title = f"🎉【学迹今日战报】{student_name} 今日作业满卡完成！({today_str})"
         status_banner = f"🌟 **太棒了！今日全部作业均已完成满卡！**\n🔥 **连续打卡**：第 **{streak_days}** 天 ｜ 完成度：**100%** 🟢"
     else:
-        title = f"📊【学迹今日汇总】{student_name} 今日作业与复习快报"
+        title = f"📊【学迹今日汇总】{student_name} 今日作业与复习快报 ({today_str})"
         status_banner = f"🔥 **连续打卡**：第 **{streak_days}** 天 ｜ 完成度：**{completed}/{total}** 🟡"
 
     lines = [

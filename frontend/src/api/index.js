@@ -5,6 +5,15 @@ const api = axios.create({
   timeout: 10000
 });
 
+// 家长门禁请求头拦截器
+api.interceptors.request.use((config) => {
+  const pin = sessionStorage.getItem('parent_pin');
+  if (pin) {
+    config.headers['X-Parent-PIN'] = pin;
+  }
+  return config;
+});
+
 export const homeworkApi = {
   getList: (dateStr) => api.get('/homework', { params: { date: dateStr } }),
   getCalendar: (monthStr) => api.get('/homework/calendar', { params: { month: monthStr } }),

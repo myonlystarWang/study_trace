@@ -17,8 +17,14 @@ from backend.app.utils.notifier import (
 )
 from backend.app.routers.homework import calculate_streak
 
+from backend.app.auth import require_parent_pin
+
 logger = logging.getLogger("notifications_router")
-router = APIRouter(prefix="/api/notifications", tags=["通知推送与晚报"])
+router = APIRouter(
+    prefix="/api/notifications",
+    tags=["通知推送与晚报"],
+    dependencies=[Depends(require_parent_pin)]
+)
 SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
 
 DEFAULT_CONFIG = {
@@ -112,88 +118,26 @@ async def test_notification_channel(
 @router.post("/send-summary-now", response_model=NotificationSendOut)
 async def send_summary_now(
     student_id: int = 1,
-    channels: Optional[list[str]] = Body(None, embed=True),
     db: Session = Depends(get_db)
 ):
     """
     立即生成并全渠道发送今日作业与复习汇总日报 (force_summary)
-    绕过中途跳过逻辑，随时全景快报
+    直接复用调度引擎核心链路，防逻辑漂移
     """
-    today = date.today()
-    today_str = today.strftime("%Y-%m-%d")
+    from backend.app.scheduler import check_and_dispatch_homework_reminders
 
-    # 1. 统计今日作业
-    homework_items = db.query(HomeworkItem).filter(
-        HomeworkItem.student_id == student_id,
-        HomeworkItem.date == today
-    ).all()
-
-    items_data = []
-    for item in homework_items:
-        items_data.append({
-            "subject_name": item.subject.name if item.subject else "综合",
-            "title": item.content,
-            "is_completed": item.is_completed,
-            "completed_at": item.completed_at.strftime("%Y-%m-%d %H:%M:%S") if item.completed_at else None
-        })
-
-    # 2. 统计连续打卡与艾宾浩斯待复习
-    streak_days = calculate_streak(student_id, db)
-    ebbinghaus_count = db.query(MistakeRecord).filter(
-        MistakeRecord.student_id == student_id,
-        MistakeRecord.next_review_date <= today,
-        MistakeRecord.mastery_status != "已掌握"
-    ).count()
-
-    # 3. 构造模板
-    student_name = "初一同学"
-    title, content = build_summary_message(
-        student_name=student_name,
-        today_str=today_str,
-        items=items_data,
-        streak_days=streak_days,
-        ebbinghaus_count=ebbinghaus_count,
-        force=True
+    res = await check_and_dispatch_homework_reminders(
+        slot="manual",
+        force_summary=True,
+        db=db,
+        student_id=student_id
     )
 
-    # 4. 查配置并分发
-    cfg = load_notification_config(db)
-    target_channels = channels or cfg.get("enabled_channels", ["pushplus"])
-
-    results = await dispatch_notification(
-        title=title,
-        content=content,
-        channels=target_channels,
-        config=cfg
-    )
-
-    # 5. 记录日志 (slot="manual")
-    for ch, res in results.items():
-        if res.get("success"):
-            try:
-                # 检查是否已存在当天 manual 记录
-                exist = db.query(NotificationLog).filter(
-                    NotificationLog.date == today,
-                    NotificationLog.slot == "manual",
-                    NotificationLog.channel == ch
-                ).first()
-                if not exist:
-                    log = NotificationLog(
-                        date=today,
-                        slot="manual",
-                        channel=ch,
-                        sent_at=datetime.now(SHANGHAI_TZ)
-                    )
-                    db.add(log)
-                    db.commit()
-            except Exception as e:
-                db.rollback()
-                logger.warning(f"Failed to record NotificationLog for {ch}: {e}")
-
-    has_success = any(res.get("success") for res in results.values())
+    details = res.get("details", {})
+    has_success = any(v.get("success") for v in details.values())
     formatted_details = {
-        k: NotificationResultOut(channel=k, success=v["success"], message=v["message"])
-        for k, v in results.items()
+        k: NotificationResultOut(channel=k, success=v.get("success", False), message=v.get("message", ""))
+        for k, v in details.items()
     }
 
     return NotificationSendOut(success=has_success, details=formatted_details)

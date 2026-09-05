@@ -1,9 +1,11 @@
+from typing import Optional
 from datetime import datetime, timedelta
 import bcrypt
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Header, Depends
 from sqlalchemy.orm import Session
 from backend.app.models import Setting
 from backend.app.config import settings
+from backend.app.database import get_db
 
 # 内存级临时防爆破记录（进程内）
 _auth_state = {
@@ -73,3 +75,16 @@ def change_pin(old_pin: str, new_pin: str, db: Session) -> bool:
     pin_setting.value = new_hash
     db.commit()
     return True
+
+
+def require_parent_pin(
+    x_parent_pin: Optional[str] = Header(None, alias="X-Parent-PIN"),
+    db: Session = Depends(get_db)
+) -> bool:
+    """家长端安全门禁：拦截未授权请求，杜绝未经验证读取凭据或外发推送"""
+    if not x_parent_pin:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="需要家长管理口令 (请在请求头提供 X-Parent-PIN)"
+        )
+    return verify_pin(x_parent_pin, db)

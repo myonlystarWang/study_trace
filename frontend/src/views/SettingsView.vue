@@ -265,6 +265,7 @@ const handleVerifyPin = async () => {
     await settingsApi.verifyPin(inputPin.value);
     isUnlocked.value = true;
     sessionStorage.setItem('parent_unlocked', 'true');
+    sessionStorage.setItem('parent_pin', inputPin.value);
     showToast({ message: '解锁成功', icon: 'success' });
     fetchSubjects();
     fetchNotificationConfig();
@@ -279,6 +280,7 @@ const handleVerifyPin = async () => {
 const lockSettings = () => {
   isUnlocked.value = false;
   sessionStorage.removeItem('parent_unlocked');
+  sessionStorage.removeItem('parent_pin');
   inputPin.value = '';
   showToast('已安全退出家长模式');
 };
@@ -425,6 +427,7 @@ const submitChangePin = async () => {
   }
   try {
     await settingsApi.changePin(pinForm.value.oldPin, pinForm.value.newPin);
+    sessionStorage.setItem('parent_pin', pinForm.value.newPin);
     showToast({ message: '口令修改成功', icon: 'success' });
     pinForm.value = { oldPin: '', newPin: '' };
   } catch (e) {

@@ -147,21 +147,23 @@ frontend/src/
 
 | # | DoD 条目 | 验证方式 | 对应测试函数 / 动作 | 验证逻辑与断言 |
 |---|:---|:---:|:---|:---|
-| 1 | **时区与时段配置** | 自动化 | `test_scheduler_timezone_and_slots` | 断言调度器 Cron 触发器显式绑定 `Asia/Shanghai`，时段严格包含 20:10, 21:10, 21:50 |
-| 2 | **数据库级幂等约束** | 自动化 | `test_notification_idempotency_constraint` | 验证同一 `(date, slot, channel)` 重复插入时触发 SQLite 唯一约束违规，应用层拦截 |
-| 3 | **中途满卡免打扰跳过** | 自动化 | `test_midway_reminder_skips_when_completed` | 当日作业全部打勾时，20:10 / 21:10 触发直接跳过，返回 `skipped`，不调用任何渠道 |
-| 4 | **晚间满卡仍发晚报** | 自动化 | `test_evening_summary_dispatches_when_completed` | 当日作业全部打勾时，21:50 触发依然成功发出「🎉 今日满卡」喜报 |
-| 5 | **催办带待办清单** | 自动化 | `test_reminder_contains_uncompleted_items` | 当有未完成作业时，催办内容中提取出具体的学科名称与待办题干 |
-| 6 | **立即发送今日汇总** | 自动化 | `test_force_summary_dispatch` | 无论当前时间与完成状态，`force_summary=True` 均立即生成最新快照并推送 |
-| 7 | **微信服务号推送** | 自动化 | `test_wechat_pushplus_and_serverchan` | 模拟 PushPlus 与 Server酱 报文构造，验证附带防重序号，Markdown 模板结构正确 |
-| 8 | **iOS Bark 推送** | 自动化 | `test_bark_notification` | 验证 Bark 拼装 URL 包含分组、标题与正文 |
-| 9 | **群机器人与错误提示** | 自动化 | `test_webhook_adapter_and_error_handling` | 适配企微/钉钉/飞书格式；当 Webhook URL 格式非法时返回友好的中文提示 |
-| 10 | **多渠道并行与容错** | 自动化 | `test_multichannel_fault_tolerance` | 模拟渠道 A 抛出网络超时，渠道 B 正常返回，验证通道互不干扰 |
-| 11 | **月历 API 性能与准确度** | 自动化 | `test_monthly_calendar_api_performance_and_accuracy` | 测试 `GET /api/homework/calendar` 执行耗时 ≤ 50ms，红/黄/绿/灰四色状态精确匹配 |
-| 12 | **Windows 文件锁防重** | 自动化 | `test_windows_msvcrt_scheduler_lock` | 测试同一环境二次获取 `scheduler.lock` 触发 `msvcrt` 拦截，验证 dev reload 防重 |
-| 13 | **Web Push 解耦验证** | 自动化 | `test_webpush_decoupled_graceful_handling` | 验证 Web Push 缺库时返回提示而非 500，真机验收明确列入 M6 |
-| 14 | **作业页月历交互** | 真机手动 | 前端交互实测 | 点击顶部日历图标弹出月历，红黄绿灰状态正确，点击任意日期切换加载作业 |
-| 15 | **番茄钟切屏防漂移** | 真机手动 | 前端切后台实测 | 启动番茄钟切后台或黑屏 25 分钟后切回，基于时间戳剩余时间校准准确，系统推送兜底 |
+| 0 | **家长门禁安全守卫** | 自动化 | `test_notification_endpoints_security_guard` | 未带 X-Parent-PIN 请求头时一律返回 401 拦截，防止凭据泄露与随意触发 |
+| 1 | **真正并发分发验证** | 自动化 | `test_dispatch_notification_is_truly_parallel` | 验证多渠道使用 asyncio.gather 真正并发触发，双渠道耗时 < 0.25s (DoD #7) |
+| 2 | **时区与时段配置** | 自动化 | `test_scheduler_timezone_and_slots` | 断言调度器 Cron 触发器显式绑定 `Asia/Shanghai`，时段严格包含 20:10, 21:10, 21:50 |
+| 3 | **数据库级幂等约束** | 自动化 | `test_notification_idempotency_constraint` | 验证同一 `(date, slot, channel)` 重复插入时触发 SQLite 唯一约束违规，应用层拦截 |
+| 4 | **中途满卡免打扰跳过** | 自动化 | `test_midway_reminder_skips_when_completed` | 当日作业全部打勾时，20:10 / 21:10 触发直接跳过，返回 `skipped`，不调用任何渠道 |
+| 5 | **晚间满卡仍发晚报** | 自动化 | `test_evening_summary_dispatches_when_completed` | 当日作业全部打勾时，21:50 触发依然成功发出「🎉 今日满卡」喜报 |
+| 6 | **催办带待办清单** | 自动化 | `test_reminder_contains_uncompleted_items` | 当有未完成作业时，催办内容中提取出具体的学科名称、待办题干与学生姓名 |
+| 7 | **立即发送汇总与频控** | 自动化 | `test_force_summary_dispatch_and_rate_limit` | `force_summary=True` 立即推送最新快照，并有 30 秒防连击频控保护 |
+| 8 | **微信服务号推送** | 自动化 | `test_wechat_pushplus_and_serverchan` | 模拟 PushPlus 与 Server酱 报文构造，验证附带防重序号，未实名 905 错误友好提示 |
+| 9 | **iOS Bark 推送** | 自动化 | `test_bark_notification` | 验证 Bark 拼装 URL 包含分组、标题与正文，code!=200 失败时不误判为成功 |
+| 10 | **群机器人与错误提示** | 自动化 | `test_webhook_adapter_and_error_handling` | 适配企微/钉钉/飞书格式；当 Webhook URL 格式非法时返回友好的中文提示 |
+| 11 | **多渠道并行与容错** | 自动化 | `test_multichannel_fault_tolerance` | 模拟渠道 A 抛出网络超时，渠道 B 正常返回，验证通道互不干扰 |
+| 12 | **月历 API 性能与准确度** | 自动化 | `test_monthly_calendar_api_performance_and_accuracy` | 测试 `GET /api/homework/calendar` 执行耗时 ≤ 50ms，红/黄/绿/灰四色状态精确匹配 |
+| 13 | **Windows 文件锁防重** | 自动化 | `test_windows_msvcrt_scheduler_lock_real_assertion` | 测试同一环境二次获取 `scheduler.lock` 触发拦截返回 False，释放后可重用 (真断言) |
+| 14 | **Web Push 解耦验证** | 自动化 | `test_webpush_decoupled_graceful_handling` | 验证 Web Push 缺库时返回提示而非 500，真机验收明确列入 M6 |
+| 15 | **作业页月历交互** | 真机手动 | 前端交互实测 | 点击顶部日历图标弹出月历，红黄绿灰状态正确，点击任意日期切换加载作业 |
+| 16 | **番茄钟切屏防漂移** | 真机手动 | 前端切后台实测 | 启动番茄钟切后台或黑屏 25 分钟后切回，基于时间戳剩余时间校准准确，系统推送兜底 |
 
 ---
 

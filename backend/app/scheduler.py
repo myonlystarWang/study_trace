@@ -12,7 +12,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from backend.app.database import SessionLocal
-from backend.app.models import HomeworkItem, MistakeRecord, NotificationLog
+from backend.app.models import HomeworkItem, MistakeRecord, NotificationLog, Student
 from backend.app.routers.homework import calculate_streak
 from backend.app.routers.notifications import load_notification_config
 from backend.app.utils.notifier import (
@@ -32,6 +32,9 @@ def acquire_scheduler_lock() -> bool:
     使用 msvcrt.locking(..., LK_NBLCK, 1)
     """
     global _lock_file
+    if _lock_file is not None:
+        return False
+
     lock_dir = Path("data/temp")
     try:
         lock_dir.mkdir(parents=True, exist_ok=True)
@@ -90,7 +93,7 @@ async def check_and_dispatch_homework_reminders(
         close_db = True
 
     try:
-        today = date.today()
+        today = datetime.now(SHANGHAI_TZ).date()
         today_str = today.strftime("%Y-%m-%d")
 
         # 1. 统计今日作业条目
@@ -121,8 +124,28 @@ async def check_and_dispatch_homework_reminders(
                     "details": {}
                 }
 
-        # 3. 构造推送内容
-        student_name = "初一同学"
+        # 3. 构造推送内容 (查询真实学生姓名，避免硬编码)
+        student = db.query(Student).filter(Student.id == student_id).first()
+        student_name = student.name if student else "初一同学"
+
+        # 频控保护：手动立即发送 30 秒内防连击刷爆第三方额度
+        if slot == "manual" and force_summary:
+            recent_manual = db.query(NotificationLog).filter(
+                NotificationLog.date == today,
+                NotificationLog.slot == "manual"
+            ).order_by(NotificationLog.sent_at.desc()).first()
+            if recent_manual and recent_manual.sent_at:
+                sent_time = recent_manual.sent_at if recent_manual.sent_at.tzinfo else recent_manual.sent_at.replace(tzinfo=SHANGHAI_TZ)
+                delta_sec = (datetime.now(SHANGHAI_TZ) - sent_time).total_seconds()
+                if delta_sec < 30:
+                    logger.warning(f"Manual summary rate limited ({delta_sec:.1f}s < 30s)")
+                    return {
+                        "status": "rate_limited",
+                        "slot": slot,
+                        "reason": f"刚刚已推送过今日汇总，请等待 {int(30 - delta_sec)} 秒后再试",
+                        "details": {}
+                    }
+
         if slot in ("20:10", "21:10") and not force_summary:
             title, content = build_reminder_message(
                 student_name=student_name,

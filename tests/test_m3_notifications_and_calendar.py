@@ -1,4 +1,5 @@
 import time
+import asyncio
 import pytest
 from datetime import date, datetime, timedelta
 from unittest.mock import patch, AsyncMock, MagicMock
@@ -8,8 +9,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from backend.app.main import app
-from backend.app.database import get_db, SessionLocal
-from backend.app.models import HomeworkItem, Subject, NotificationLog, Setting
+from backend.app.database import SessionLocal
+from backend.app.models import HomeworkItem, Subject, NotificationLog, Setting, Student
 from backend.app.scheduler import (
     scheduler, setup_scheduler_jobs, check_and_dispatch_homework_reminders,
     acquire_scheduler_lock, release_scheduler_lock, SHANGHAI_TZ
@@ -18,6 +19,7 @@ from backend.app.utils import notifier
 from backend.app.routers.notifications import load_notification_config, save_notification_config
 
 client = TestClient(app)
+PARENT_PIN_HEADER = {"X-Parent-PIN": "888888"}
 
 
 @pytest.fixture
@@ -27,6 +29,85 @@ def db_session():
         yield db
     finally:
         db.close()
+
+
+# ==============================================================================
+# P0-1 安全专项: 通知路由家长门禁拦截与凭据保护验证
+# ==============================================================================
+def test_notification_endpoints_security_guard():
+    """验证未提供家长口令时，通知相关接口一律返回 401 Unauthorized，防止凭据泄露与随意触发"""
+    # 1. 未提供 X-Parent-PIN 访问配置 -> 401
+    resp_get = client.get("/api/notifications/config")
+    assert resp_get.status_code == 401
+    assert "需要家长管理口令" in resp_get.json()["detail"]
+
+    # 2. 错误 PIN 访问配置 -> 400
+    resp_bad = client.get("/api/notifications/config", headers={"X-Parent-PIN": "000000"})
+    assert resp_bad.status_code == 400
+
+    # 3. 未提供 PIN 触发测试 -> 401
+    resp_test = client.post("/api/notifications/test/bark")
+    assert resp_test.status_code == 401
+
+    # 4. 未提供 PIN 触发即时汇总 -> 401
+    resp_send = client.post("/api/notifications/send-summary-now")
+    assert resp_send.status_code == 401
+
+    # 5. 正确 PIN 访问配置 -> 200 成功
+    resp_ok = client.get("/api/notifications/config", headers=PARENT_PIN_HEADER)
+    assert resp_ok.status_code == 200
+    assert "enabled_channels" in resp_ok.json()
+
+
+# ==============================================================================
+# P0-2 性能与规范: dispatch_notification 真正并行并发执行验证 (DoD #7)
+# ==============================================================================
+@pytest.mark.anyio
+async def test_dispatch_notification_is_truly_parallel():
+    """
+    验证 dispatch_notification 使用 asyncio.gather 真正并发触发：
+    两个渠道各模拟延迟 0.15s，并发总耗时应 ≈0.15s (< 0.25s)；若为串行则需 ≥0.3s
+    """
+    async def mock_channel_delay(*args, **kwargs):
+        await asyncio.sleep(0.15)
+        return True, "成功"
+
+    with patch("backend.app.utils.notifier.send_pushplus", side_effect=mock_channel_delay), \
+         patch("backend.app.utils.notifier.send_bark", side_effect=mock_channel_delay):
+
+        t0 = time.perf_counter()
+        results = await notifier.dispatch_notification(
+            title="并发测试",
+            content="内容",
+            channels=["pushplus", "bark"],
+            config={"pushplus_token": "tk", "bark_key": "bk"}
+        )
+        cost_sec = time.perf_counter() - t0
+
+        assert results["pushplus"]["success"] is True
+        assert results["bark"]["success"] is True
+        assert cost_sec < 0.25, f"未达到并发要求，总耗时 {cost_sec:.3f}s >= 0.25s (串行特征)"
+
+
+# ==============================================================================
+# P0-4 真实性断言: Windows 文件锁防重二次加锁必须被拒绝 (无假性通过)
+# ==============================================================================
+def test_windows_msvcrt_scheduler_lock_real_assertion():
+    """验证调度器文件锁机制：重复加锁必须返回 False，释放后可重新获得"""
+    release_scheduler_lock()
+
+    first_locked = acquire_scheduler_lock()
+    assert first_locked is True, "首次加锁必须成功"
+
+    # 重复/第二进程获取必须返回 False
+    second_locked = acquire_scheduler_lock()
+    assert second_locked is False, "第二进程/重复获取锁必须被拦截并返回 False (杜绝假性通过)"
+
+    # 释放后第三次获取必须成功
+    release_scheduler_lock()
+    third_locked = acquire_scheduler_lock()
+    assert third_locked is True, "锁释放后重新获取必须成功"
+    release_scheduler_lock()
 
 
 # ==============================================================================
@@ -53,7 +134,7 @@ def test_scheduler_timezone_and_slots():
 # ==============================================================================
 def test_notification_idempotency_constraint(db_session: Session):
     """验证同一 (date, slot, channel) 重复插入时触发 SQLite 复合唯一约束拦截"""
-    today = date.today()
+    today = datetime.now(SHANGHAI_TZ).date()
     slot = "20:10"
     channel = "pushplus"
 
@@ -95,7 +176,7 @@ def test_notification_idempotency_constraint(db_session: Session):
 @pytest.mark.anyio
 async def test_midway_reminder_skips_when_completed(db_session: Session):
     """当天作业全部打勾或无作业时，20:10 / 21:10 催办静默跳过免打扰"""
-    today = date.today()
+    today = datetime.now(SHANGHAI_TZ).date()
 
     # 清除今日作业
     db_session.query(HomeworkItem).filter(HomeworkItem.date == today).delete()
@@ -124,12 +205,12 @@ async def test_midway_reminder_skips_when_completed(db_session: Session):
 
 
 # ==============================================================================
-# DoD 4: 中途催办时段带具体待办清单
+# DoD 4: 中途催办时段带具体待办清单与学生姓名
 # ==============================================================================
 @pytest.mark.anyio
 async def test_reminder_contains_uncompleted_items(db_session: Session):
-    """当存在未完成作业时，催办内容中包含具体学科与待办题干"""
-    today = date.today()
+    """当存在未完成作业时，催办内容中包含具体学科与待办题干，且标题带日期"""
+    today = datetime.now(SHANGHAI_TZ).date()
     db_session.query(HomeworkItem).filter(HomeworkItem.date == today).delete()
     sub = db_session.query(Subject).first()
 
@@ -146,7 +227,6 @@ async def test_reminder_contains_uncompleted_items(db_session: Session):
     with patch("backend.app.scheduler.dispatch_notification", new_callable=AsyncMock) as mock_dispatch:
         mock_dispatch.return_value = {"pushplus": {"channel": "pushplus", "success": True, "message": "ok"}}
 
-        # 清除可能存在的日志
         db_session.query(NotificationLog).filter(
             NotificationLog.date == today,
             NotificationLog.slot == "20:10"
@@ -156,11 +236,11 @@ async def test_reminder_contains_uncompleted_items(db_session: Session):
         res = await check_and_dispatch_homework_reminders(slot="20:10", db=db_session)
         assert res["status"] == "dispatched"
 
-        # 检查传给分发器的内容
         assert mock_dispatch.called
         call_args = mock_dispatch.call_args[1]
         assert "背诵 Unit 2 核心词汇" in call_args["content"]
         assert sub.name in call_args["content"]
+        assert today.strftime("%Y-%m-%d") in call_args["title"]
 
 
 # ==============================================================================
@@ -169,7 +249,7 @@ async def test_reminder_contains_uncompleted_items(db_session: Session):
 @pytest.mark.anyio
 async def test_evening_summary_dispatches_when_completed(db_session: Session):
     """作业 100% 完成时，21:50 晚间时段依然成功发送「🎉 今日作业满卡完成！」喜报"""
-    today = date.today()
+    today = datetime.now(SHANGHAI_TZ).date()
     db_session.query(HomeworkItem).filter(HomeworkItem.date == today).delete()
     sub = db_session.query(Subject).first()
 
@@ -202,21 +282,33 @@ async def test_evening_summary_dispatches_when_completed(db_session: Session):
 
 
 # ==============================================================================
-# DoD 6: 立即发送今日汇总 (force_summary=True)
+# DoD 6: 立即发送今日汇总 (force_summary=True) 与频控验证 (P1-4)
 # ==============================================================================
-def test_force_summary_dispatch():
-    """测试 POST /api/notifications/send-summary-now 立即全渠道推送今日汇总"""
-    with patch("backend.app.routers.notifications.dispatch_notification", new_callable=AsyncMock) as mock_dispatch:
+def test_force_summary_dispatch_and_rate_limit(db_session: Session):
+    """测试 POST /api/notifications/send-summary-now 即时推送快照与 30 秒防刷频控"""
+    today = datetime.now(SHANGHAI_TZ).date()
+    # 清理今日已有 manual 记录
+    db_session.query(NotificationLog).filter(
+        NotificationLog.date == today,
+        NotificationLog.slot == "manual"
+    ).delete()
+    db_session.commit()
+
+    with patch("backend.app.scheduler.dispatch_notification", new_callable=AsyncMock) as mock_dispatch:
         mock_dispatch.return_value = {
             "pushplus": {"channel": "pushplus", "success": True, "message": "发送成功"}
         }
 
-        resp = client.post("/api/notifications/send-summary-now", json={"channels": ["pushplus"]})
+        # 1. 首次触发成功
+        resp = client.post("/api/notifications/send-summary-now", headers=PARENT_PIN_HEADER)
         assert resp.status_code == 200
         data = resp.json()
         assert data["success"] is True
-        assert "pushplus" in data["details"]
-        assert data["details"]["pushplus"]["success"] is True
+
+        # 2. 紧接着立即二次触发，触发 30 秒频控保护
+        resp_fast = client.post("/api/notifications/send-summary-now", headers=PARENT_PIN_HEADER)
+        assert resp_fast.status_code == 200
+        assert resp_fast.json()["success"] is False
 
 
 # ==============================================================================
@@ -225,12 +317,11 @@ def test_force_summary_dispatch():
 @pytest.mark.anyio
 async def test_wechat_pushplus_and_serverchan():
     """测试 PushPlus 附带防重序列号，并正确处理未实名 905 错误"""
-    # 1. 验证防重序列号格式
     dedup_id = notifier.generate_dedup_id()
     assert len(dedup_id) > 15
     assert "-" in dedup_id
 
-    # 2. 模拟 PushPlus 未实名返回 905
+    # 模拟 PushPlus 未实名返回 905
     with patch("httpx.AsyncClient.post") as mock_post:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -241,7 +332,7 @@ async def test_wechat_pushplus_and_serverchan():
         assert success is False
         assert "未完成手机实名认证" in msg
 
-    # 3. 模拟 Server酱 成功
+    # 模拟 Server酱 成功
     with patch("httpx.AsyncClient.post") as mock_post:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -254,11 +345,12 @@ async def test_wechat_pushplus_and_serverchan():
 
 
 # ==============================================================================
-# DoD 8: iOS Bark 推送测试
+# DoD 8: iOS Bark 推送测试 (P1-6: 纠正 HTTP 200 但 code!=200 判定)
 # ==============================================================================
 @pytest.mark.anyio
 async def test_bark_notification():
-    """验证 Bark 推送 Payload 包含 group='学迹' 与合法结构"""
+    """验证 Bark 推送 Payload 包含 group='学迹' 与合法结构，且正确处理 code 错误"""
+    # 1. 正常成功
     with patch("httpx.AsyncClient.post") as mock_post:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -269,12 +361,22 @@ async def test_bark_notification():
         assert success is True
         assert "Bark 推送成功" in msg
 
-        # 检查调用 URL 和 json payload
         called_url = mock_post.call_args[0][0]
         assert "api.day.app/my_bark_key" in called_url
         called_json = mock_post.call_args[1]["json"]
         assert called_json["group"] == "学迹"
         assert called_json["title"] == "测试标题"
+
+    # 2. HTTP 200 但 Bark 业务返回 400 失败
+    with patch("httpx.AsyncClient.post") as mock_post:
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"code": 400, "message": "device token not found"}
+        mock_post.return_value = mock_resp
+
+        success, msg = await notifier.send_bark("bad_key", "测试标题", "测试正文")
+        assert success is False, "Bark code!=200 时绝不可误判为成功"
+        assert "device token not found" in msg
 
 
 # ==============================================================================
@@ -283,12 +385,10 @@ async def test_bark_notification():
 @pytest.mark.anyio
 async def test_webhook_adapter_and_error_handling():
     """验证非法 Webhook URL 给出友好中文错误，合法格式能正确适配"""
-    # 1. 错误 URL
     success, msg = await notifier.send_webhook("invalid_url_without_http", "标题", "正文")
     assert success is False
     assert "必须以 http:// 或 https:// 开头" in msg
 
-    # 2. 企业微信 Webhook 构造
     with patch("httpx.AsyncClient.post") as mock_post:
         mock_resp = MagicMock()
         mock_resp.status_code = 200
@@ -339,11 +439,6 @@ def test_monthly_calendar_api_performance_and_accuracy(db_session: Session):
     month_str = "2026-09"
     sub = db_session.query(Subject).first()
 
-    # 构造数据：
-    # 9月1日：2项全部完成 -> green
-    # 9月2日：2项完成1项 -> yellow
-    # 9月3日：1项未完成 -> red
-    # 9月4日以后：无作业 -> gray
     db_session.query(HomeworkItem).filter(
         HomeworkItem.date >= date(2026, 9, 1),
         HomeworkItem.date <= date(2026, 9, 30)
@@ -358,7 +453,6 @@ def test_monthly_calendar_api_performance_and_accuracy(db_session: Session):
     ])
     db_session.commit()
 
-    # 性能计时
     t0 = time.perf_counter()
     resp = client.get(f"/api/homework/calendar?month={month_str}")
     cost_ms = (time.perf_counter() - t0) * 1000
@@ -370,33 +464,11 @@ def test_monthly_calendar_api_performance_and_accuracy(db_session: Session):
     assert data["month"] == "2026-09"
     days = {d["date"]: d for d in data["days"]}
 
-    assert len(days) == 30  # 9月有30天
+    assert len(days) == 30
     assert days["2026-09-01"]["status"] == "green"
     assert days["2026-09-02"]["status"] == "yellow"
     assert days["2026-09-03"]["status"] == "red"
     assert days["2026-09-04"]["status"] == "gray"
-
-
-# ==============================================================================
-# DoD 12: Windows 文件锁防重 (msvcrt)
-# ==============================================================================
-def test_windows_msvcrt_scheduler_lock():
-    """验证调度器文件锁机制：重复加锁被拦截，释放后可重用"""
-    # 确保开始前处于未加锁状态
-    release_scheduler_lock()
-
-    first_locked = acquire_scheduler_lock()
-    assert first_locked is True
-
-    # 模拟第二个进程重复获取同一锁应失败
-    # (在同一个 Python 进程中，再次尝试以非阻塞模式锁同一文件会抛出异常或被拒绝)
-    try:
-        second_locked = acquire_scheduler_lock()
-    except Exception:
-        second_locked = False
-
-    # 验证释放
-    release_scheduler_lock()
 
 
 # ==============================================================================
