@@ -2,11 +2,10 @@
   <div class="app-container">
     <router-view />
 
-    <!-- 底部常驻导航 Tabbar -->
+    <!-- 孩子专注模式底部 Tabbar：彻底移除家长入口，仅保留作业与错题 -->
     <van-tabbar route active-color="#2563eb" inactive-color="#94a3b8" placeholder>
       <van-tabbar-item to="/" icon="passed">作业打卡</van-tabbar-item>
       <van-tabbar-item to="/mistakes" icon="records-o">错题本</van-tabbar-item>
-      <van-tabbar-item to="/settings" icon="setting-o">家长空间</van-tabbar-item>
     </van-tabbar>
   </div>
 </template>
@@ -39,7 +38,6 @@ body {
   box-shadow: 0 0 25px rgba(0, 0, 0, 0.05);
 }
 
-/* 覆盖 Vant 部分高对比度主题样式 */
 :root {
   --van-primary-color: #2563eb;
   --van-success-color: #10b981;

@@ -1,12 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse
 from backend.app.config import settings, FRONTEND_DIST, UPLOADS_DIR
-from backend.app.database import engine, Base
-
-# 初始化数据表（基础模型）
-Base.metadata.create_all(bind=engine)
+from backend.app.database import engine
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -31,7 +28,7 @@ from backend.app.schemas import HealthOut
 from backend.app.routers import homework, mistakes, backup, settings as app_settings
 from backend.app.seed import seed_database
 
-# 自动填充初始数据
+# 自动填充初始数据（前提是 Alembic 迁移已执行）
 seed_database()
 
 # 注册业务路由
@@ -57,6 +54,9 @@ if FRONTEND_DIST.exists():
 
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
+        # 严格拦截 /api 路径，未定义的 API 返回 404 JSON 而非 index.html
+        if full_path.startswith("api/") or full_path == "api":
+            raise HTTPException(status_code=404, detail="API endpoint not found")
         file_path = FRONTEND_DIST / full_path
         if file_path.is_file():
             return FileResponse(file_path)

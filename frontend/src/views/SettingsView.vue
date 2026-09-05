@@ -1,6 +1,6 @@
 <template>
   <div class="settings-view">
-    <van-nav-bar title="家长管理视图" />
+    <van-nav-bar title="家长管理视图" left-arrow @click-left="$router.push('/')" />
 
     <!-- 门禁口令验证卡片 -->
     <div class="pin-gate-card" v-if="!isUnlocked">

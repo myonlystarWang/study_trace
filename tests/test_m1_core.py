@@ -173,3 +173,76 @@ def test_backup_export_and_import():
     assert import_res.status_code == 200
     assert import_res.json()["status"] == "ok"
     assert "pre_restore_snapshot" in import_res.json()
+
+
+def test_pin_lockout_after_five_attempts():
+    """测试家长门禁：输错 1-4 次提示剩余次数，第 5 次锁定 5 分钟并拦截后续请求"""
+    from backend.app.auth import _auth_state
+    # 重置临时认证状态
+    _auth_state["failed_attempts"] = 0
+    _auth_state["locked_until"] = None
+
+    # 前 4 次输错返回 400 并显示剩余次数
+    for attempt in range(1, 5):
+        res = client.post("/api/settings/verify-pin", json={"pin": "wrong"})
+        assert res.status_code == 400
+        assert f"还剩 {5 - attempt} 次机会" in res.json()["detail"]
+
+    # 第 5 次输错触发锁定返回 403
+    res5 = client.post("/api/settings/verify-pin", json={"pin": "wrong"})
+    assert res5.status_code == 403
+    assert "锁定 5 分钟" in res5.json()["detail"]
+
+    # 锁定中再次请求直接被拦截返回 403
+    res_locked = client.post("/api/settings/verify-pin", json={"pin": "888888"})
+    assert res_locked.status_code == 403
+    assert "连续输错锁定中" in res_locked.json()["detail"]
+
+    # 清理状态以防影响后续测试
+    _auth_state["failed_attempts"] = 0
+    _auth_state["locked_until"] = None
+
+
+def test_streak_across_month_boundary():
+    """测试跨月连续打卡：从上月30、31号到本月1、2号，Streak 连续累加不中断"""
+    db = SessionLocal()
+    try:
+        math = db.query(Subject).filter(Subject.name == "数学").first()
+        today = date.today()
+        # 构造跨越前 5 天的连续打卡（无论当前日期是否处于月初或月中）
+        for offset in range(5):
+            d = today - timedelta(days=offset)
+            db.add(HomeworkItem(student_id=1, subject_id=math.id, date=d, content=f"跨天作业 {d}", is_completed=True))
+        db.commit()
+
+        streak = calculate_streak(1, db)
+        assert streak == 5, f"连续 5 天打卡 streak 应为 5，实际为 {streak}"
+    finally:
+        db.close()
+
+
+def test_backup_manifest_sha256_exact_match():
+    """测试备份文件内部清单：每个被打包文件的 sha256 均与 manifest.json 记录 100% 严格一致"""
+    import hashlib
+    import json
+    export_res = client.get("/api/backup/export")
+    assert export_res.status_code == 200
+
+    with zipfile.ZipFile(io.BytesIO(export_res.content)) as z:
+        manifest_data = json.loads(z.read("manifest.json").decode("utf-8"))
+        files_map = manifest_data["files"]
+        assert len(files_map) > 0
+
+        for arc_name, expected_sha256 in files_map.items():
+            actual_bytes = z.read(arc_name)
+            actual_sha256 = hashlib.sha256(actual_bytes).hexdigest()
+            assert actual_sha256 == expected_sha256, f"{arc_name} 的 sha256 校验不匹配"
+
+
+def test_api_not_found_returns_404_json_not_html():
+    """测试未定义的 API 路径返回 404 JSON 而不是被 SPA fallback 吞掉返回 index.html"""
+    res = client.get("/api/invalid_endpoint_xyz")
+    assert res.status_code == 404
+    assert res.headers["content-type"].startswith("application/json")
+    assert res.json()["detail"] == "API endpoint not found"
+

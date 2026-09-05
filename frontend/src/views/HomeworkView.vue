@@ -7,8 +7,13 @@
         <span class="date-text">{{ isToday ? '今日作业' : currentDate }}</span>
         <button class="nav-btn" :disabled="isToday" @click="changeDate(1)">❯</button>
       </div>
-      <div class="streak-badge" v-if="streak > 0">
-        🔥 连续 <b>{{ streak }}</b> 天
+      <div class="header-right">
+        <div class="streak-badge" v-if="streak > 0">
+          🔥 连续 <b>{{ streak }}</b> 天
+        </div>
+        <button class="lock-entry-btn" title="家长管理入口" @click="$router.push('/settings')">
+          🔒
+        </button>
       </div>
     </div>
 
@@ -307,6 +312,23 @@ onMounted(async () => {
   font-size: 1.15rem;
   font-weight: 700;
   color: #0f172a;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lock-entry-btn {
+  border: none;
+  background: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .streak-badge {
