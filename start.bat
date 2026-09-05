@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 title StudyTrace
 
 set "FNM_NODE_DIR=%APPDATA%\fnm\node-versions\v22.23.2\installation"

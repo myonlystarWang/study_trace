@@ -1,5 +1,5 @@
 from pathlib import Path
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # 根目录与关键路径定位
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -17,6 +17,12 @@ for d in [DATA_DIR, UPLOADS_DIR, ORIGINALS_DIR, THUMBNAILS_DIR, EXPORTS_DIR, BAC
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=str(DATA_DIR / ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+
     PROJECT_NAME: str = "学迹 StudyTrace"
     VERSION: str = "0.1.0"
     TIMEZONE: str = "Asia/Shanghai"
@@ -31,11 +37,6 @@ class Settings(BaseSettings):
     # 安全
     SECRET_KEY: str = "study-trace-secure-local-key-2026"
     DEFAULT_PIN: str = "888888"
-
-    class Config:
-        env_file = str(DATA_DIR / ".env")
-        env_file_encoding = "utf-8"
-        extra = "ignore"
 
 
 settings = Settings()

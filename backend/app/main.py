@@ -27,8 +27,10 @@ app.add_middleware(
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 
+from backend.app.schemas import HealthOut
+
 # 健康检查端点
-@app.get("/api/health")
+@app.get("/api/health", response_model=HealthOut)
 def health_check():
     return {
         "status": "ok",
