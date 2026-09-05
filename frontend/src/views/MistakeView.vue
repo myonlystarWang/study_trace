@@ -178,7 +178,7 @@
         </div>
 
         <div class="modal-footer-btns">
-          <van-button block @click="showAddModal = false">取消</van-button>
+          <van-button block @click="closeAddModal">取消</van-button>
           <van-button type="primary" block :loading="submitting" @click="submitAddMistake">保存入册</van-button>
         </div>
       </div>
@@ -220,7 +220,8 @@ const newMistake = ref({
   error_type: '概念模糊',
   extracted_text: '',
   original_image_path: null,
-  thumbnail_path: null
+  thumbnail_path: null,
+  storage_key: null
 });
 
 const onTabChange = () => {
@@ -299,6 +300,7 @@ const handleUpload = async (fileItem) => {
     const res = await mistakeApi.uploadImage(formData);
     newMistake.value.original_image_path = res.data.original_url;
     newMistake.value.thumbnail_path = res.data.thumbnail_url;
+    newMistake.value.storage_key = res.data.storage_key || res.data.original_url.replace(/^\/?(uploads\/)?/, '');
     showToast({ message: '图片上传成功', icon: 'success' });
   } catch (e) {
     showToast('上传失败');
@@ -306,7 +308,7 @@ const handleUpload = async (fileItem) => {
 };
 
 const extractText = async () => {
-  if (!uploadedFile.value) {
+  if (!uploadedFile.value && !newMistake.value.storage_key) {
     showToast('请先上传错题图片');
     return;
   }
@@ -314,7 +316,12 @@ const extractText = async () => {
   if (pollTimerM) clearInterval(pollTimerM);
   try {
     const fd = new FormData();
-    fd.append('file', uploadedFile.value);
+    if (newMistake.value.storage_key) {
+      // 优先复用服务端已落盘的原图路径，避免大图二次网络传输
+      fd.append('image_path', newMistake.value.storage_key);
+    } else if (uploadedFile.value) {
+      fd.append('file', uploadedFile.value);
+    }
     fd.append('mode', 'auto');
     const res = await ocrApi.createTask(fd);
     const taskId = res.data.task_id;
@@ -347,6 +354,26 @@ const extractText = async () => {
   }
 };
 
+const resetModalState = () => {
+  if (pollTimerM) {
+    clearInterval(pollTimerM);
+    pollTimerM = null;
+  }
+  ocrLoading.value = false;
+  fileList.value = [];
+  uploadedFile.value = null;
+  newMistake.value.extracted_text = '';
+  newMistake.value.source_reference = '';
+  newMistake.value.original_image_path = null;
+  newMistake.value.thumbnail_path = null;
+  newMistake.value.storage_key = null;
+};
+
+const closeAddModal = () => {
+  resetModalState();
+  showAddModal.value = false;
+};
+
 const submitAddMistake = async () => {
   if (!newMistake.value.extracted_text.trim() && !newMistake.value.original_image_path) {
     showToast('请至少输入题干文字或上传图片');
@@ -364,10 +391,7 @@ const submitAddMistake = async () => {
     });
     showToast({ message: '错题已归入艾宾浩斯复习流', icon: 'success' });
     showAddModal.value = false;
-    fileList.value = [];
-    newMistake.value.extracted_text = '';
-    newMistake.value.source_reference = '';
-    newMistake.value.original_image_path = null;
+    resetModalState();
     fetchMistakes();
   } catch (e) {
     showToast('保存错题失败');
@@ -382,9 +406,11 @@ const previewImage = (url) => {
 };
 
 watch(showAddModal, (v) => {
-  if (!v && pollTimerM) {
-    clearInterval(pollTimerM);
-    pollTimerM = null;
+  if (!v) {
+    if (pollTimerM) {
+      clearInterval(pollTimerM);
+      pollTimerM = null;
+    }
     ocrLoading.value = false;
   }
 });

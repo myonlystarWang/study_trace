@@ -119,3 +119,121 @@ def test_engines_status():
     j = r.json()
     assert j["default"] == "RapidOCR"
     assert j["detail"]["RapidOCR"] == "available"
+
+
+def test_ocr_path_traversal_prevention():
+    """安全防护：严禁任意本地路径穿越读取，越界路径必须返回 400。"""
+    client = TestClient(app)
+
+    # 1) 尝试读取系统敏感路径
+    r1 = client.post("/api/ocr/tasks", data={"image_path": "C:/Windows/System32/drivers/etc/hosts"})
+    assert r1.status_code == 400
+    assert "非法或不存在" in r1.json()["detail"]
+
+    # 2) 尝试相对路径穿越读取项目敏感配置
+    r2 = client.post("/api/ocr/tasks", data={"image_path": "../../data/.env"})
+    assert r2.status_code == 400
+
+    # 3) 不存在的图片路径
+    r3 = client.post("/api/ocr/tasks", data={"image_path": "originals/not_exist_file.png"})
+    assert r3.status_code == 400
+
+
+def test_ocr_storage_key_reuse_and_temp_cleanup(samples):
+    """验证错题图 storage_key 路径复用与临时文件自动清理、全站备份防污染。"""
+    client = TestClient(app)
+    data = samples["sample_chinese"].read_bytes()
+
+    # 1. 错题图上传接口应返回 storage_key
+    up_res = client.post(
+        "/api/mistakes/upload",
+        files={"file": ("chinese.png", data, "image/png")}
+    )
+    assert up_res.status_code == 200
+    up_json = up_res.json()
+    assert "storage_key" in up_json
+    storage_key = up_json["storage_key"]
+    assert storage_key.startswith("originals/")
+
+    # 2. 通过 storage_key 发起 OCR 任务，无需二次上传
+    task_res = client.post("/api/ocr/tasks", data={"image_path": storage_key})
+    assert task_res.status_code == 202
+    tid = task_res.json()["task_id"]
+
+    final = None
+    for _ in range(30):
+        r = client.get(f"/api/ocr/tasks/{tid}")
+        assert r.status_code == 200
+        j = r.json()
+        if j["status"] in ("succeeded", "failed"):
+            final = j
+            break
+        time.sleep(0.2)
+
+    assert final is not None
+    assert final["status"] == "succeeded"
+    assert "公园" in final["result"]["text"] or "孩子们" in final["result"]["text"]
+
+    # 3. 验证临时文件自动删除：直接上传临时文件做 OCR
+    from backend.app.config import OCR_TEMP_DIR
+    temp_res = client.post(
+        "/api/ocr/tasks",
+        files={"file": ("temp_test.png", data, "image/png")}
+    )
+    assert temp_res.status_code == 202
+    temp_tid = temp_res.json()["task_id"]
+
+    for _ in range(30):
+        r = client.get(f"/api/ocr/tasks/{temp_tid}")
+        if r.json()["status"] in ("succeeded", "failed"):
+            break
+        time.sleep(0.2)
+
+    # 任务完成后，OCR_TEMP_DIR 中该任务的临时文件应已被删除
+    temp_files = list(OCR_TEMP_DIR.glob("*"))
+    assert len(temp_files) == 0, f"临时文件未被清理: {temp_files}"
+
+    # 4. 验证备份导出 Zip 中 100% 不包含 ocr_in 或 temp 临时目录
+    import zipfile
+    import io
+    bk_res = client.get("/api/backup/export")
+    assert bk_res.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(bk_res.content), "r") as zf:
+        all_names = zf.namelist()
+        for name in all_names:
+            assert "ocr_in" not in name, f"备份中泄漏了 OCR 临时目录: {name}"
+            assert "temp" not in name, f"备份中泄漏了 temp 目录: {name}"
+        # 且正常的业务原图存在于备份中
+        assert any(name.startswith("uploads/originals/") for name in all_names)
+
+
+def test_mistake_consecutive_image_then_text_no_thumbnail_leak():
+    """验证错题连续录入场景：第一条带图、第二条纯文本时，第二条记录绝不泄漏第一条的缩略图。"""
+    client = TestClient(app)
+    # 1. 录入带图错题
+    r1 = client.post("/api/mistakes", json={
+        "subject_id": 1,
+        "source_reference": "周练 1",
+        "error_type": "概念模糊",
+        "extracted_text": "带图错题 1",
+        "original_image_path": "/uploads/originals/test.jpg",
+        "thumbnail_path": "/uploads/thumbnails/test.jpg"
+    })
+    assert r1.status_code == 200
+    m1 = r1.json()
+    assert m1["thumbnail_path"] == "/uploads/thumbnails/test.jpg"
+
+    # 2. 紧接着录入纯文字错题（对应前端 resetModalState 之后的情况）
+    r2 = client.post("/api/mistakes", json={
+        "subject_id": 1,
+        "source_reference": "周练 2",
+        "error_type": "粗心大意",
+        "extracted_text": "纯文字错题 2",
+        "original_image_path": None,
+        "thumbnail_path": None
+    })
+    assert r2.status_code == 200
+    m2 = r2.json()
+    assert m2["thumbnail_path"] is None
+    assert m2["original_image_path"] is None
+

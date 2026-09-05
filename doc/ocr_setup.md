@@ -6,10 +6,11 @@
 
 ## 一、PaddleOCR（可选退路，本地）
 
-仅在 RapidOCR 不满足需求时启用。注意：paddlepaddle 依赖约 1GB，安装失败率较高，且首次运行需联网下载模型。
+仅在 RapidOCR 不满足需求时启用。注意：PaddleOCR 需配合 PaddlePaddle 深度学习框架（~1GB），且首次运行需联网下载模型。
 
 ```bash
-# 在 .venv 内安装（不影响系统 Python 3.9）
+# 在 .venv 内安装 paddlepaddle（Windows CPU 版需走百度官方源）与 paddleocr
+uv pip install paddlepaddle -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
 uv pip install paddleocr
 
 # 自检

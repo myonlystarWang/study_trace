@@ -40,13 +40,16 @@ def create_backup_archive() -> Path:
             zipf.write(DB_FILE, arcname=arc_name)
             manifest["files"][arc_name] = compute_sha256(DB_FILE)
 
-        # 2. 打包 uploads 目录全部文件
+        # 2. 打包 uploads 目录的业务文件（仅包含 originals 与 thumbnails，杜绝临时文件污染）
         if UPLOADS_DIR.exists():
-            for file_path in UPLOADS_DIR.rglob("*"):
-                if file_path.is_file():
-                    arc_name = f"uploads/{file_path.relative_to(UPLOADS_DIR).as_posix()}"
-                    zipf.write(file_path, arcname=arc_name)
-                    manifest["files"][arc_name] = compute_sha256(file_path)
+            for sub_dir_name in ["originals", "thumbnails"]:
+                sub_dir = UPLOADS_DIR / sub_dir_name
+                if sub_dir.exists():
+                    for file_path in sub_dir.rglob("*"):
+                        if file_path.is_file():
+                            arc_name = f"uploads/{file_path.relative_to(UPLOADS_DIR).as_posix()}"
+                            zipf.write(file_path, arcname=arc_name)
+                            manifest["files"][arc_name] = compute_sha256(file_path)
 
         # 3. 写入清单 manifest.json
         zipf.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2))

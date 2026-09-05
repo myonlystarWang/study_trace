@@ -45,14 +45,21 @@ def _check_cloud_key() -> bool:
 
 
 def main() -> int:
+    # 尝试将标准输出重置为 UTF-8，若环境不支持则优雅回退
+    if sys.platform == "win32":
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
+
     rapid = _check_rapid()
     paddle = _check_paddle()
     cloud = _check_cloud_key()
 
     print("=== 学迹 StudyTrace · OCR 环境自检 ===")
-    print(f"  RapidOCR (默认/本地离线) : {'✅ 可用' if rapid else '❌ 未安装'}")
-    print(f"  PaddleOCR (可选退路)     : {'✅ 已安装' if paddle else '➖ 未安装（可选）'}")
-    print(f"  CloudVLM  (云端兜底)     : {'✅ 已配置 Key' if cloud else '➖ 未配置 Key（可选）'}")
+    print(f"  RapidOCR (默认/本地离线) : {'[OK] 可用' if rapid else '[MISSING] 未安装'}")
+    print(f"  PaddleOCR (可选退路)     : {'[OK] 已安装' if paddle else '[-] 未安装（可选）'}")
+    print(f"  CloudVLM  (云端兜底)     : {'[OK] 已配置 Key' if cloud else '[-] 未配置 Key（可选）'}")
     print()
 
     if rapid:

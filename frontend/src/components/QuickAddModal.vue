@@ -11,15 +11,20 @@
 
       <!-- 拍照识别模式 -->
       <div v-if="mode === 'camera'" class="camera-box">
-        <van-uploader
-          v-if="!ocrLoading"
-          :after-read="onOcrUpload"
-          :max-count="1"
-          preview-size="100px"
-          :capture="'environment'"
-        />
-        <div v-else class="ocr-loading">
-          <van-skeleton title :row="3" />
+        <div class="camera-uploader-row">
+          <van-uploader
+            v-model="cameraFileList"
+            :after-read="onOcrUpload"
+            :max-count="1"
+            preview-size="80px"
+            :capture="'environment'"
+          />
+          <div class="uploader-hint" v-if="cameraFileList.length === 0">
+            点击上方拍照或选取作业照片，自动提取题干
+          </div>
+        </div>
+        <div v-if="ocrLoading" class="ocr-loading">
+          <van-skeleton title :row="2" />
           <p class="ocr-tip">正在识别题干，耗时约 0.5~1.5s…</p>
         </div>
       </div>
@@ -57,7 +62,7 @@
       <div class="modal-btns">
         <van-button block @click="close">取消</van-button>
         <van-button type="primary" block :loading="saving" @click="submitBatch">
-          批量添加（{{ lines.length }}）
+          {{ lines.length <= 1 ? '添加作业' : `批量添加（${lines.length}）` }}
         </van-button>
       </div>
     </div>
@@ -82,6 +87,7 @@ const inputText = ref('');
 const selectedSubject = ref(null);
 const saving = ref(false);
 const ocrLoading = ref(false);
+const cameraFileList = ref([]);
 let pollTimer = null;
 
 const lines = computed(() =>
@@ -104,6 +110,7 @@ watch(
 const close = () => {
   stopPoll();
   inputText.value = '';
+  cameraFileList.value = [];
   ocrLoading.value = false;
   mode.value = 'manual';
   emit('update:show', false);
@@ -217,6 +224,19 @@ const submitBatch = async () => {
 .camera-box {
   margin-bottom: 1rem;
   min-height: 60px;
+}
+.camera-uploader-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.uploader-hint {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+.ocr-loading {
+  margin-top: 0.75rem;
 }
 .ocr-tip {
   font-size: 0.8rem;

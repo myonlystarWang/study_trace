@@ -9,10 +9,12 @@ ORIGINALS_DIR = UPLOADS_DIR / "originals"
 THUMBNAILS_DIR = UPLOADS_DIR / "thumbnails"
 EXPORTS_DIR = DATA_DIR / "exports"
 BACKUPS_DIR = DATA_DIR / "backups"
+TEMP_DIR = DATA_DIR / "temp"
+OCR_TEMP_DIR = TEMP_DIR / "ocr_in"
 FRONTEND_DIST = BASE_DIR / "frontend" / "dist"
 
-# 自动确保数据持久化目录存在
-for d in [DATA_DIR, UPLOADS_DIR, ORIGINALS_DIR, THUMBNAILS_DIR, EXPORTS_DIR, BACKUPS_DIR]:
+# 自动确保数据持久化与临时目录存在
+for d in [DATA_DIR, UPLOADS_DIR, ORIGINALS_DIR, THUMBNAILS_DIR, EXPORTS_DIR, BACKUPS_DIR, TEMP_DIR, OCR_TEMP_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 

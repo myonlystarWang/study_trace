@@ -28,6 +28,7 @@ data/study_trace.db-journal
 data/uploads/
 data/backups/
 data/exports/
+data/temp/
 tests/samples/_bench/
 
 # IDE

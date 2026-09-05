@@ -21,10 +21,12 @@ async def upload_image(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="上传文件内容为空")
     
     sha256, orig_url, thumb_url = save_image_bytes(content, file.filename or "image.jpg")
+    storage_key = orig_url.lstrip("/").removeprefix("uploads/")
     return {
         "sha256": sha256,
         "original_url": orig_url,
-        "thumbnail_url": thumb_url
+        "thumbnail_url": thumb_url,
+        "storage_key": storage_key
     }
 
 
