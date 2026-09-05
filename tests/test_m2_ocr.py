@@ -142,6 +142,14 @@ def test_ocr_path_traversal_prevention():
 def test_ocr_storage_key_reuse_and_temp_cleanup(samples):
     """验证错题图 storage_key 路径复用与临时文件自动清理、全站备份防污染。"""
     client = TestClient(app)
+    # 隔离本用例对 OCR_TEMP_DIR 的污染：其他用例（如 test_ocr_async_pipeline）
+    # 上传文件会产生临时文件，且只在轮询到 succeeded 即结束，未必等 finally 删完。
+    from backend.app.config import OCR_TEMP_DIR
+    for f in OCR_TEMP_DIR.glob("*"):
+        try:
+            f.unlink()
+        except Exception:
+            pass
     data = samples["sample_chinese"].read_bytes()
 
     # 1. 错题图上传接口应返回 storage_key
@@ -190,6 +198,7 @@ def test_ocr_storage_key_reuse_and_temp_cleanup(samples):
         time.sleep(0.2)
 
     # 任务完成后，OCR_TEMP_DIR 中该任务的临时文件应已被删除
+    time.sleep(0.2)  # 等待 finally 兜底清理（如有）落盘
     temp_files = list(OCR_TEMP_DIR.glob("*"))
     assert len(temp_files) == 0, f"临时文件未被清理: {temp_files}"
 

@@ -67,6 +67,13 @@ def _run_task(task_id: str, image_path: str, mode: str, is_temp: bool = False) -
             task["engine"] = engine.name
             task["progress"] = 50
         result = engine.recognize(image_path)
+        # 成功路径：先删除临时输入文件，确保 status 置为 succeeded 时文件已不在磁盘，
+        # 即使客户端在轮询到成功的瞬间断开也不会残留孤儿文件（杜绝磁盘泄漏）。
+        if is_temp:
+            try:
+                Path(image_path).unlink(missing_ok=True)
+            except Exception:
+                pass
         with _TASK_LOCK:
             task["result"] = result
             task["cost_ms"] = result.cost_ms
@@ -78,7 +85,7 @@ def _run_task(task_id: str, image_path: str, mode: str, is_temp: bool = False) -
             task["error"] = str(e)
             task["progress"] = 100
     finally:
-        # 若是临时上传给 OCR 推理的文件，执行完毕立即删除，杜绝磁盘泄漏与备份污染
+        # 失败/异常路径的安全兜底：确保临时文件一定被清理
         if is_temp:
             try:
                 Path(image_path).unlink(missing_ok=True)
