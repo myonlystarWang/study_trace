@@ -3,8 +3,10 @@
     <van-nav-bar title="家长管理视图" left-arrow @click-left="$router.push('/')" />
 
     <!-- 门禁口令验证卡片 -->
-    <div class="pin-gate-card" v-if="!isUnlocked">
-      <div class="gate-icon">🔒</div>
+    <div class="st-card pin-gate-card" v-if="!isUnlocked">
+      <div class="gate-icon-circle">
+        <van-icon name="lock" size="32" color="#d97706" />
+      </div>
       <h3>家长模式身份验证</h3>
       <p class="gate-tip">初中生专注模式已开启。请输入管理口令进入：</p>
       
@@ -53,7 +55,12 @@
         <!-- PushPlus 微信推送配置 -->
         <div class="channel-config-box">
           <div class="channel-header">
-            <span class="channel-title">🟢 微信公众号推送 (PushPlus 首选推荐)</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="st-icon-badge st-icon-badge--success">
+                <van-icon name="chat-o" />
+              </span>
+              <span class="channel-title">微信公众号推送 (PushPlus 首选推荐)</span>
+            </div>
             <span class="channel-badge free">实名免费 200条/天</span>
           </div>
           <van-field
@@ -73,15 +80,25 @@
               </van-button>
             </template>
           </van-field>
-          <div class="channel-hint">
-            💡 提示：微信关注“PushPlus推送加”公众号，<b>必须完成手机号实名认证</b>方可享有 200 条/天免费额度；未实名接口将返回 905。
+          <div class="channel-hint" style="padding-left: 0; margin-top: 6px;">
+            <van-notice-bar
+              left-icon="info-o"
+              :scrollable="false"
+              wrapable
+              text="提示：微信关注“PushPlus推送加”公众号，必须完成手机号实名认证方可享有 200 条/天免费额度；未实名接口将返回 905。"
+            />
           </div>
         </div>
 
         <!-- Server酱 配置 -->
         <div class="channel-config-box">
           <div class="channel-header">
-            <span class="channel-title">🟡 Server酱 (Turbo版 备选)</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="st-icon-badge st-icon-badge--warning">
+                <van-icon name="bell-o" />
+              </span>
+              <span class="channel-title">Server酱 (Turbo版 备选)</span>
+            </div>
             <span class="channel-badge warning">免费限 5条/天</span>
           </div>
           <van-field
@@ -105,7 +122,12 @@
         <!-- iOS Bark 配置 -->
         <div class="channel-config-box">
           <div class="channel-header">
-            <span class="channel-title">🍎 iOS Bark 推送 (全家 iPhone 首选)</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="st-icon-badge st-icon-badge--purple">
+                <van-icon name="phone-o" />
+              </span>
+              <span class="channel-title">iOS Bark 推送 (全家 iPhone 首选)</span>
+            </div>
             <span class="channel-badge free">无需 HTTPS 免账号</span>
           </div>
           <van-field
@@ -129,7 +151,12 @@
         <!-- 群机器人 Webhook -->
         <div class="channel-config-box">
           <div class="channel-header">
-            <span class="channel-title">🤖 群机器人 Webhook (企微 / 钉钉 / 飞书)</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="st-icon-badge st-icon-badge--neutral">
+                <van-icon name="cluster-o" />
+              </span>
+              <span class="channel-title">群机器人 Webhook (企微 / 钉钉 / 飞书)</span>
+            </div>
             <span class="channel-badge free">100% 免费零门槛</span>
           </div>
           <van-field
@@ -166,17 +193,18 @@
             plain
             round
             block
+            icon="guide-o"
             style="margin-top: 10px;"
             :loading="sendingSummary"
             @click="handleSendSummaryNow"
           >
-            🚀 立即生成并发送今日汇总 (即时推送快照)
+            立即生成并发送今日汇总 (即时推送快照)
           </van-button>
         </div>
       </van-cell-group>
 
       <!-- 成绩管理与月度学情看板（家长专属深度分析） -->
-      <van-cell-group inset title="📊 成绩管理与月度学情看板 (家长专属)" style="margin-top: 1.5rem;">
+      <van-cell-group inset title="成绩管理与月度学情看板 (家长专属)" style="margin-top: 1.5rem;">
         <van-cell
           title="成绩管理与录入"
           is-link
@@ -187,7 +215,12 @@
 
         <div class="monthly-analytics-box">
           <div class="monthly-header">
-            <span class="monthly-title">📅 月度作业打卡深度透视</span>
+            <div class="st-section-header" style="margin-bottom: 0;">
+              <span class="st-icon-badge st-icon-badge--info">
+                <van-icon name="calendar-o" />
+              </span>
+              <span class="monthly-title">月度作业打卡深度透视</span>
+            </div>
             <div class="month-stepper">
               <van-button size="mini" icon="arrow-left" @click="changeMonth(-1)" />
               <span class="current-month-text">{{ currentYear }} 年 {{ currentMonth }} 月</span>
@@ -212,20 +245,27 @@
           </div>
 
           <!-- 整月每日打卡率走势折线图 -->
-          <div class="monthly-chart-title">📈 每日作业打卡率走势 (1~{{ monthlyData?.total_days || 30 }}日)</div>
+          <div class="monthly-chart-title">
+            <van-icon name="ascending" color="#2563eb" style="margin-right: 4px;" />
+            每日作业打卡率走势 (1~{{ monthlyData?.total_days || 30 }}日)
+          </div>
           <div ref="monthlyTrendChartRef" class="monthly-echarts-container"></div>
 
           <!-- 各科目未完成频次分布柱状图 -->
-          <div class="monthly-chart-title" style="margin-top: 14px;">📊 各科目未完成频次分布</div>
+          <div class="monthly-chart-title" style="margin-top: 14px;">
+            <van-icon name="bar-chart-o" color="#f59e0b" style="margin-right: 4px;" />
+            各科目未完成频次分布
+          </div>
           <div v-show="monthlyData?.subject_missing_distribution?.length > 0" ref="monthlyMissingChartRef" class="monthly-echarts-container bar-height"></div>
           <div v-if="!monthlyData?.subject_missing_distribution?.length" class="monthly-perfect-tip">
-            🎉 本月暂无科目未完成记录，各项作业皆如期完成！
+            <van-icon name="passed" color="#10b981" style="margin-right: 4px;" />
+            本月暂无科目未完成记录，各项作业皆如期完成！
           </div>
         </div>
       </van-cell-group>
 
       <!-- A4 周末重练卷与组卷记录（家长空间入口与历史） -->
-      <van-cell-group inset title="🖨️ A4 周末重练卷 (家长专属管理)" style="margin-top: 1.5rem;">
+      <van-cell-group inset title="A4 周末重练卷 (家长专属管理)" style="margin-top: 1.5rem;">
         <van-cell
           title="前往组卷中心"
           is-link
@@ -302,8 +342,15 @@
           </template>
         </van-cell>
       </van-cell-group>
-      <div class="security-warning-card">
-        ⚠️ <b>安全须知</b>：导出的备份 Zip 压缩包包含本地 SQLite 数据库（含已配置的通知 Token 与 Key 等敏感凭据），请妥善保存在私密设备中，<b>切勿外传或公开发布</b>。
+      <div style="margin: 10px 16px;">
+        <van-notice-bar
+          left-icon="warning-o"
+          color="#ef4444"
+          background="#fef2f2"
+          wrapable
+          :scrollable="false"
+          text="安全须知：导出的备份 Zip 压缩包包含本地 SQLite 数据库（含已配置的通知 Token 与 Key 等敏感凭据），请妥善保存在私密设备中，切勿外传或公开发布。"
+        />
       </div>
 
       <!-- 学科设置 -->
@@ -317,9 +364,10 @@
         <van-cell title="新增自定义学科" is-link @click="showAddSubject = true" />
       </van-cell-group>
 
-      <!-- 口令管理 -->
-      <van-cell-group inset title="安全设置" style="margin-top: 1rem;">
+      <!-- 口令管理与关于系统 -->
+      <van-cell-group inset title="安全设置与系统关于" style="margin-top: 1rem;">
         <van-cell title="修改管理口令" is-link @click="showChangePin = true" />
+        <van-cell title="关于系统与运行自检" is-link icon="info-o" @click="$router.push('/about')" />
         <van-cell title="退出管理视图" is-link @click="lockSettings" />
       </van-cell-group>
     </div>
@@ -453,13 +501,13 @@ const handleTestChannel = async (channel, target) => {
     const res = await notificationApi.testChannel(channel, target);
     if (res.data.success) {
       showDialog({
-        title: '✅ 测试发送成功',
+        title: '测试发送成功',
         message: res.data.message || '请查看手机个人微信或 App 通知的弹出卡片！',
         confirmButtonText: '好'
       });
     } else {
       showDialog({
-        title: '❌ 测试发送未成功',
+        title: '测试发送未成功',
         message: res.data.message || '请检查配置或网络',
         confirmButtonText: '知道了'
       });
@@ -467,7 +515,7 @@ const handleTestChannel = async (channel, target) => {
   } catch (e) {
     const msg = e.response?.data?.detail || e.message || '测试请求失败';
     showDialog({
-      title: '❌ 测试接口异常',
+      title: '测试接口异常',
       message: msg,
       confirmButtonText: '知道了'
     });
@@ -486,7 +534,7 @@ const handleSendSummaryNow = async () => {
       const res = await notificationApi.sendSummaryNow();
       if (res.data.success) {
         showDialog({
-          title: '🎉 发送成功',
+          title: '发送成功',
           message: '今日作业与复习快报已成功送达！',
           confirmButtonText: '确定'
         });
@@ -494,7 +542,7 @@ const handleSendSummaryNow = async () => {
         const msg = res.data.message || '部分渠道发送失败，请在上方检查各通道配置。';
         const isRateLimited = msg.includes('秒') || msg.includes('等待') || msg.includes('频繁');
         showDialog({
-          title: isRateLimited ? '⏳ 提示' : '⚠️ 发送未完成',
+          title: isRateLimited ? '操作提示' : '发送未完成',
           message: msg,
           confirmButtonText: '知道了'
         });
@@ -761,16 +809,23 @@ onUnmounted(() => {
 
 .pin-gate-card {
   margin: 3rem 1.5rem;
-  background: white;
-  border-radius: 16px;
+  background: var(--st-bg-card, #ffffff);
+  border-radius: var(--st-radius-md, 14px);
   padding: 2.5rem 1.5rem;
   text-align: center;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--st-border, #f1f5f9);
+  box-shadow: var(--st-shadow-card);
 }
 
-.gate-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+.gate-icon-circle {
+  width: 60px;
+  height: 60px;
+  background: var(--st-warning-light, #fffbeb);
+  border-radius: var(--st-radius-full, 9999px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
 }
 
 .pin-gate-card h3 {

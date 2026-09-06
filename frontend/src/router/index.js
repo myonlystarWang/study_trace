@@ -6,12 +6,21 @@ import PaperCenterView from '../views/PaperCenterView.vue';
 import PaperPrintView from '../views/PaperPrintView.vue';
 import ScoreView from '../views/ScoreView.vue';
 import DesignPreviewView from '../views/DesignPreviewView.vue';
+import HomeView from '../views/HomeView.vue';
 
 const routes = [
   {
     path: '/',
     name: 'homework',
     component: HomeworkView
+  },
+  {
+    path: '/about',
+    name: 'about',
+    component: HomeView,
+    meta: {
+      hideTabbar: true
+    }
   },
   {
     path: '/mistakes',
