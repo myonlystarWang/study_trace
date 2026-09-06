@@ -545,3 +545,14 @@ onMounted(() => {
   line-height: 1.5;
 }
 </style>
+      <!-- M4 A4 周末重练卷入口 (家长空间专属) -->
+      <van-cell-group inset title="🖨️ A4 周末重练卷 (家长专属管理)" style="margin-top: 1.5rem;">
+        <van-cell
+          title="生成 A4 周末重练试卷"
+          value="4套预设 / 自选组卷"
+          is-link
+          to="/paper"
+        />
+      </van-cell-group>
+
+      

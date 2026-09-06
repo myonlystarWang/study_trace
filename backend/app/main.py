@@ -38,7 +38,15 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 
 from backend.app.schemas import HealthOut
-from backend.app.routers import homework, mistakes, backup, settings as app_settings, ocr as ocr_router, notifications as notifications_router
+from backend.app.routers import (
+    homework,
+    mistakes,
+    backup,
+    settings as app_settings,
+    ocr as ocr_router,
+    notifications as notifications_router,
+    paper as paper_router,
+)
 from backend.app.seed import seed_database
 
 # 自动填充初始数据（前提是 Alembic 迁移已执行）
@@ -51,6 +59,7 @@ app.include_router(backup.router)
 app.include_router(app_settings.router)
 app.include_router(ocr_router.router)
 app.include_router(notifications_router.router)
+app.include_router(paper_router.router)
 
 
 # 健康检查端点

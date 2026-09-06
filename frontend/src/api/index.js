@@ -66,3 +66,14 @@ export const notificationApi = {
 };
 
 export default api;
+
+export const paperApi = {
+  getCandidates: (params) => api.get('/paper/candidates', { params }),
+  compose: (data) => api.post('/paper/compose', data),
+  getPaper: (id) => api.get(`/paper/${id}`),
+  markPrinted: (id) => api.post(`/paper/${id}/mark_printed`),
+  batchReview: (id, reviews) => api.post(`/paper/${id}/batch_review`, { reviews }),
+  getHistory: (params) => api.get('/paper/history', { params })
+};
+
+export default api;

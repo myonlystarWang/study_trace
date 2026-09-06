@@ -120,3 +120,21 @@ class PushSubscription(Base):
     auth = Column(Text, nullable=False)
     user_agent = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.now)
+
+
+class Paper(Base):
+    __tablename__ = "papers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(100), nullable=False, default="初一错题周末重练卷")
+    subtitle = Column(String(100), nullable=True, default="满分: 100分 · 建议用时: 45分钟")
+    mistake_ids = Column(Text, nullable=False)  # JSON 数组，如 "[1, 2, 3]"
+    sort_by = Column(String(20), default="subject")  # subject / order / random
+    space_level = Column(String(20), default="standard")  # compact / standard / spacious
+    style_mode = Column(String(20), default="grid")  # grid / lined / blank
+    show_error_type = Column(Boolean, default=False)
+    estimated_pages = Column(Integer, default=1)
+    warnings = Column(Text, nullable=True)  # JSON 数组，如 '["第 1 题内容较长..."]'
+    student_name = Column(String(50), nullable=False, default="初一同学")
+    status = Column(String(20), default="draft", index=True)  # draft / printed / reviewed
+    created_at = Column(DateTime, default=datetime.now, index=True)

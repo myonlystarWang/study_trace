@@ -1,0 +1,183 @@
+/* ==========================================================================
+   A4 周末重练卷专业印刷排版规范 (print.css)
+   ========================================================================== */
+
+/* 1. 标准 A4 页面设置与页码计数器 */
+@page {
+  size: A4 portrait;
+  margin: 18mm;
+  @bottom-center {
+    content: "第 " counter(page) " 页 / 共 " counter(pages) " 页";
+    font-size: 8pt;
+    color: #666666;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+}
+
+/* 2. 屏幕预览模式规则 */
+@media screen {
+  .app-container--wide {
+    max-width: none !important;
+    background-color: #e2e8f0 !important;
+  }
+
+  .app-container--wide .van-tabbar,
+  .app-container--wide .van-tabbar-placeholder {
+    display: none !important;
+  }
+
+  .paper-preview-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 24px 12px 60px 12px;
+    background-color: #f1f5f9;
+    min-height: calc(100vh - 56px);
+    display: flex;
+    justify-content: center;
+  }
+
+  .paper-page-frame {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 18mm;
+    box-sizing: border-box;
+    margin: 0 auto;
+    background: #ffffff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border-radius: 2px;
+  }
+
+  .paper-page-sheet {
+    width: 100%;
+    display: block;
+  }
+}
+
+/* 3. 打印输出模式规则 (@media print) */
+@media print {
+  /* 彻底隐藏全局与页面非打印 UI */
+  .no-print,
+  .van-tabbar,
+  .van-tabbar-placeholder,
+  .paper-toolbar,
+  .page-break-btn,
+  .review-action-bar,
+  .van-dialog,
+  .van-overlay {
+    display: none !important;
+  }
+
+  /* 剥离视口高度与移动端限制，防止产生多余空白页 */
+  html,
+  body,
+  #app,
+  .app-container {
+    min-height: 0 !important;
+    height: auto !important;
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+  }
+
+  /* 剥离屏幕预览外框与内边距，完全适配 @page 的 18mm 内容区 */
+  .paper-preview-scroll {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .paper-page-frame {
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+  }
+
+  .paper-page-sheet {
+    width: 100% !important;
+    display: block !important;
+  }
+}
+
+/* 4. 题目容器与父级防截断保证 */
+.paper-body,
+.paper-question-list,
+.van-cell-group,
+.paper-page-sheet,
+.paper-page-frame {
+  display: block !important;
+}
+
+.paper-question-item {
+  display: block !important;
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+  margin-bottom: 22px;
+  position: relative;
+}
+
+/* 超长题目降级为自然跨页 */
+.paper-question-item.is-oversized {
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+}
+
+/* 手动分页类 */
+.manual-page-break {
+  break-before: page !important;
+  page-break-before: page !important;
+}
+
+/* 5. 答题留白区域与底纹样式 */
+.paper-answer-area {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 10px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 4px;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+/* 方格底纹 (8mm x 8mm) */
+.paper-answer-area--grid {
+  background-size: 8mm 8mm;
+  background-image:
+    linear-gradient(to right, #f1f5f9 1px, transparent 1px),
+    linear-gradient(to bottom, #f1f5f9 1px, transparent 1px);
+  background-color: #ffffff;
+}
+
+/* 经典横线底纹 (8mm 行距) */
+.paper-answer-area--lined {
+  background-size: 100% 8mm;
+  background-image: linear-gradient(to bottom, #f1f5f9 1px, transparent 1px);
+  background-color: #ffffff;
+}
+
+/* 纯白底纹 */
+.paper-answer-area--blank {
+  background: #ffffff;
+}
+
+/* 6. 题目插图自适应约束 */
+.paper-question-img-wrap {
+  margin: 10px 0;
+  text-align: center;
+  max-height: 55mm;
+  overflow: hidden;
+}
+
+.paper-question-img {
+  max-width: 100%;
+  max-height: 55mm;
+  object-fit: contain;
+  border-radius: 4px;
+}

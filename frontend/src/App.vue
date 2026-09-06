@@ -1,5 +1,5 @@
 <template>
-  <div class="app-container">
+  <div class="app-container" :class="{ 'app-container--wide': $route.meta?.paperMode }">
     <router-view />
 
     <!-- 孩子专注模式底部 Tabbar：彻底移除家长入口，仅保留作业与错题 -->

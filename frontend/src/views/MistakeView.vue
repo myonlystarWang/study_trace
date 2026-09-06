@@ -1,15 +1,22 @@
 <template>
   <div class="mistake-view">
-    <!-- 顶部主标签页切换 -->
-    <van-tabs v-model:active="activeTab" color="#2563eb" line-width="40px" @change="onTabChange">
-      <van-tab title="今日复习" name="review">
-        <template #title>
-          <span>今日待复习</span>
-          <van-badge v-if="reviewQueueCount > 0" :content="reviewQueueCount" />
-        </template>
-      </van-tab>
-      <van-tab title="错题总库" name="all"></van-tab>
-    </van-tabs>
+    <!-- 顶部主标签页切换与周末组卷快捷入口 -->
+    <div class="mistake-header-bar">
+      <van-tabs v-model:active="activeTab" color="#2563eb" line-width="40px" @change="onTabChange" class="mistake-tabs">
+        <van-tab title="今日复习" name="review">
+          <template #title>
+            <span>今日待复习</span>
+            <van-badge v-if="reviewQueueCount > 0" :content="reviewQueueCount" />
+          </template>
+        </van-tab>
+        <van-tab title="错题总库" name="all"></van-tab>
+      </van-tabs>
+      <div class="paper-quick-btn" @click="$router.push('/paper')">
+        <van-icon name="notes-o" />
+        <span>周末组卷</span>
+      </div>
+    </div>
+
 
     <!-- 学科与筛选过滤器 -->
     <div class="filter-section">
@@ -428,7 +435,43 @@ onMounted(async () => {
   min-height: 100vh;
 }
 
+.mistake-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 2px 10px 2px 2px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.mistake-tabs {
+  flex: 1;
+}
+
+.paper-quick-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #eff6ff;
+  color: #2563eb;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #bfdbfe;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.paper-quick-btn:active {
+  background: #dbeafe;
+  transform: scale(0.97);
+}
+
 .filter-section {
+
   margin: 0.75rem 0;
 }
 

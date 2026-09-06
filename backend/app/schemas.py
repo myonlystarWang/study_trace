@@ -183,3 +183,93 @@ class MonthlyCalendarOut(BaseModel):
     month: str  # YYYY-MM
     days: List[CalendarDayStatus]
 
+
+# M4 A4 周末重练卷契约
+class PaperCandidateOut(BaseModel):
+    id: int
+    subject_id: int
+    subject_name: str
+    extracted_text: Optional[str] = None
+    original_image_path: Optional[str] = None
+    thumbnail_path: Optional[str] = None
+    error_type: Optional[str] = None
+    mastery_status: str
+    review_count: int
+    next_review_date: Optional[date] = None
+    created_at: datetime
+    is_this_week: bool = False
+    is_ebbinghaus: bool = False
+    is_unmastered: bool = False
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaperComposeIn(BaseModel):
+    mistake_ids: List[int]
+    title: str = "初一错题周末重练卷"
+    subtitle: Optional[str] = "满分: 100分 · 建议用时: 45分钟"
+    sort_by: str = "subject"  # subject / order / random
+    space_level: str = "standard"  # compact / standard / spacious
+    style_mode: str = "grid"  # grid / lined / blank
+    show_error_type: bool = False
+
+
+class PaperQuestionOut(BaseModel):
+    id: int  # mistake_id
+    order_num: int
+    subject_id: int
+    subject_name: str
+    extracted_text: Optional[str] = None
+    original_image_path: Optional[str] = None
+    error_type: Optional[str] = None
+    space_mm: int = 45
+    is_oversized: bool = False
+
+
+class PaperComposeOut(BaseModel):
+    paper_id: int
+    title: str
+    subtitle: Optional[str] = None
+    student_name: str
+    sort_by: str = "subject"
+    space_level: str = "standard"
+    style_mode: str = "grid"
+    show_error_type: bool = False
+    questions: List[PaperQuestionOut]
+    total_questions: int
+    estimated_pages: int
+    warnings: List[str] = []
+    status: str = "draft"
+    created_at: datetime
+
+
+class PaperBatchReviewItem(BaseModel):
+    mistake_id: int
+    result: str  # remembered / forgotten
+
+
+class PaperBatchReviewIn(BaseModel):
+    reviews: List[PaperBatchReviewItem]
+
+
+class PaperBatchReviewFailedItem(BaseModel):
+    mistake_id: int
+    reason: str
+
+
+class PaperBatchReviewOut(BaseModel):
+    paper_id: int
+    success: List[int]
+    failed: List[PaperBatchReviewFailedItem] = []
+    message: str
+
+
+class PaperHistoryOut(BaseModel):
+    id: int
+    title: str
+    subtitle: Optional[str] = None
+    student_name: str
+    total_questions: int
+    estimated_pages: int
+    status: str
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
