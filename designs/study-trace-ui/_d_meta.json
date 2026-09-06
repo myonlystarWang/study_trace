@@ -1,0 +1,19 @@
+{
+  "type": "design",
+  "designSystems": [],
+  "primaryDesignSystem": null,
+  "assets": {
+    "StudyTrace UI 统一设计语言 Demo": {
+      "versions": [
+        {
+          "path": "StudyTrace-UI-Demo.html",
+          "createdAt": "2026-09-06T08:13:22.895Z",
+          "status": "needs-review",
+          "subtitle": "作业打卡 + 学情成绩 两屏样板 · 零 emoji · Icon Badge 体系"
+        }
+      ]
+    }
+  },
+  "createdAt": "2026-09-06T08:13:22.896Z",
+  "updatedAt": "2026-09-06T08:13:22.896Z"
+}

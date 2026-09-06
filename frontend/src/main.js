@@ -5,6 +5,8 @@ import router from './router';
 
 // 引入 Vant 样式与全量常用移动端组件
 import 'vant/lib/index.css';
+import './assets/design-tokens.css';
+import './assets/print.css';
 import {
   Button,
   Tabbar,
@@ -30,7 +32,9 @@ import {
   Image as VanImage,
   Uploader,
   Badge,
-  NoticeBar
+  NoticeBar,
+  Switch,
+  SwipeCell
 } from 'vant';
 
 const app = createApp(App);
@@ -63,5 +67,7 @@ app.use(VanImage);
 app.use(Uploader);
 app.use(Badge);
 app.use(NoticeBar);
+app.use(Switch);
+app.use(SwipeCell);
 
 app.mount('#app');

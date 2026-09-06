@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学迹 StudyTrace — UI 设计系统与改版交互原型</title>
+  <link rel="stylesheet" href="https://fastly.jsdelivr.net/npm/vant@4/lib/index.css" />
+  <style>
+    :root {
+      --st-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      --st-bg-page: #f8fafc;
+      --st-bg-card: #ffffff;
+      --st-border: #f1f5f9;
+      --st-border-bold: #e2e8f0;
+      
+      --st-primary: #2563eb;
+      --st-primary-light: #eff6ff;
+      --st-success: #10b981;
+      --st-success-light: #ecfdf5;
+      --st-warning: #f59e0b;
+      --st-warning-light: #fffbeb;
+      --st-danger: #ef4444;
+      --st-danger-light: #fef2f2;
+      --st-purple: #7c3aed;
+      --st-purple-light: #f5f3ff;
+      --st-neutral: #475569;
+      --st-neutral-light: #f1f5f9;
+
+      --st-text-main: #0f172a;
+      --st-text-regular: #334155;
+      --st-text-secondary: #64748b;
+      --st-text-muted: #94a3b8;
+
+      --st-radius-sm: 6px;
+      --st-radius-md: 10px;
+      --st-radius-lg: 14px;
+      --st-radius-xl: 18px;
+      --st-shadow-card: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+      --st-shadow-hover: 0 4px 12px rgba(15, 23, 42, 0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: var(--st-font);
+      background-color: #0b1120;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    /* 桌面工作台布局 */
+    .preview-workspace {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 460px 1fr;
+      gap: 32px;
+      align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+      .preview-workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* 左侧手机模型 */
+    .device-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .device-frame {
+      width: 400px;
+      height: 844px;
+      background: #000;
+      border-radius: 46px;
+      padding: 12px;
+      box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      position: relative;
+    }
+
+    .device-screen {
+      width: 100%;
+      height: 100%;
+      background: var(--st-bg-page);
+      border-radius: 36px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      color: var(--st-text-main);
+    }
+
+    .device-screen::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* 手机顶部灵动岛与状态栏 */
+    .status-bar {
+      height: 44px;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--st-text-main);
+      position: sticky;
+      top: 0;
+      background: rgba(248, 250, 252, 0.9);
+      backdrop-filter: blur(10px);
+      z-index: 50;
+    }
+
+    .island {
+      width: 110px;
+      height: 26px;
+      background: #000;
+      border-radius: 14px;
+      margin: 0 auto;
+    }
+
+    .screen-body {
+      flex: 1;
+      padding: 12px 14px 70px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* 底部导航 Tabbar */
+    .mobile-tabbar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--st-border-bold);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding-bottom: 8px;
+      z-index: 60;
+    }
+
+    .tab-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      font-size: 11px;
+      color: var(--st-text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      width: 70px;
+    }
+
+    .tab-item.active {
+      color: var(--st-primary);
+      font-weight: 600;
+    }
+
+    .tab-item .van-icon {
+      font-size: 20px;
+    }
+
+    /* 核心设计组件规范 */
+    .st-card {
+      background: var(--st-bg-card);
+      border-radius: var(--st-radius-lg);
+      border: 1px solid var(--st-border);
+      box-shadow: var(--st-shadow-card);
+      padding: 14px 16px;
+      transition: all 0.2s ease;
+    }
+
+    .st-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .header-left-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--st-text-main);
+    }
+
+    .header-sub {
+      font-size: 11px;
+      color: var(--st-text-secondary);
+    }
+
+    /* 核心视觉：Icon Badge 矢量微徽章体系 */
+    .st-icon-badge {
+      width: 26px;
+      height: 26px;
+      border-radius: var(--st-radius-sm);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .st-icon-badge--primary { background: var(--st-primary-light); color: var(--st-primary); }
+    .st-icon-badge--success { background: var(--st-success-light); color: var(--st-success); }
+    .st-icon-badge--warning { background: var(--st-warning-light); color: var(--st-warning); }
+    .st-icon-badge--danger  { background: var(--st-danger-light);  color: var(--st-danger);  }
+    .st-icon-badge--purple  { background: var(--st-purple-light);  color: var(--st-purple);  }
+    .st-icon-badge--neutral { background: var(--st-neutral-light); color: var(--st-neutral); }
+
+    /* 药丸 Chips 筛选栏 */
+    .st-chips-scroll {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+    }
+    .st-chips-scroll::-webkit-scrollbar { display: none; }
+
+    .st-chip {
+      white-space: nowrap;
+      padding: 5px 12px;
+      font-size: 12px;
+      border-radius: 20px;
+      border: 1px solid var(--st-border-bold);
+      background: #fff;
+      color: var(--st-text-regular);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .st-chip.active {
+      background: var(--st-primary);
+      border-color: var(--st-primary);
+      color: #fff;
+      font-weight: 500;
+    }
+
+    /* 视图 1：作业打卡卡片 */
+    .hw-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+    }
+
+    .date-selector-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #fff;
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--st-border-bold);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--st-text-main);
+    }
+
+    .streak-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 10px;
+      background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+      border: 1px solid #fed7aa;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #c2410c;
+    }
+
+    .progress-bar-box {
+      background: #fff;
+      border-radius: var(--st-radius-md);
+      padding: 12px 14px;
+      border: 1px solid var(--st-border);
+    }
+
+    .progress-labels {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .progress-track {
+      height: 8px;
+      background: #f1f5f9;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #10b981);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .hw-item-card {
+      background: #fff;
+      border-radius: var(--st-radius-md);
+      padding: 12px 14px;
+      border: 1px solid var(--st-border);
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      transition: all 0.2s ease;
+    }
+
+    .hw-checkbox {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid #cbd5e1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      margin-top: 2px;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+    }
+
+    .hw-checkbox.checked {
+      background: var(--st-success);
+      border-color: var(--st-success);
+      color: #fff;
+    }
+
+    .hw-content-box {
+      flex: 1;
+    }
+
+    .hw-sub-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .sub-pill {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #f1f5f9;
+      color: var(--st-text-regular);
+    }
+
+    .hw-text {
+      font-size: 14px;
+      color: var(--st-text-main);
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+
+    .hw-text.done {
+      text-decoration: line-through;
+      color: var(--st-text-muted);
+    }
+
+    .hw-btn-group {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    /* 视图 2：错题本卡片 */
+    .mistake-card {
+      background: #fff;
+      border-radius: var(--st-radius-lg);
+      border: 1px solid var(--st-border);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .mistake-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tag-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tag-sub {
+      background: var(--st-primary-light);
+      color: var(--st-primary);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    .tag-error {
+      background: #fff7ed;
+      color: #c2410c;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      border: 1px solid #ffedd5;
+    }
+
+    .status-badge {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+    .status-badge.review { background: #fef3c7; color: #b45309; }
+    .status-badge.mastered { background: #ecfdf5; color: #047857; }
+
+    .question-box {
+      font-size: 13px;
+      color: var(--st-text-main);
+      line-height: 1.5;
+      background: #f8fafc;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border-left: 3px solid var(--st-primary);
+    }
+
+    .review-action-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 8px;
+      border-top: 1px dashed var(--st-border-bold);
+    }
+
+    .review-count-info {
+      font-size: 11px;
+      color: var(--st-text-secondary);
+    }
+
+    .action-btn-pair {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* 视图 3：学情成绩卡片 */
+    .summary-hero-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-radius: var(--st-radius-xl);
+      padding: 16px;
+      color: #fff;
+    }
+
+    .hero-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .hero-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .avatar-circle {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #38bdf8;
+    }
+
+    .hero-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 10px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .hero-stat-cell b {
+      font-size: 17px;
+      color: #fff;
+    }
+
+    .hero-stat-cell span {
+      display: block;
+      font-size: 10px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    .alert-card {
+      background: #fef2f2;
+      border-radius: var(--st-radius-md);
+      border-left: 4px solid var(--st-danger);
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .alert-text-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #991b1b;
+      font-weight: 500;
+    }
+
+    /* 右侧设计规范说明面板 */
+    .docs-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .docs-panel {
+      background: #1e293b;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 24px;
+    }
+
+    .docs-panel h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .docs-desc {
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    /* Before vs After 鲜明对比表格 */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .compare-box {
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    .compare-box.old {
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+
+    .compare-box.new {
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .compare-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .compare-box.old .compare-title { color: #f87171; }
+    .compare-box.new .compare-title { color: #34d399; }
+
+    .compare-list {
+      font-size: 12px;
+      line-height: 1.8;
+      color: #cbd5e1;
+      padding-left: 16px;
+    }
+
+    /* 调色盘呈现 */
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .palette-swatch {
+      background: #0f172a;
+      border-radius: 10px;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .color-block {
+      height: 24px;
+      border-radius: 6px;
+    }
+
+    .swatch-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+
+    .swatch-hex {
+      font-size: 10px;
+      color: #64748b;
+      font-family: monospace;
+    }
+
+    /* 快捷切换器 */
+    .tab-switcher-nav {
+      display: flex;
+      gap: 8px;
+      background: #0f172a;
+      padding: 6px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 20px;
+    }
+
+    .switch-btn {
+      flex: 1;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .switch-btn.active {
+      background: var(--st-primary);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+<div class="preview-workspace">
+  <!-- 左侧：真实交互手机界面 -->
+  <div class="device-column">
+    <div class="device-frame">
+      <div class="device-screen">
+        <!-- 顶部灵动岛与电量状态栏 -->
+        <div class="status-bar">
+          <span>9:41</span>
+          <div class="island"></div>
+          <div style="display: flex; gap: 4px; align-items: center;">
+            <van-icon name="phone-o" size="14" />
+            <van-icon name="cluster-o" size="14" />
+          </div>
+        </div>
+
+        <!-- 手机页面动态内容区 -->
+        <div class="screen-body">
+          
+          <!-- TAB 1: 作业打卡页面 -->
+          <div id="view-homework" class="view-content" style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- 顶栏：日期与连击 -->
+            <div class="hw-header-row">
+              <div class="date-selector-pill">
+                <van-icon name="arrow-left" size="12" style="color: #64748b;" />
+                <span>今日作业</span>
+                <van-icon name="calendar-o" size="14" style="color: var(--st-primary);" />
+                <van-icon name="arrow" size="12" style="color: #64748b;" />
+              </div>
+              <div class="streak-badge">
+                <van-icon name="fire" size="13" color="#f97316" />
+                <span>连续 <b>5</b> 天打卡</span>
+              </div>
+            </div>
+
+            <!-- 完成度卡片 -->
+            <div class="progress-bar-box">
+              <div class="progress-labels">
+                <span style="font-weight: 600; color: #1e293b;">完成进度 (2/4 项)</span>
+                <span style="font-weight: 700; color: #10b981;">50%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" style="width: 50%;"></div>
+              </div>
+            </div>
+
+            <!-- 学科筛选 Chips -->
+            <div class="st-chips-scroll">
+              <div class="st-chip active">全部 (4)</div>
+              <div class="st-chip">数学 (1)</div>
+              <div class="st-chip">英语 (1)</div>
+              <div class="st-chip">语文 (1)</div>
+              <div class="st-chip">地理 (1)</div>
+            </div>
+
+            <!-- 作业清单卡片 -->
+            <div class="hw-item-card">
+              <div class="hw-checkbox checked">
+                <van-icon name="success" size="12" />
+              </div>
+              <div class="hw-content-box">
+                <div class="hw-sub-row">
+                  <span class="sub-pill">数学</span>
+                  <span style="font-size: 11px; color: #10b981; font-weight: 500;">已完成</span>
+                </div>
+                <div class="hw-text done">全品作业本 P45 第 3~8 题（压轴几何反证法）</div>
+                <div class="hw-btn-group">
+                  <van-button size="mini" plain type="primary" icon="plus">转错题</van-button>
+                  <van-button size="mini" plain type="default">删除</van-button>
+                </div>
+              </div>
+            </div>
+
+            <div class="hw-item-card">
+              <div class="hw-checkbox"></div>
+              <div class="hw-content-box">
+                <div class="hw-sub-row">
+                  <span class="sub-pill">英语</span>
+                  <span style="font-size: 11px; color: #94a3b8;">待完成</span>
+                </div>
+                <div class="hw-text">Unit 3 核心词组听写背诵 + 课文跟读 15 分钟</div>
+                <div class="hw-btn-group">
+                  <van-button size="mini" plain type="primary" icon="plus">转错题</van-button>
+                  <van-button size="mini" plain type="default">删除</van-button>
+                </div>
+              </div>
+            </div>
+
+            <div class="hw-item-card">
+              <div class="hw-checkbox"></div>
+              <div class="hw-content-box">
+                <div class="hw-sub-row">
+                  <span class="sub-pill">地理</span>
+                  <span style="font-size: 11px; color: #94a3b8;">待完成</span>
+                </div>
+                <div class="hw-text">经纬网半球定位专项练习卷 2 张</div>
+                <div class="hw-btn-group">
+                  <van-button size="mini" plain type="primary" icon="plus">转错题</van-button>
+                  <van-button size="mini" plain type="default">删除</van-button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: 错题本页面 (隐藏/切换) -->
+          <div id="view-mistakes" class="view-content" style="display: none; flex-direction: column; gap: 12px;">
+            <div class="st-section-header">
+              <div class="header-left-group">
+                <span class="st-icon-badge st-icon-badge--primary"><van-icon name="records-o" /></span>
+                <span class="header-title">今日推荐复习 (3题)</span>
+              </div>
+              <van-button size="mini" plain type="primary" icon="notes-o">A4组卷</van-button>
+            </div>
+
+            <!-- 学科过滤器 -->
+            <div class="st-chips-scroll">
+              <div class="st-chip active">全部</div>
+              <div class="st-chip">数学</div>
+              <div class="st-chip">英语</div>
+              <div class="st-chip">地理</div>
+            </div>
+
+            <!-- 错题卡片 -->
+            <div class="mistake-card">
+              <div class="mistake-meta-row">
+                <div class="tag-group">
+                  <span class="tag-sub">数学</span>
+                  <span class="tag-error">概念模糊</span>
+                </div>
+                <span class="status-badge review">待复习</span>
+              </div>
+              <div class="question-box">
+                在直角坐标系中，若点 P(a, b) 在第二象限，则关于原点对称的点 Q 坐标及象限判定？
+              </div>
+              <div class="review-action-row">
+                <span class="review-count-info">已复习 2 次 · 下次今天</span>
+                <div class="action-btn-pair">
+                  <van-button size="small" plain type="danger" icon="cross">又忘了</van-button>
+                  <van-button size="small" type="success" icon="passed">掌握啦</van-button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mistake-card">
+              <div class="mistake-meta-row">
+                <div class="tag-group">
+                  <span class="tag-sub">地理</span>
+                  <span class="tag-error">计算错误</span>
+                </div>
+                <span class="status-badge review">待复习</span>
+              </div>
+              <div class="question-box">
+                若甲地（120°E，40°N）正午太阳高度角为 50°，求太阳直射点纬度？
+              </div>
+              <div class="review-action-row">
+                <span class="review-count-info">已复习 1 次 · 下次明天</span>
+                <div class="action-btn-pair">
+                  <van-button size="small" plain type="danger" icon="cross">又忘了</van-button>
+                  <van-button size="small" type="success" icon="passed">掌握啦</van-button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: 学情成绩页面 (隐藏/切换) -->
+          <div id="view-scores" class="view-content" style="display: none; flex-direction: column; gap: 12px;">
+            <div class="summary-hero-card">
+              <div class="hero-top-row">
+                <div class="hero-user">
+                  <div class="avatar-circle"><van-icon name="award-o" /></div>
+                  <div>
+                    <div style="font-size: 15px; font-weight: 600;">初一学情台账</div>
+                    <div style="font-size: 11px; color: #94a3b8;">7 科均衡跟踪 · 累计 4 次考试</div>
+                  </div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 10px; color: #94a3b8;">最新期中总分</div>
+                  <div style="font-size: 17px; font-weight: 700; color: #38bdf8;">697 <small style="font-size: 11px; color: #94a3b8;">/ 760</small></div>
+                </div>
+              </div>
+              <div class="hero-stats-grid">
+                <div class="hero-stat-cell">
+                  <b>4</b>
+                  <span>累计考试</span>
+                </div>
+                <div class="hero-stat-cell">
+                  <b style="color: #f87171;">1</b>
+                  <span>薄弱预警</span>
+                </div>
+                <div class="hero-stat-cell">
+                  <b style="color: #34d399;">91.7%</b>
+                  <span>满分率</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 薄弱学科诊断条 -->
+            <div class="alert-card">
+              <div class="alert-text-left">
+                <span class="st-icon-badge st-icon-badge--danger"><van-icon name="warning" /></span>
+                <div>
+                  <div style="font-weight: 600; color: #991b1b;">地理需重点关注</div>
+                  <div style="font-size: 11px; color: #b91c1c;">期中满分率 58% (不及格) 且错题堆积 4 道</div>
+                </div>
+              </div>
+              <van-icon name="arrow" size="14" color="#991b1b" />
+            </div>
+
+            <!-- 走势折线图演示 -->
+            <div class="st-card">
+              <div class="st-section-header">
+                <div class="header-left-group">
+                  <span class="st-icon-badge st-icon-badge--primary"><van-icon name="chart-trending-o" /></span>
+                  <span class="header-title">成绩走势分析</span>
+                </div>
+                <span class="header-sub">全科总分满分率</span>
+              </div>
+              <div class="st-chips-scroll" style="margin-bottom: 12px;">
+                <div class="st-chip active">全科总分</div>
+                <div class="st-chip">数学</div>
+                <div class="st-chip">语文</div>
+                <div class="st-chip">英语</div>
+              </div>
+              <!-- 示意 SVG 走势曲线 -->
+              <svg viewBox="0 0 320 120" style="width: 100%; height: 120px; overflow: visible;">
+                <defs>
+                  <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#2563eb" stop-opacity="0.3" />
+                    <stop offset="100%" stop-color="#2563eb" stop-opacity="0" />
+                  </linearGradient>
+                </defs>
+                <path d="M 20 60 Q 90 20, 160 30 T 300 15 L 300 110 L 20 110 Z" fill="url(#grad)" />
+                <path d="M 20 60 Q 90 20, 160 30 T 300 15" fill="none" stroke="#2563eb" stroke-width="3" />
+                <circle cx="20" cy="60" r="4" fill="#2563eb" />
+                <circle cx="160" cy="30" r="4" fill="#2563eb" />
+                <circle cx="300" cy="15" r="4" fill="#2563eb" />
+                <text x="20" y="50" font-size="10" fill="#64748b" text-anchor="middle">87.9%</text>
+                <text x="160" y="20" font-size="10" fill="#64748b" text-anchor="middle">91.7%</text>
+                <text x="300" y="8" font-size="10" fill="#2563eb" font-weight="bold" text-anchor="middle">98.3%</text>
+              </svg>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 手机底部 Tabbar -->
+        <div class="mobile-tabbar">
+          <div class="tab-item active" onclick="switchTab('homework')">
+            <van-icon name="passed" />
+            <span>作业打卡</span>
+          </div>
+          <div class="tab-item" onclick="switchTab('mistakes')">
+            <van-icon name="records-o" />
+            <span>错题本</span>
+          </div>
+          <div class="tab-item" onclick="switchTab('scores')">
+            <van-icon name="chart-trending-o" />
+            <span>学情成绩</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右侧：设计系统规范与重构对比文档 -->
+  <div class="docs-column">
+    <div class="docs-panel">
+      <h2>
+        <span class="st-icon-badge st-icon-badge--primary"><van-icon name="brush-o" /></span>
+        前端视觉去 Emoji 统一设计体系 (Design Tokens)
+      </h2>
+      <p class="docs-desc">
+        遵照 <code>baoyu-design</code> 原则，全站消灭随意散落的 OS 原生字符 Emoji，建立起基于 Vant 4 矢量图标库的 <b>Icon Badge</b> 微徽章体系与层次分明的语义化色卡。点击左侧手机底部 Tabbar 可实时体验流畅交互。
+      </p>
+
+      <!-- Before vs After 对比 -->
+      <div class="compare-grid">
+        <div class="compare-box old">
+          <div class="compare-title">
+            <van-icon name="cross" /> 旧版视觉缺陷（草稿感）
+          </div>
+          <ul class="compare-list">
+            <li>随意堆砌字符 Emoji（📅, 🔒, 🎓, ⚠️, 📈, 🕸️, 📋）</li>
+            <li>不同操作系统/设备显示粗细色彩严重失真</li>
+            <li>各页面卡片内边距、圆角与阴影杂乱不一</li>
+            <li>手写原生按钮与 Vant 组件混杂，缺乏统一规范</li>
+          </ul>
+        </div>
+        <div class="compare-box new">
+          <div class="compare-title">
+            <van-icon name="success" /> 新版统一设计标准（产品级）
+          </div>
+          <ul class="compare-list">
+            <li>100% 替换为带浅色背衬的微徽章 <code>st-icon-badge</code></li>
+            <li>统一使用 <code>design-tokens.css</code> 全局语义变量</li>
+            <li>卡片统一 14px 优雅小圆角与 1px 极细分界线</li>
+            <li>作业打卡、错题复习、成绩走势全链路排版一致</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 语义化色卡与微徽章展示 -->
+      <h3 style="font-size: 14px; color: #f8fafc; margin-bottom: 8px;">🎨 统一语义色彩令牌 (Semantic Color Tokens)</h3>
+      <div class="palette-grid">
+        <div class="palette-swatch">
+          <div class="color-block" style="background: #2563eb;"></div>
+          <span class="swatch-name">Primary 品牌蓝</span>
+          <span class="swatch-hex">#2563eb</span>
+        </div>
+        <div class="palette-swatch">
+          <div class="color-block" style="background: #10b981;"></div>
+          <span class="swatch-name">Success 达成绿</span>
+          <span class="swatch-hex">#10b981</span>
+        </div>
+        <div class="palette-swatch">
+          <div class="color-block" style="background: #f59e0b;"></div>
+          <span class="swatch-name">Warning 待复习橙</span>
+          <span class="swatch-hex">#f59e0b</span>
+        </div>
+        <div class="palette-swatch">
+          <div class="color-block" style="background: #ef4444;"></div>
+          <span class="swatch-name">Danger 薄弱红</span>
+          <span class="swatch-hex">#ef4444</span>
+        </div>
+        <div class="palette-swatch">
+          <div class="color-block" style="background: #7c3aed;"></div>
+          <span class="swatch-name">Purple 艾宾浩斯紫</span>
+          <span class="swatch-hex">#7c3aed</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+        <h3 style="font-size: 14px; color: #f8fafc; margin-bottom: 8px;">🚀 快速切换预览左侧视图</h3>
+        <div class="tab-switcher-nav">
+          <button class="switch-btn active" id="btn-hw" onclick="switchTab('homework')">1. 作业打卡流</button>
+          <button class="switch-btn" id="btn-mistakes" onclick="switchTab('mistakes')">2. 错题复习流</button>
+          <button class="switch-btn" id="btn-scores" onclick="switchTab('scores')">3. 学情成绩流</button>
+        </div>
+        <p style="font-size: 12px; color: #64748b;">
+          可在本地浏览器中直接双击打开 <code>designs/ui-preview.html</code> 查看此交互原型，或者在服务运行时访问 <code>/ui-preview.html</code>。
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://fastly.jsdelivr.net/npm/vant@4/lib/vant.min.js"></script>
+<script>
+  function switchTab(tabKey) {
+    document.querySelectorAll('.view-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.switch-btn').forEach(el => el.classList.remove('active'));
+
+    if (tabKey === 'homework') {
+      document.getElementById('view-homework').style.display = 'flex';
+      document.querySelectorAll('.tab-item')[0].classList.add('active');
+      document.getElementById('btn-hw').classList.add('active');
+    } else if (tabKey === 'mistakes') {
+      document.getElementById('view-mistakes').style.display = 'flex';
+      document.querySelectorAll('.tab-item')[1].classList.add('active');
+      document.getElementById('btn-mistakes').classList.add('active');
+    } else if (tabKey === 'scores') {
+      document.getElementById('view-scores').style.display = 'flex';
+      document.querySelectorAll('.tab-item')[2].classList.add('active');
+      document.getElementById('btn-scores').classList.add('active');
+    }
+  }
+</script>
+
+</body>
+</html>

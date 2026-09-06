@@ -5,6 +5,7 @@ import SettingsView from '../views/SettingsView.vue';
 import PaperCenterView from '../views/PaperCenterView.vue';
 import PaperPrintView from '../views/PaperPrintView.vue';
 import ScoreView from '../views/ScoreView.vue';
+import DesignPreviewView from '../views/DesignPreviewView.vue';
 
 const routes = [
   {
@@ -45,6 +46,14 @@ const routes = [
     name: 'settings',
     component: SettingsView
   },
+  {
+    path: '/preview',
+    name: 'design-preview',
+    component: DesignPreviewView,
+    meta: {
+      hideTabbar: true
+    }
+  }
 ];
 
 

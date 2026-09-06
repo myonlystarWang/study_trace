@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学迹 StudyTrace — UI 统一设计语言 Demo（作业打卡 / 学情成绩）</title>
+<style>
+/* ============================================================
+   Design Tokens — 对齐 doc/UI Polish plan.md
+   补充：plan 中 ScoreView 雷达用到 st-icon-badge--info 但未定义，
+   此处新增 --st-info（sky），解决该缺口。
+   ============================================================ */
+:root{
+  --st-font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Noto Sans SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+
+  --st-bg-page:#f8fafc;
+  --st-bg-card:#ffffff;
+  --st-border:#f1f5f9;
+  --st-border-bold:#e2e8f0;
+
+  --st-primary:#2563eb;   --st-primary-light:#eff6ff;
+  --st-success:#10b981;   --st-success-light:#ecfdf5;
+  --st-warning:#f59e0b;   --st-warning-light:#fffbeb;
+  --st-danger:#ef4444;    --st-danger-light:#fef2f2;
+  --st-purple:#7c3aed;    --st-purple-light:#f5f3ff;
+  --st-info:#0ea5e9;      --st-info-light:#f0f9ff;
+  --st-neutral:#475569;   --st-neutral-light:#f1f5f9;
+
+  --st-text-main:#0f172a;
+  --st-text-regular:#334155;
+  --st-text-secondary:#64748b;
+  --st-text-muted:#94a3b8;
+
+  --st-radius-sm:6px; --st-radius-md:10px; --st-radius-lg:14px; --st-radius-xl:18px;
+  --st-shadow-card:0 1px 3px rgba(15,23,42,.04),0 1px 2px rgba(15,23,42,.02);
+  --st-shadow-hover:0 4px 12px rgba(15,23,42,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{
+  font-family:var(--st-font);
+  background:#0b1120;
+  background-image:radial-gradient(circle at 20% 0%,#16213a 0%,#0b1120 55%);
+  color:#e2e8f0;
+  min-height:100vh;
+  padding:32px 24px 56px;
+  line-height:1.5;
+}
+.canvas{max-width:1180px;margin:0 auto;}
+
+/* ---------- 画布页头 ---------- */
+.canvas-head{margin-bottom:28px;}
+.canvas-head h1{font-size:22px;font-weight:700;color:#f8fafc;letter-spacing:.3px;}
+.canvas-head p{font-size:13.5px;color:#94a3b8;margin-top:8px;max-width:760px;line-height:1.7;}
+.canvas-head .tagline{display:inline-flex;align-items:center;gap:7px;margin-top:14px;padding:5px 12px;border-radius:999px;background:rgba(37,99,235,.14);border:1px solid rgba(37,99,235,.3);color:#93c5fd;font-size:12px;font-weight:500;}
+
+/* ---------- 设备框 ---------- */
+.devices{display:flex;gap:32px;flex-wrap:wrap;justify-content:center;align-items:flex-start;}
+.device-col{display:flex;flex-direction:column;align-items:center;gap:12px;}
+.device-caption{font-size:13px;color:#cbd5e1;font-weight:600;display:flex;align-items:center;gap:8px;}
+.device-caption .dot{width:7px;height:7px;border-radius:50%;background:var(--st-primary);}
+.device-frame{
+  width:390px;height:844px;border-radius:44px;overflow:hidden;position:relative;
+  background:var(--st-bg-page);
+  box-shadow:0 30px 80px rgba(0,0,0,.45),0 0 0 11px #1c2740,0 0 0 12px #2b3a5c;
+  display:flex;flex-direction:column;
+}
+.screen-body{flex:1;overflow-y:auto;overflow-x:hidden;padding:14px 14px 18px;-webkit-overflow-scrolling:touch;}
+.screen-body::-webkit-scrollbar{width:0;}
+
+/* ---------- 通用原子（对应 plan 的 st-* 类） ---------- */
+.st-card{background:var(--st-bg-card);border:1px solid var(--st-border);border-radius:var(--st-radius-lg);padding:14px 16px;box-shadow:var(--st-shadow-card);}
+.st-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.st-section-title{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:600;color:var(--st-text-main);}
+.st-section-sub{font-size:11px;color:var(--st-text-muted);}
+
+.st-icon-badge{width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+.st-icon-badge svg{width:16px;height:16px;}
+.st-icon-badge--sm{width:24px;height:24px;border-radius:7px;}
+.st-icon-badge--sm svg{width:14px;height:14px;}
+.b-primary{background:var(--st-primary-light);color:var(--st-primary);}
+.b-success{background:var(--st-success-light);color:var(--st-success);}
+.b-warning{background:var(--st-warning-light);color:var(--st-warning);}
+.b-danger{background:var(--st-danger-light);color:var(--st-danger);}
+.b-purple{background:var(--st-purple-light);color:var(--st-purple);}
+.b-info{background:var(--st-info-light);color:var(--st-info);}
+.b-neutral{background:var(--st-neutral-light);color:var(--st-neutral);}
+
+.st-chip{padding:5px 13px;border-radius:999px;font-size:12.5px;white-space:nowrap;border:1px solid var(--st-border-bold);background:#fff;color:var(--st-text-secondary);font-weight:500;}
+.st-chip.active{background:var(--st-primary);border-color:var(--st-primary);color:#fff;font-weight:600;}
+.chip-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;scrollbar-width:none;}
+.chip-row::-webkit-scrollbar{display:none;}
+
+.st-status-tag{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:2px 8px;border-radius:var(--st-radius-sm);}
+.t-primary{background:var(--st-primary-light);color:var(--st-primary);}
+.t-success{background:var(--st-success-light);color:var(--st-success);}
+.t-warning{background:var(--st-warning-light);color:#b45309;}
+.t-danger{background:var(--st-danger-light);color:var(--st-danger);}
+.t-neutral{background:var(--st-neutral-light);color:var(--st-neutral);}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;cursor:pointer;font-family:inherit;font-weight:600;border-radius:var(--st-radius-md);transition:.15s;}
+.btn svg{width:15px;height:15px;}
+.btn-primary{background:var(--st-primary);color:#fff;}
+.btn-block{width:100%;height:46px;font-size:15px;border-radius:999px;}
+.mini-btn{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:5px 10px;border-radius:var(--st-radius-sm);border:1px solid transparent;cursor:pointer;font-family:inherit;}
+.mini-btn svg{width:13px;height:13px;}
+.mini-primary{background:var(--st-primary-light);color:var(--st-primary);border-color:#dbeafe;}
+.mini-ghost{background:#fff;color:var(--st-text-muted);border-color:var(--st-border-bold);}
+
+/* ---------- 屏 1：作业打卡 ---------- */
+.hw-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.date-nav{display:flex;align-items:center;gap:8px;}
+.nav-btn{width:32px;height:32px;border-radius:var(--st-radius-md);border:1px solid var(--st-border-bold);background:#fff;color:var(--st-text-secondary);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.nav-btn svg{width:16px;height:16px;}
+.nav-btn:disabled{opacity:.35;}
+.date-text{display:inline-flex;align-items:center;gap:6px;font-size:18px;font-weight:700;color:var(--st-text-main);}
+.date-text svg{width:16px;height:16px;color:var(--st-text-muted);}
+.header-right{display:flex;align-items:center;gap:8px;}
+.streak-badge{display:inline-flex;align-items:center;gap:5px;background:var(--st-warning-light);color:#c2410c;border:1px solid #fde68a;padding:5px 11px;border-radius:999px;font-size:12.5px;font-weight:600;}
+.streak-badge svg{width:14px;height:14px;color:#f97316;}
+.lock-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--st-border-bold);background:#fff;color:var(--st-text-secondary);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.lock-btn svg{width:16px;height:16px;}
+
+.progress-card{margin-bottom:14px;}
+.progress-info{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
+.progress-info .lbl{font-size:13px;color:var(--st-text-secondary);font-weight:500;}
+.progress-info .val{font-size:19px;font-weight:800;color:var(--st-warning);}
+.progress-track{height:9px;border-radius:999px;background:var(--st-neutral-light);overflow:hidden;}
+.progress-fill{height:100%;border-radius:999px;background:var(--st-warning);}
+
+.hw-list{display:flex;flex-direction:column;gap:10px;}
+.hw-card{display:flex;align-items:flex-start;gap:12px;}
+.hw-card.completed{background:#fcfdfe;}
+.check-circle{width:30px;height:30px;border-radius:50%;border:2px solid var(--st-border-bold);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;color:transparent;}
+.check-circle svg{width:16px;height:16px;}
+.check-circle.checked{background:var(--st-success);border-color:var(--st-success);color:#fff;}
+.hw-body{flex:1;min-width:0;}
+.hw-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.hw-time{font-size:11px;color:var(--st-success);font-weight:500;}
+.hw-text{font-size:14.5px;color:var(--st-text-regular);line-height:1.6;margin-bottom:9px;word-break:break-word;}
+.hw-text.strike{text-decoration:line-through;color:var(--st-text-muted);}
+.hw-actions{display:flex;gap:8px;}
+
+.bottom-bar{padding:10px 14px;background:rgba(248,250,252,.92);backdrop-filter:blur(8px);border-top:1px solid var(--st-border);}
+.tabbar{display:flex;background:#fff;border-top:1px solid var(--st-border);}
+.tabbar-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 11px;color:var(--st-text-muted);font-size:11px;font-weight:500;}
+.tabbar-item svg{width:21px;height:21px;}
+.tabbar-item.active{color:var(--st-primary);}
+
+/* ---------- 屏 2：学情成绩 ---------- */
+.score-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.score-nav .title{font-size:18px;font-weight:700;color:var(--st-text-main);}
+.nav-pill{display:inline-flex;align-items:center;gap:5px;background:var(--st-primary);color:#fff;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;border:none;cursor:pointer;}
+.nav-pill svg{width:14px;height:14px;}
+
+.summary-card{margin-bottom:14px;}
+.summary-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.summary-id{display:flex;align-items:center;gap:10px;}
+.summary-id .name{font-size:15px;font-weight:700;color:var(--st-text-main);}
+.summary-id .sub{font-size:11.5px;color:var(--st-text-secondary);margin-top:2px;}
+.latest-box{text-align:right;background:var(--st-primary-light);border:1px solid #dbeafe;border-radius:var(--st-radius-md);padding:7px 12px;}
+.latest-box .k{font-size:10px;color:var(--st-primary);display:block;}
+.latest-box .v{font-size:17px;font-weight:800;color:var(--st-primary);}
+.latest-box .v small{font-size:11px;color:#60a5fa;font-weight:600;}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:var(--st-bg-page);border-radius:var(--st-radius-md);padding:11px 8px;text-align:center;}
+.stat-grid .n{font-size:18px;font-weight:800;color:var(--st-text-main);}
+.stat-grid .n.warn{color:var(--st-danger);}
+.stat-grid .t{font-size:11px;color:var(--st-text-secondary);margin-top:2px;}
+
+.weak-box{border:1px solid #fecaca;background:var(--st-danger-light);border-radius:var(--st-radius-lg);padding:13px 15px;margin-bottom:14px;}
+.weak-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
+.weak-head .l{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;color:#b91c1c;}
+.weak-head .r{font-size:10.5px;color:#dc2626;opacity:.8;}
+.weak-card{background:#fff;border-radius:var(--st-radius-md);padding:10px 12px;margin-bottom:8px;}
+.weak-card:last-child{margin-bottom:0;}
+.weak-card .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.weak-card .sn{font-size:13px;font-weight:700;color:#991b1b;}
+.weak-card .desc{font-size:11.5px;color:#dc2626;line-height:1.55;}
+.weak-card .go{font-size:11px;color:var(--st-primary);font-weight:600;margin-top:6px;display:flex;align-items:center;gap:3px;}
+.weak-card .go svg{width:12px;height:12px;}
+
+.chart-card{margin-bottom:14px;}
+.pill-row{display:flex;gap:7px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;scrollbar-width:none;}
+.pill-row::-webkit-scrollbar{display:none;}
+.pill{padding:4px 11px;border-radius:999px;font-size:11.5px;border:1px solid var(--st-border-bold);background:#fff;color:var(--st-text-secondary);white-space:nowrap;font-weight:500;}
+.pill.active{background:var(--st-primary);border-color:var(--st-primary);color:#fff;font-weight:600;}
+.chart-footnote{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--st-text-secondary);background:var(--st-bg-page);padding:7px 10px;border-radius:var(--st-radius-sm);margin-top:8px;line-height:1.5;}
+.chart-footnote svg{width:13px;height:13px;color:var(--st-text-muted);flex-shrink:0;}
+.absent-banner{display:flex;align-items:center;gap:7px;background:var(--st-warning-light);border:1px solid #fde68a;border-radius:var(--st-radius-sm);padding:8px 11px;font-size:11.5px;color:#b45309;margin-top:10px;line-height:1.5;}
+.absent-banner svg{width:14px;height:14px;flex-shrink:0;color:var(--st-warning);}
+.exam-select{font-size:11px;padding:4px 9px;border-radius:var(--st-radius-sm);border:1px solid var(--st-border-bold);background:#fff;color:var(--st-text-regular);}
+
+.ledger-list{display:flex;flex-direction:column;gap:10px;}
+.exam-card .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
+.exam-meta{display:flex;align-items:center;gap:7px;}
+.exam-type{font-size:11px;font-weight:700;background:var(--st-primary-light);color:var(--st-primary);padding:2px 8px;border-radius:var(--st-radius-sm);}
+.exam-title{font-size:14px;font-weight:600;color:var(--st-text-main);}
+.exam-actions{display:flex;gap:6px;}
+.exam-date{display:flex;align-items:center;gap:9px;font-size:11.5px;color:var(--st-text-secondary);margin-bottom:9px;}
+.exam-date svg{width:13px;height:13px;}
+.rank-tag{background:var(--st-neutral-light);color:var(--st-text-secondary);padding:1px 7px;border-radius:var(--st-radius-sm);font-size:10.5px;}
+.score-banner{display:flex;align-items:center;justify-content:space-between;background:var(--st-bg-page);border-radius:var(--st-radius-md);padding:9px 12px;margin-bottom:9px;}
+.score-banner .l{font-size:12px;color:var(--st-text-secondary);}
+.score-banner .l b{font-size:17px;color:var(--st-text-main);font-weight:800;}
+.score-banner .l small{color:var(--st-text-muted);}
+.sub-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:6px;}
+.sub-chip{display:flex;align-items:center;justify-content:space-between;background:var(--st-bg-page);border-radius:var(--st-radius-sm);padding:5px 8px;font-size:11px;}
+.sub-chip .nm{color:var(--st-text-secondary);}
+.sub-chip .sc{color:var(--st-text-main);font-weight:700;}
+.sub-chip .sc small{color:var(--st-text-muted);font-weight:500;}
+.sub-chip.absent{background:var(--st-danger-light);}
+.sub-chip.absent .sc{color:var(--st-danger);font-weight:600;}
+
+/* ---------- 设计系统图例 ---------- */
+.legend{margin-top:40px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:24px 26px;}
+.legend h2{font-size:15px;color:#f1f5f9;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:9px;}
+.legend .note{font-size:12px;color:#94a3b8;margin-bottom:20px;line-height:1.7;}
+.legend-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;}
+.legend-block h3{font-size:12px;color:#cbd5e1;font-weight:600;margin-bottom:12px;text-transform:uppercase;letter-spacing:.6px;}
+.swatch-row{display:flex;flex-wrap:wrap;gap:9px;}
+.swatch{display:flex;flex-direction:column;align-items:center;gap:6px;width:62px;}
+.swatch .chip{width:46px;height:46px;border-radius:11px;display:flex;align-items:center;justify-content:center;}
+.swatch .chip svg{width:20px;height:20px;}
+.swatch .nm{font-size:10px;color:#94a3b8;}
+.token-line{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:#cbd5e1;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);}
+.token-line code{color:#7dd3fc;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;}
+.radius-demo{display:flex;gap:12px;align-items:flex-end;}
+.radius-demo .box{background:rgba(37,99,235,.18);border:1px solid rgba(37,99,235,.4);display:flex;align-items:center;justify-content:center;font-size:10px;color:#93c5fd;height:46px;width:56px;}
+</style>
+</head>
+<body>
+<!-- ============ 内联 SVG 图标精灵（线性风格，对应 van-icon 的 -o 系列） ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-chev-l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></symbol>
+    <symbol id="i-chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></symbol>
+    <symbol id="i-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4"/></symbol>
+    <symbol id="i-records" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></symbol>
+    <symbol id="i-award" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+    <symbol id="i-bar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="14"/><line x1="12" y1="20" x2="12" y2="8"/><line x1="18" y1="20" x2="18" y2="4"/></symbol>
+  </defs>
+</svg>
+
+<div class="canvas">
+  <div class="canvas-head">
+    <h1>学迹 StudyTrace — UI 统一设计语言 Demo</h1>
+    <p>对齐 <code style="color:#7dd3fc">doc/UI Polish plan.md</code> 的 Design Tokens 与 Icon Badge 体系：全站清除字符 Emoji，改用线性矢量图标 + 语义色块徽章；卡片圆角统一 14px、细边框、克制阴影；去掉深色渐变与左侧色条等"AI 套路"，回到白底扁平的专业教育工具质感。下面两屏取 Emoji 最重的「学情成绩」与「作业打卡」做样板。</p>
+    <span class="tagline"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 0 Emoji · 7 语义色 · Vant 组件底座</span>
+  </div>
+
+  <div class="devices">
+    <!-- ================= 屏 1：作业打卡 ================= -->
+    <div class="device-col">
+      <div class="device-caption"><span class="dot"></span>作业打卡 · HomeworkView</div>
+      <div class="device-frame" data-screen-label="作业打卡">
+        <div class="screen-body">
+          <div class="hw-header">
+            <div class="date-nav">
+              <button class="nav-btn"><svg><use href="#i-chev-l"/></svg></button>
+              <span class="date-text">今日作业 <svg><use href="#i-cal"/></svg></span>
+              <button class="nav-btn" disabled><svg><use href="#i-chev-r"/></svg></button>
+            </div>
+            <div class="header-right">
+              <span class="streak-badge"><svg><use href="#i-flame"/></svg> 连续 <b>12</b> 天</span>
+              <button class="lock-btn"><svg><use href="#i-lock"/></svg></button>
+            </div>
+          </div>
+
+          <div class="st-card progress-card">
+            <div class="progress-info">
+              <span class="lbl">完成进度 (3/5)</span>
+              <span class="val">60%</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:60%"></div></div>
+          </div>
+
+          <div class="chip-row">
+            <span class="st-chip active">全部</span>
+            <span class="st-chip">数学</span>
+            <span class="st-chip">语文</span>
+            <span class="st-chip">英语</span>
+            <span class="st-chip">地理</span>
+            <span class="st-chip">生物</span>
+          </div>
+
+          <div class="hw-list">
+            <div class="st-card hw-card completed">
+              <div class="check-circle checked"><svg><use href="#i-check"/></svg></div>
+              <div class="hw-body">
+                <div class="hw-meta"><span class="st-status-tag t-primary">数学</span><span class="hw-time">已完成</span></div>
+                <div class="hw-text strike">完成课本 P52 练习册 1–8 题，订正昨天的小测错题</div>
+                <div class="hw-actions">
+                  <button class="mini-btn mini-primary"><svg><use href="#i-plus"/></svg> 转错题</button>
+                  <button class="mini-btn mini-ghost"><svg><use href="#i-trash"/></svg> 删除</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="st-card hw-card completed">
+              <div class="check-circle checked"><svg><use href="#i-check"/></svg></div>
+              <div class="hw-body">
+                <div class="hw-meta"><span class="st-status-tag t-primary">英语</span><span class="hw-time">已完成</span></div>
+                <div class="hw-text strike">背诵 Unit 3 单词表，完成配套听力练习两遍</div>
+                <div class="hw-actions">
+                  <button class="mini-btn mini-primary"><svg><use href="#i-plus"/></svg> 转错题</button>
+                  <button class="mini-btn mini-ghost"><svg><use href="#i-trash"/></svg> 删除</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="st-card hw-card">
+              <div class="check-circle"><svg><use href="#i-check"/></svg></div>
+              <div class="hw-body">
+                <div class="hw-meta"><span class="st-status-tag t-primary">语文</span></div>
+                <div class="hw-text">抄写《春》第 4–6 段并背诵，完成课后思考探究一、二</div>
+                <div class="hw-actions">
+                  <button class="mini-btn mini-primary"><svg><use href="#i-plus"/></svg> 转错题</button>
+                  <button class="mini-btn mini-ghost"><svg><use href="#i-trash"/></svg> 删除</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="st-card hw-card">
+              <div class="check-circle"><svg><use href="#i-check"/></svg></div>
+              <div class="hw-body">
+                <div class="hw-meta"><span class="st-status-tag t-primary">地理</span></div>
+                <div class="hw-text">填绘世界海陆分布简图，标注七大洲四大洋名称</div>
+                <div class="hw-actions">
+                  <button class="mini-btn mini-primary"><svg><use href="#i-plus"/></svg> 转错题</button>
+                  <button class="mini-btn mini-ghost"><svg><use href="#i-trash"/></svg> 删除</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-bar">
+          <button class="btn btn-primary btn-block"><svg><use href="#i-plus"/></svg> 录入新作业</button>
+        </div>
+        <div class="tabbar">
+          <div class="tabbar-item active"><svg><use href="#i-home"/></svg> 作业打卡</div>
+          <div class="tabbar-item"><svg><use href="#i-book"/></svg> 错题本</div>
+          <div class="tabbar-item"><svg><use href="#i-bar"/></svg> 学情成绩</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 屏 2：学情成绩 ================= -->
+    <div class="device-col">
+      <div class="device-caption"><span class="dot" style="background:var(--st-info)"></span>学情成绩 · ScoreView</div>
+      <div class="device-frame" data-screen-label="学情成绩">
+        <div class="screen-body">
+          <div class="score-nav">
+            <span class="title">学情成绩分析</span>
+            <button class="nav-pill"><svg><use href="#i-plus"/></svg> 录入成绩</button>
+          </div>
+
+          <!-- 概览卡：去深色渐变，改白底 + 品牌色强调 -->
+          <div class="st-card summary-card">
+            <div class="summary-top">
+              <div class="summary-id">
+                <span class="st-icon-badge b-primary"><svg><use href="#i-award"/></svg></span>
+                <div>
+                  <div class="name">初一学情档案</div>
+                  <div class="sub">已记录 4 场考试 · 7 科均衡追踪</div>
+                </div>
+              </div>
+              <div class="latest-box">
+                <span class="k">最近总分</span>
+                <span class="v">118<small>/120</small></span>
+              </div>
+            </div>
+            <div class="stat-grid">
+              <div><div class="n">4</div><div class="t">累计考试</div></div>
+              <div><div class="n warn">1</div><div class="t">薄弱科目</div></div>
+              <div><div class="n">98%</div><div class="t">最新满分率</div></div>
+            </div>
+          </div>
+
+          <!-- 薄弱诊断：去左侧色条套路，改 icon badge + 浅底 -->
+          <div class="weak-box">
+            <div class="weak-head">
+              <span class="l"><span class="st-icon-badge st-icon-badge--sm b-danger"><svg><use href="#i-warn"/></svg></span> 薄弱学科诊断 (1 门)</span>
+              <span class="r">满分率 &lt; 60% 或顽固错题 ≥ 3</span>
+            </div>
+            <div class="weak-card">
+              <div class="top"><span class="sn">地理</span><span class="st-status-tag t-danger">重点关注</span></div>
+              <div class="desc">近期考试平均满分率仅 58%（不及格）；错题本堆积 4 道未掌握顽固题</div>
+              <div class="go">前往错题本复习 <svg><use href="#i-chev-r"/></svg></div>
+            </div>
+          </div>
+
+          <!-- 走势折线图 -->
+          <div class="st-card chart-card">
+            <div class="st-section-header">
+              <span class="st-section-title"><span class="st-icon-badge b-primary"><svg><use href="#i-trend"/></svg></span> 成绩走势分析</span>
+              <span class="st-section-sub">全科总分 满分率变动</span>
+            </div>
+            <div class="pill-row">
+              <span class="pill active">全科总分</span>
+              <span class="pill">数学</span>
+              <span class="pill">语文</span>
+              <span class="pill">英语</span>
+              <span class="pill">地理</span>
+            </div>
+            <svg viewBox="0 0 330 175" width="100%" height="175" role="img" aria-label="成绩走势折线图">
+              <line x1="34" y1="20" x2="320" y2="20" stroke="#f1f5f9" stroke-width="1"/>
+              <line x1="34" y1="55" x2="320" y2="55" stroke="#f1f5f9" stroke-width="1"/>
+              <line x1="34" y1="90" x2="320" y2="90" stroke="#f1f5f9" stroke-width="1"/>
+              <line x1="34" y1="125" x2="320" y2="125" stroke="#f1f5f9" stroke-width="1"/>
+              <text x="8" y="24" font-size="9" fill="#94a3b8">100</text>
+              <text x="12" y="94" font-size="9" fill="#94a3b8">50</text>
+              <text x="20" y="129" font-size="9" fill="#94a3b8">0</text>
+              <polygon points="55,71 140,55 225,48 310,38 310,125 55,125" fill="rgba(37,99,235,.10)"/>
+              <polyline points="55,71 140,55 225,48 310,38" fill="none" stroke="#2563eb" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="55" cy="71" r="4" fill="#fff" stroke="#2563eb" stroke-width="2.4"/>
+              <circle cx="140" cy="55" r="4" fill="#fff" stroke="#2563eb" stroke-width="2.4"/>
+              <circle cx="225" cy="48" r="4" fill="#fff" stroke="#2563eb" stroke-width="2.4"/>
+              <circle cx="310" cy="38" r="4.5" fill="#2563eb" stroke="#fff" stroke-width="2"/>
+              <text x="55" y="60" font-size="9.5" fill="#334155" text-anchor="middle" font-weight="600">77%</text>
+              <text x="140" y="44" font-size="9.5" fill="#334155" text-anchor="middle" font-weight="600">86%</text>
+              <text x="225" y="37" font-size="9.5" fill="#334155" text-anchor="middle" font-weight="600">90%</text>
+              <text x="310" y="27" font-size="9.5" fill="#2563eb" text-anchor="middle" font-weight="700">98%</text>
+              <text x="55" y="142" font-size="9" fill="#94a3b8" text-anchor="middle">月考一</text>
+              <text x="140" y="142" font-size="9" fill="#94a3b8" text-anchor="middle">期中</text>
+              <text x="225" y="142" font-size="9" fill="#94a3b8" text-anchor="middle">月考二</text>
+              <text x="310" y="142" font-size="9" fill="#94a3b8" text-anchor="middle">周测</text>
+            </svg>
+          </div>
+
+          <!-- 7 科雷达图（地理缺考 → 6 轴动态） -->
+          <div class="st-card chart-card">
+            <div class="st-section-header">
+              <span class="st-section-title"><span class="st-icon-badge b-info"><svg><use href="#i-target"/></svg></span> 7 科均衡学力雷达</span>
+              <select class="exam-select"><option>期中考试 (11-15)</option></select>
+            </div>
+            <svg viewBox="0 0 300 235" width="100%" height="235" role="img" aria-label="学力雷达图">
+              <polygon points="150,30 223.6,72.5 223.6,157.5 150,200 76.4,157.5 76.4,72.5" fill="none" stroke="#e2e8f0" stroke-width="1"/>
+              <polygon points="150,57.5 196.8,84.4 196.8,145.6 150,172.5 103.2,145.6 103.2,84.4" fill="none" stroke="#eef2f7" stroke-width="1"/>
+              <polygon points="150,85 170,96.3 170,133.7 150,145 130,133.7 130,96.3" fill="none" stroke="#eef2f7" stroke-width="1"/>
+              <line x1="150" y1="115" x2="150" y2="30" stroke="#f1f5f9" stroke-width="1"/>
+              <line x1="150" y1="115" x2="223.6" y2="72.5" stroke="#f1f5f9" stroke-width="1"/>
+              <line x1="150" y1="115" x2="223.6" y2="157.5" stroke="#f1f5f9" stroke-width="1"/>
+              <line x1="150" y1="115" x2="150" y2="200" stroke="#f1f5f9" stroke-width="1"/>
+              <line x1="150" y1="115" x2="76.4" y2="157.5" stroke="#f1f5f9" stroke-width="1"/>
+              <line x1="150" y1="115" x2="76.4" y2="72.5" stroke="#f1f5f9" stroke-width="1"/>
+              <polygon points="150,36.8 212.6,78.9 219.9,155.4 150,189.8 83.8,153.25 86.7,78.45" fill="rgba(14,165,233,.22)" stroke="#0ea5e9" stroke-width="2.2" stroke-linejoin="round"/>
+              <circle cx="150" cy="36.8" r="3" fill="#0ea5e9"/><circle cx="212.6" cy="78.9" r="3" fill="#0ea5e9"/>
+              <circle cx="219.9" cy="155.4" r="3" fill="#0ea5e9"/><circle cx="150" cy="189.8" r="3" fill="#0ea5e9"/>
+              <circle cx="83.8" cy="153.25" r="3" fill="#0ea5e9"/><circle cx="86.7" cy="78.45" r="3" fill="#0ea5e9"/>
+              <text x="150" y="20" font-size="10" fill="#334155" text-anchor="middle" font-weight="600">数学</text>
+              <text x="240" y="66" font-size="10" fill="#334155" text-anchor="middle" font-weight="600">语文</text>
+              <text x="240" y="170" font-size="10" fill="#334155" text-anchor="middle" font-weight="600">英语</text>
+              <text x="150" y="216" font-size="10" fill="#334155" text-anchor="middle" font-weight="600">道法</text>
+              <text x="58" y="170" font-size="10" fill="#334155" text-anchor="middle" font-weight="600">历史</text>
+              <text x="58" y="66" font-size="10" fill="#334155" text-anchor="middle" font-weight="600">生物</text>
+            </svg>
+            <div class="absent-banner"><svg><use href="#i-info"/></svg> <span><b>地理</b> 缺考，已按规则排除在雷达轴外，避免图形被拉至 0 点失真</span></div>
+          </div>
+
+          <!-- 历史台账 -->
+          <div class="ledger-list">
+            <div class="st-section-header" style="margin-bottom:10px">
+              <span class="st-section-title"><span class="st-icon-badge b-neutral"><svg><use href="#i-records"/></svg></span> 考试历史台账</span>
+              <span class="st-section-sub">共 4 场</span>
+            </div>
+            <div class="st-card exam-card">
+              <div class="top">
+                <div class="exam-meta"><span class="exam-type">期中</span><span class="exam-title">初一上学期期中考试</span></div>
+                <div class="exam-actions">
+                  <button class="mini-btn mini-primary">编辑</button>
+                  <button class="mini-btn mini-ghost">删除</button>
+                </div>
+              </div>
+              <div class="exam-date"><svg><use href="#i-cal"/></svg> 2024-11-15 <span class="rank-tag">班排 4</span> <span class="rank-tag">校排 18</span></div>
+              <div class="score-banner">
+                <span class="l">实考总分 <b>634</b> <small>/ 760</small></span>
+                <span class="st-status-tag t-primary">满分率 83.4%</span>
+              </div>
+              <div class="sub-chips">
+                <div class="sub-chip"><span class="nm">数学</span><span class="sc">116<small>/120</small></span></div>
+                <div class="sub-chip"><span class="nm">语文</span><span class="sc">106<small>/120</small></span></div>
+                <div class="sub-chip"><span class="nm">英语</span><span class="sc">118<small>/120</small></span></div>
+                <div class="sub-chip"><span class="nm">地理</span><span class="sc">58<small>/100</small></span></div>
+              </div>
+            </div>
+            <div class="st-card exam-card">
+              <div class="top">
+                <div class="exam-meta"><span class="exam-type">月考</span><span class="exam-title">初一上学期第二次月考</span></div>
+                <div class="exam-actions">
+                  <button class="mini-btn mini-primary">编辑</button>
+                  <button class="mini-btn mini-ghost">删除</button>
+                </div>
+              </div>
+              <div class="exam-date"><svg><use href="#i-cal"/></svg> 2024-12-18 <span class="rank-tag">班排 5</span></div>
+              <div class="score-banner">
+                <span class="l">实考总分 <b>614</b> <small>/ 660</small></span>
+                <div style="display:flex;gap:6px"><span class="st-status-tag t-primary">93%</span><span class="st-status-tag t-warning">1 科缺考</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabbar">
+          <div class="tabbar-item"><svg><use href="#i-home"/></svg> 作业打卡</div>
+          <div class="tabbar-item"><svg><use href="#i-book"/></svg> 错题本</div>
+          <div class="tabbar-item active"><svg><use href="#i-bar"/></svg> 学情成绩</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 设计系统图例 ================= -->
+  <div class="legend">
+    <h2><span class="st-icon-badge st-icon-badge--sm b-primary"><svg><use href="#i-target"/></svg></span> 统一设计系统（Design Tokens）</h2>
+    <p class="note">以下令牌将落入 <code style="color:#7dd3fc">frontend/src/assets/design-tokens.css</code>，全站 6 屏共用。Icon Badge 用 24/28px 微圆角色块承载线性图标，替代所有字符 Emoji。</p>
+    <div class="legend-grid">
+      <div class="legend-block">
+        <h3>Icon Badge · 7 语义色</h3>
+        <div class="swatch-row">
+          <div class="swatch"><span class="chip" style="background:var(--st-primary-light);color:var(--st-primary)"><svg><use href="#i-trend"/></svg></span><span class="nm">Primary</span></div>
+          <div class="swatch"><span class="chip" style="background:var(--st-success-light);color:var(--st-success)"><svg><use href="#i-check"/></svg></span><span class="nm">Success</span></div>
+          <div class="swatch"><span class="chip" style="background:var(--st-warning-light);color:var(--st-warning)"><svg><use href="#i-flame"/></svg></span><span class="nm">Warning</span></div>
+          <div class="swatch"><span class="chip" style="background:var(--st-danger-light);color:var(--st-danger)"><svg><use href="#i-warn"/></svg></span><span class="nm">Danger</span></div>
+          <div class="swatch"><span class="chip" style="background:var(--st-purple-light);color:var(--st-purple)"><svg><use href="#i-records"/></svg></span><span class="nm">Purple</span></div>
+          <div class="swatch"><span class="chip" style="background:var(--st-info-light);color:var(--st-info)"><svg><use href="#i-target"/></svg></span><span class="nm">Info*</span></div>
+          <div class="swatch"><span class="chip" style="background:var(--st-neutral-light);color:var(--st-neutral)"><svg><use href="#i-info"/></svg></span><span class="nm">Neutral</span></div>
+        </div>
+        <p style="font-size:10.5px;color:#64748b;margin-top:10px;line-height:1.6">* Info 为本次新增——plan 中 ScoreView 雷达引用了 <code style="color:#7dd3fc">st-icon-badge--info</code> 却未在 6 色清单里定义，这里补齐（sky #0ea5e9，与雷达图配色一致）。</p>
+      </div>
+      <div class="legend-block">
+        <h3>中性色与文字层级</h3>
+        <div class="token-line"><span>页面背景</span><code>--st-bg-page #f8fafc</code></div>
+        <div class="token-line"><span>卡片表面</span><code>--st-bg-card #ffffff</code></div>
+        <div class="token-line"><span>卡片边框</span><code>--st-border #f1f5f9</code></div>
+        <div class="token-line"><span>标题文字</span><code>#0f172a</code></div>
+        <div class="token-line"><span>正文 / 次级 / 弱</span><code>#334155 #64748b #94a3b8</code></div>
+      </div>
+      <div class="legend-block">
+        <h3>圆角 · 阴影 · 间距</h3>
+        <div class="radius-demo" style="margin-bottom:14px">
+          <div class="box" style="border-radius:6px">6px</div>
+          <div class="box" style="border-radius:10px">10px</div>
+          <div class="box" style="border-radius:14px">14px</div>
+        </div>
+        <div class="token-line"><span>卡片圆角</span><code>--st-radius-lg 14px</code></div>
+        <div class="token-line"><span>卡片阴影</span><code>0 1px 3px rgba(15,23,42,.04)</code></div>
+        <div class="token-line"><span>卡片内边距</span><code>14px 16px</code></div>
+        <div class="token-line"><span>列表间距</span><code>gap 10px</code></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
