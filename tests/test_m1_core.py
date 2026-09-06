@@ -246,3 +246,49 @@ def test_api_not_found_returns_404_json_not_html():
     assert res.headers["content-type"].startswith("application/json")
     assert res.json()["detail"] == "API endpoint not found"
 
+
+def test_subject_update_and_delete():
+    """测试学科满分分值修改、核心学科保护与自定义学科增删"""
+    db = SessionLocal()
+    math = db.query(Subject).filter(Subject.name == "数学").first()
+    orig_math_score = math.full_score
+    math_id = math.id
+    db.close()
+
+    # 1. 修改预置核心学科满分（如中考满分调整为 150）
+    res = client.put(f"/api/settings/subjects/{math_id}", json={"full_score": 150.0})
+    assert res.status_code == 200
+    assert res.json()["full_score"] == 150.0
+
+    # 2. 尝试重命名核心学科（应受保护不被篡改）
+    res_rename = client.put(f"/api/settings/subjects/{math_id}", json={"name": "高级数学"})
+    assert res_rename.status_code == 200
+    assert res_rename.json()["name"] == "数学"  # 名称受保护
+
+    # 3. 尝试删除核心学科（应返回 400 保护拦截）
+    res_del_core = client.delete(f"/api/settings/subjects/{math_id}")
+    assert res_del_core.status_code == 400
+    assert "预置系统核心学科不可删除" in res_del_core.json()["detail"]
+
+    # 4. 创建自定义学科
+    res_create = client.post("/api/settings/subjects", json={"name": "物理实验", "full_score": 100.0, "is_default": False})
+    assert res_create.status_code == 200
+    custom_sub = res_create.json()
+    custom_id = custom_sub["id"]
+    assert custom_sub["name"] == "物理实验"
+    assert custom_sub["is_default"] is False
+
+    # 5. 更新自定义学科（允许修改名称与分值）
+    res_up = client.put(f"/api/settings/subjects/{custom_id}", json={"name": "科学探索", "full_score": 70.0})
+    assert res_up.status_code == 200
+    assert res_up.json()["name"] == "科学探索"
+    assert res_up.json()["full_score"] == 70.0
+
+    # 6. 删除自定义学科（成功删除）
+    res_del_custom = client.delete(f"/api/settings/subjects/{custom_id}")
+    assert res_del_custom.status_code == 200
+    assert res_del_custom.json()["status"] == "ok"
+
+    # 7. 恢复数学原本满分
+    client.put(f"/api/settings/subjects/{math_id}", json={"full_score": orig_math_score})
+

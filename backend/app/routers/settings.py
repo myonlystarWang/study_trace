@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from backend.app.database import get_db
 from backend.app.models import Subject
-from backend.app.schemas import SubjectOut, SubjectCreate
+from backend.app.schemas import SubjectOut, SubjectCreate, SubjectUpdate
 from backend.app.auth import verify_pin, change_pin
 
 router = APIRouter(prefix="/api/settings", tags=["系统设置与门禁"])
@@ -46,6 +46,36 @@ def create_subject(sub_in: SubjectCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(sub)
     return sub
+
+
+@router.put("/subjects/{subject_id}", response_model=SubjectOut)
+def update_subject(subject_id: int, sub_in: SubjectUpdate, db: Session = Depends(get_db)):
+    """更新学科信息（支持修改满分分值与自定义学科名称）"""
+    sub = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not sub:
+        raise HTTPException(status_code=404, detail="未找到该学科")
+    if sub_in.full_score is not None:
+        sub.full_score = sub_in.full_score
+    if sub_in.name is not None and not sub.is_default:
+        sub.name = sub_in.name
+    if sub_in.sort_order is not None:
+        sub.sort_order = sub_in.sort_order
+    db.commit()
+    db.refresh(sub)
+    return sub
+
+
+@router.delete("/subjects/{subject_id}")
+def delete_subject(subject_id: int, db: Session = Depends(get_db)):
+    """删除自定义学科（系统预置核心学科禁止删除）"""
+    sub = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not sub:
+        raise HTTPException(status_code=404, detail="未找到该学科")
+    if sub.is_default:
+        raise HTTPException(status_code=400, detail="预置系统核心学科不可删除")
+    db.delete(sub)
+    db.commit()
+    return {"status": "ok", "message": "学科已删除"}
 
 
 @router.post("/verify-pin")

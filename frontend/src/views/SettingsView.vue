@@ -1,6 +1,6 @@
 <template>
   <div class="settings-view">
-    <van-nav-bar title="家长管理视图" left-arrow @click-left="$router.push('/')" fixed placeholder />
+    <van-nav-bar title="家长管理" fixed placeholder />
 
     <div class="settings-container">
       <!-- 门禁口令验证卡片 -->
@@ -36,21 +36,24 @@
       <div class="unlocked-content" v-else>
         <van-notice-bar
           left-icon="info-o"
-          text="已进入家长管理空间，可设置推送提醒、管理学科与备份。"
+          text="已进入家长管理空间，可配置提醒渠道、管理学科分值及全站备份。"
           class="settings-top-notice"
         />
 
-        <!-- 每日提醒与通知渠道配置 -->
+        <!-- 卡片 1: 每日提醒与多渠道推送设置 -->
         <div class="st-card">
           <div class="st-section-header">
             <span class="st-icon-badge st-icon-badge--primary">
               <van-icon name="bell-o" />
             </span>
-            <span>每日提醒与多渠道推送设置</span>
+            <span>推送提醒设置</span>
           </div>
 
           <!-- 时段说明 -->
-          <van-cell title="提醒策略" label="20:10 / 21:10 中途催办 (100%完成自动跳过免打扰) ｜ 21:50 晚间汇总日报 (满卡送达喜报)" />
+          <van-cell
+            title="提醒策略"
+            label="20:10 / 21:10 中途催办 (100%完成自动跳过免打扰) ｜ 21:50 晚间汇总日报 (满卡送达喜报)"
+          />
 
           <!-- 渠道选择 -->
           <van-cell title="启用渠道">
@@ -67,7 +70,7 @@
           <!-- PushPlus 微信推送配置 -->
           <div class="channel-config-box">
             <div class="channel-header">
-              <div style="display: flex; align-items: center; gap: 6px;">
+              <div class="channel-header-left">
                 <span class="st-icon-badge st-icon-badge--success">
                   <van-icon name="chat-o" />
                 </span>
@@ -92,7 +95,7 @@
                 </van-button>
               </template>
             </van-field>
-            <div class="channel-hint" style="padding-left: 0; margin-top: 6px;">
+            <div class="channel-hint">
               <van-notice-bar
                 left-icon="info-o"
                 :scrollable="false"
@@ -105,7 +108,7 @@
           <!-- Server酱 配置 -->
           <div class="channel-config-box">
             <div class="channel-header">
-              <div style="display: flex; align-items: center; gap: 6px;">
+              <div class="channel-header-left">
                 <span class="st-icon-badge st-icon-badge--warning">
                   <van-icon name="bell-o" />
                 </span>
@@ -134,7 +137,7 @@
           <!-- iOS Bark 配置 -->
           <div class="channel-config-box">
             <div class="channel-header">
-              <div style="display: flex; align-items: center; gap: 6px;">
+              <div class="channel-header-left">
                 <span class="st-icon-badge st-icon-badge--purple">
                   <van-icon name="phone-o" />
                 </span>
@@ -163,7 +166,7 @@
           <!-- 群机器人 Webhook -->
           <div class="channel-config-box">
             <div class="channel-header">
-              <div style="display: flex; align-items: center; gap: 6px;">
+              <div class="channel-header-left">
                 <span class="st-icon-badge st-icon-badge--neutral">
                   <van-icon name="cluster-o" />
                 </span>
@@ -215,30 +218,62 @@
           </div>
         </div>
 
-        <!-- 成绩管理与月度学情看板（家长专属深度分析） -->
+        <!-- 卡片 2: 学科与满分管理 -->
+        <div class="st-card">
+          <div class="st-section-header">
+            <span class="st-icon-badge st-icon-badge--purple">
+              <van-icon name="apps-o" />
+            </span>
+            <span>学科与满分管理</span>
+          </div>
+
+          <div class="card-hint-text">
+            点击学科可调整满分分值（如100/120/150分），支持添加或删除自定义学科。
+          </div>
+
+          <div class="subject-cell-list">
+            <van-cell
+              v-for="sub in subjects"
+              :key="sub.id"
+              :title="sub.name"
+              :label="sub.is_default ? '预置核心学科' : '自定义拓展学科'"
+              is-link
+              @click="openEditSubject(sub)"
+            >
+              <template #right-icon>
+                <div class="subject-cell-right">
+                  <span class="subject-score-val">{{ sub.full_score }} 分</span>
+                  <van-icon name="edit" class="subject-edit-icon" />
+                </div>
+              </template>
+            </van-cell>
+          </div>
+
+          <van-cell
+            title="新增自定义学科"
+            icon="plus"
+            is-link
+            class="add-subject-cell"
+            @click="openAddSubject"
+          />
+        </div>
+
+        <!-- 卡片 3: 月度打卡透视 -->
         <div class="st-card">
           <div class="st-section-header">
             <span class="st-icon-badge st-icon-badge--info">
               <van-icon name="chart-trending-o" />
             </span>
-            <span>成绩管理与月度学情看板 (家长专属)</span>
+            <span>月度打卡透视</span>
           </div>
-
-          <van-cell
-            title="成绩管理与录入"
-            is-link
-            icon="records-o"
-            label="录入历次大考小测成绩、查看单科与全科雷达学情"
-            @click="$router.push('/scores')"
-          />
 
           <div class="monthly-analytics-box">
             <div class="monthly-header">
               <div class="monthly-title-box">
-                <span class="st-icon-badge st-icon-badge--primary" style="width: 26px; height: 26px; font-size: 13px;">
+                <span class="st-icon-badge st-icon-badge--primary" style="width: 24px; height: 24px; font-size: 12px;">
                   <van-icon name="calendar-o" />
                 </span>
-                <span class="monthly-title">月度作业打卡深度透视</span>
+                <span class="monthly-title">打卡出勤深度分析</span>
               </div>
               <div class="month-stepper">
                 <van-button size="mini" icon="arrow-left" @click="changeMonth(-1)" />
@@ -283,87 +318,13 @@
           </div>
         </div>
 
-        <!-- A4 周末重练卷与组卷记录（家长空间入口与历史） -->
-        <div class="st-card">
-          <div class="st-section-header">
-            <span class="st-icon-badge st-icon-badge--warning">
-              <van-icon name="notes-o" />
-            </span>
-            <span>A4 周末重练卷 (家长专属管理)</span>
-          </div>
-
-          <van-cell
-            title="前往组卷中心"
-            is-link
-            icon="records-o"
-            label="定制错题排版、选择留白尺寸、生成专属 A4 练习卷"
-            @click="$router.push('/paper')"
-          />
-          <van-cell
-            title="最近组卷历史记录"
-            :value="paperHistoryLoading ? '加载中...' : `${paperHistory.length} 份`"
-            :label="paperHistory.length ? '点击试卷卡片可直接预览、重新打印或批量打卡' : '尚未生成过重练卷'"
-          />
-
-          <div v-if="paperHistory.length > 0" class="history-list-box">
-            <div
-              v-for="item in paperHistory"
-              :key="item.id"
-              class="history-card"
-              @click="$router.push(`/paper/print?id=${item.id}`)"
-            >
-              <div class="history-card-header">
-                <span class="history-card-title">{{ item.title || '初一错题周末重练卷' }}</span>
-                <span v-if="item.status === 'reviewed'" class="st-status-tag st-status-tag--success">已打卡完成</span>
-                <span v-else-if="item.status === 'printed'" class="st-status-tag st-status-tag--warning">已打印·待打卡</span>
-                <span v-else class="st-status-tag st-status-tag--primary">未打印·草稿</span>
-              </div>
-              <div class="history-card-desc">
-                <span>共 {{ item.total_questions }} 题</span>
-                <span class="dot">·</span>
-                <span>预估 {{ item.estimated_pages }} 页</span>
-                <span class="dot">·</span>
-                <span>学生: {{ item.student_name }}</span>
-              </div>
-              <div class="history-card-footer">
-                <span class="history-time">{{ formatTime(item.created_at) }}</span>
-                <div class="history-btns">
-                  <van-button
-                    size="mini"
-                    type="primary"
-                    plain
-                    @click.stop="$router.push(`/paper/print?id=${item.id}`)"
-                  >
-                    查看试卷
-                  </van-button>
-                  <van-button
-                    v-if="item.status !== 'reviewed'"
-                    size="mini"
-                    type="warning"
-                    plain
-                    style="margin-left: 6px;"
-                    @click.stop="$router.push(`/paper/print?id=${item.id}&action=review`)"
-                  >
-                    去打卡
-                  </van-button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div v-else-if="!paperHistoryLoading" class="history-empty-box">
-            <van-empty description="暂无历史组卷记录，去组一张吧" image-size="60">
-              <van-button round size="small" type="primary" @click="$router.push('/paper')">立即组卷</van-button>
-            </van-empty>
-          </div>
-        </div>
-
-        <!-- 数据安全与备份 -->
+        <!-- 卡片 4: 数据安全与一键备份 -->
         <div class="st-card">
           <div class="st-section-header">
             <span class="st-icon-badge st-icon-badge--success">
               <van-icon name="shield-o" />
             </span>
-            <span>数据安全与一键备份</span>
+            <span>数据备份恢复</span>
           </div>
           <van-cell title="全站数据导出备份" is-link label="包含 SQLite 数据库与所有错题高清原图" @click="handleExportBackup" />
           <van-cell title="从备份 Zip 包还原" label="恢复前将自动在本地创建数据快照">
@@ -386,49 +347,84 @@
           </div>
         </div>
 
-        <!-- 学科设置 -->
-        <div class="st-card">
-          <div class="st-section-header">
-            <span class="st-icon-badge st-icon-badge--purple">
-              <van-icon name="apps-o" />
-            </span>
-            <span>预置初一学科管理</span>
-          </div>
-          <van-cell
-            v-for="sub in subjects"
-            :key="sub.id"
-            :title="sub.name"
-            :value="`${sub.full_score} 分`"
-          />
-          <van-cell title="新增自定义学科" is-link @click="showAddSubject = true" />
-        </div>
-
-        <!-- 口令管理与关于系统 -->
+        <!-- 卡片 5: 安全设置与系统关于 -->
         <div class="st-card">
           <div class="st-section-header">
             <span class="st-icon-badge st-icon-badge--neutral">
               <van-icon name="setting-o" />
             </span>
-            <span>安全设置与系统关于</span>
+            <span>安全口令与关于</span>
           </div>
-          <van-cell title="修改管理口令" is-link @click="showChangePin = true" />
-          <van-cell title="关于系统与运行自检" is-link icon="info-o" @click="$router.push('/about')" />
-          <van-cell title="退出管理视图" is-link @click="lockSettings" />
+          <van-cell title="修改管理口令" is-link icon="lock" @click="showChangePin = true" />
+          <van-cell title="系统关于与运行自检" is-link icon="info-o" @click="$router.push('/about')" />
+          <van-cell title="退出管理并锁定口令" is-link icon="cross" @click="lockSettings" />
         </div>
       </div>
     </div>
 
+    <!-- 编辑学科分值与名称弹窗 -->
+    <van-dialog
+      v-model:show="showEditSubject"
+      title="编辑学科"
+      show-cancel-button
+      confirm-button-text="保存分值"
+      @confirm="submitEditSubject"
+    >
+      <div style="padding: 1.25rem 1rem 0.5rem;">
+        <van-field
+          v-model="editSubForm.name"
+          label="学科名称"
+          :readonly="editSubForm.is_default"
+          :placeholder="editSubForm.is_default ? '预置核心学科名称不可修改' : '请输入学科名称'"
+        />
+        <van-field
+          v-model="editSubForm.full_score"
+          type="number"
+          label="满分分值"
+          placeholder="如 100 / 120 / 150"
+        />
+        <div v-if="editSubForm.is_default" class="edit-dialog-tip">
+          注：系统预置核心学科名称受保护不可删除，仅支持根据当地中考标准修改满分分值。
+        </div>
+        <div v-else style="margin-top: 14px; text-align: center;">
+          <van-button
+            type="danger"
+            plain
+            size="small"
+            block
+            round
+            icon="delete-o"
+            @click="handleDeleteSubject"
+          >
+            删除此自定义学科
+          </van-button>
+        </div>
+      </div>
+    </van-dialog>
+
     <!-- 新增学科弹窗 -->
-    <van-dialog v-model:show="showAddSubject" title="新增学科" show-cancel-button @confirm="submitAddSubject">
-      <div style="padding: 1rem;">
-        <van-field v-model="newSub.name" label="学科名称" placeholder="如：科学 / 法语" />
+    <van-dialog
+      v-model:show="showAddSubject"
+      title="新增学科"
+      show-cancel-button
+      confirm-button-text="添加"
+      @confirm="submitAddSubject"
+    >
+      <div style="padding: 1.25rem 1rem 0.5rem;">
+        <van-field v-model="newSub.name" label="学科名称" placeholder="如：科学 / 物理 / 法语" />
         <van-field v-model="newSub.full_score" type="number" label="满分分值" placeholder="100" />
       </div>
     </van-dialog>
 
     <!-- 修改口令弹窗 -->
-    <van-dialog v-model:show="showChangePin" title="修改管理口令" show-cancel-button @confirm="submitChangePin">
-      <div style="padding: 1rem;">
+    <van-dialog
+      v-model:show="showChangePin"
+      title="修改管理口令"
+      show-cancel-button
+      confirm-button-text="确认修改"
+      @confirm="submitChangePin"
+    >
+      <div style="padding: 1.25rem 1rem 0.5rem;">
         <van-field v-model="pinForm.oldPin" type="password" label="原口令" placeholder="请输入原口令" />
         <van-field v-model="pinForm.newPin" type="password" label="新口令" placeholder="请输入新口令 (至少4位)" />
       </div>
@@ -439,7 +435,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { showToast, showConfirmDialog, showDialog } from 'vant';
-import { settingsApi, backupApi, notificationApi, paperApi, examApi } from '../api';
+import { settingsApi, backupApi, notificationApi, examApi } from '../api';
 import echarts from '../utils/echarts';
 
 const isUnlocked = ref(sessionStorage.getItem('parent_unlocked') === 'true');
@@ -447,9 +443,13 @@ const inputPin = ref('');
 const verifying = ref(false);
 const subjects = ref([]);
 
+// 学科编辑与新增
+const showEditSubject = ref(false);
+const editSubForm = ref({ id: null, name: '', full_score: 100, is_default: true });
 const showAddSubject = ref(false);
 const newSub = ref({ name: '', full_score: 100 });
 
+// 口令修改
 const showChangePin = ref(false);
 const pinForm = ref({ oldPin: '', newPin: '' });
 
@@ -489,7 +489,6 @@ const handleVerifyPin = async () => {
     showToast({ message: '解锁成功', icon: 'success' });
     fetchSubjects();
     fetchNotificationConfig();
-    fetchPaperHistory();
     fetchMonthlyAnalytics();
   } catch (e) {
     const msg = e.response?.data?.detail || '口令错误';
@@ -512,7 +511,87 @@ const fetchSubjects = async () => {
     const res = await settingsApi.getSubjects();
     subjects.value = res.data;
   } catch (e) {
-    console.error(e);
+    console.error('获取学科列表失败', e);
+  }
+};
+
+const openEditSubject = (sub) => {
+  editSubForm.value = {
+    id: sub.id,
+    name: sub.name,
+    full_score: sub.full_score,
+    is_default: !!sub.is_default
+  };
+  showEditSubject.value = true;
+};
+
+const submitEditSubject = async () => {
+  if (!editSubForm.value.id) return;
+  const score = parseFloat(editSubForm.value.full_score);
+  if (isNaN(score) || score <= 0) {
+    showToast('请输入有效的满分分值');
+    return;
+  }
+  try {
+    await settingsApi.updateSubject(editSubForm.value.id, {
+      name: editSubForm.value.name.trim(),
+      full_score: score
+    });
+    showToast({ message: '学科满分已更新', icon: 'success' });
+    showEditSubject.value = false;
+    fetchSubjects();
+  } catch (e) {
+    showToast(e.response?.data?.detail || '修改失败');
+  }
+};
+
+const handleDeleteSubject = () => {
+  if (editSubForm.value.is_default) {
+    showToast('系统预置核心学科不可删除');
+    return;
+  }
+  showConfirmDialog({
+    title: '确认删除学科',
+    message: `确定要删除学科“${editSubForm.value.name}”吗？关联的历史记录将予以保留。`
+  }).then(async () => {
+    try {
+      await settingsApi.deleteSubject(editSubForm.value.id);
+      showToast({ message: '学科已删除', icon: 'success' });
+      showEditSubject.value = false;
+      fetchSubjects();
+    } catch (e) {
+      showToast(e.response?.data?.detail || '删除失败');
+    }
+  }).catch(() => {});
+};
+
+const openAddSubject = () => {
+  newSub.value = { name: '', full_score: 100 };
+  showAddSubject.value = true;
+};
+
+const submitAddSubject = async () => {
+  if (!newSub.value.name.trim()) {
+    showToast('请填写学科名称');
+    return;
+  }
+  const score = parseFloat(newSub.value.full_score);
+  if (isNaN(score) || score <= 0) {
+    showToast('请输入有效的满分分值');
+    return;
+  }
+  try {
+    await settingsApi.createSubject({
+      name: newSub.value.name.trim(),
+      full_score: score,
+      sort_order: subjects.value.length + 1
+    });
+    showToast({ message: '学科已添加', icon: 'success' });
+    showAddSubject.value = false;
+    newSub.value = '';
+    fetchSubjects();
+  } catch (e) {
+    showToast(e.response?.data?.detail || '添加失败');
   }
 };
 
@@ -626,25 +705,6 @@ const handleImportBackup = async (fileItem) => {
   });
 };
 
-const submitAddSubject = async () => {
-  if (!newSub.value.name.trim()) {
-    showToast('请填写学科名称');
-    return;
-  }
-  try {
-    await settingsApi.createSubject({
-      name: newSub.value.name.trim(),
-      full_score: parseFloat(newSub.value.full_score) || 100,
-      sort_order: subjects.value.length + 1
-    });
-    showToast('学科已添加');
-    newSub.value.name = '';
-    fetchSubjects();
-  } catch (e) {
-    showToast('添加失败');
-  }
-};
-
 const submitChangePin = async () => {
   if (!pinForm.value.oldPin || !pinForm.value.newPin) {
     showToast('请完整输入口令');
@@ -657,21 +717,6 @@ const submitChangePin = async () => {
     pinForm.value = { oldPin: '', newPin: '' };
   } catch (e) {
     showToast(e.response?.data?.detail || '修改失败');
-  }
-};
-
-const paperHistory = ref([]);
-const paperHistoryLoading = ref(false);
-
-const fetchPaperHistory = async () => {
-  paperHistoryLoading.value = true;
-  try {
-    const res = await paperApi.getHistory({ limit: 20 });
-    paperHistory.value = res.data;
-  } catch (err) {
-    console.error('获取历史组卷失败', err);
-  } finally {
-    paperHistoryLoading.value = false;
   }
 };
 
@@ -814,26 +859,11 @@ const handleSettingsResize = () => {
   if (monthlyMissingChartInstance) monthlyMissingChartInstance.resize();
 };
 
-const formatTime = (isoString) => {
-  if (!isoString) return '';
-  try {
-    const d = new Date(isoString);
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const h = String(d.getHours()).padStart(2, '0');
-    const min = String(d.getMinutes()).padStart(2, '0');
-    return `${m}-${day} ${h}:${min}`;
-  } catch (e) {
-    return isoString;
-  }
-};
-
 onMounted(() => {
   window.addEventListener('resize', handleSettingsResize);
   if (isUnlocked.value) {
     fetchSubjects();
     fetchNotificationConfig();
-    fetchPaperHistory();
     fetchMonthlyAnalytics();
   }
 });
@@ -845,12 +875,11 @@ onUnmounted(() => {
 });
 </script>
 
-
 <style scoped>
 .settings-view {
   min-height: 100vh;
   background-color: var(--st-bg-page, #f8fafc);
-  padding-bottom: 2rem;
+  padding-bottom: 3.5rem;
 }
 
 .settings-container {
@@ -922,6 +951,12 @@ onUnmounted(() => {
   margin-bottom: 6px;
 }
 
+.channel-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .channel-title {
   font-size: 13px;
   font-weight: 600;
@@ -933,78 +968,64 @@ onUnmounted(() => {
   color: var(--st-text-secondary, #64748b);
   line-height: 1.4;
   margin-top: 6px;
-  padding-left: 4px;
 }
 
 .notif-action-row {
   padding: 14px 0 0;
 }
 
-.history-list-box {
-  padding: 8px 0 6px;
-}
-
-.history-card {
-  background: #f8fafc;
-  border: 1px solid var(--st-border, #e2e8f0);
-  border-radius: var(--st-radius-sm, 10px);
-  padding: 12px 14px;
-  margin-bottom: 10px;
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-
-.history-card:last-child {
-  margin-bottom: 0;
-}
-
-.history-card:active {
-  background: #f1f5f9;
-}
-
-.history-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-
-.history-card-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--st-text-primary, #0f172a);
-}
-
-.history-card-desc {
+/* 学科管理卡片样式 */
+.card-hint-text {
   font-size: 12px;
   color: var(--st-text-secondary, #64748b);
-  margin-bottom: 8px;
+  line-height: 1.5;
+  margin-bottom: 10px;
+  padding: 0 4px;
+}
+
+.subject-cell-list {
+  border-radius: var(--st-radius-sm, 8px);
+  overflow: hidden;
+  border: 1px solid var(--st-border, #e2e8f0);
+  margin-bottom: 10px;
+}
+
+.subject-cell-right {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.history-card-desc .dot {
-  color: #cbd5e1;
+.subject-score-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--st-primary, #2563eb);
 }
 
-.history-card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 8px;
-  border-top: 1px dashed var(--st-border, #e2e8f0);
-}
-
-.history-time {
-  font-size: 11px;
+.subject-edit-icon {
+  font-size: 14px;
   color: var(--st-text-muted, #94a3b8);
 }
 
-.history-empty-box {
-  padding: 8px 0 16px;
+.add-subject-cell {
+  background: #f8fafc;
+  border: 1px dashed var(--st-primary-light, #bfdbfe);
+  border-radius: var(--st-radius-sm, 8px);
+  color: var(--st-primary, #2563eb);
+  font-weight: 600;
 }
 
+.edit-dialog-tip {
+  font-size: 11px;
+  color: var(--st-text-secondary, #64748b);
+  background: #f8fafc;
+  border-radius: var(--st-radius-sm, 6px);
+  padding: 8px 10px;
+  margin-top: 10px;
+  line-height: 1.4;
+}
+
+/* 月度透视样式 */
 .monthly-analytics-box {
   padding: 10px 0 4px;
 }

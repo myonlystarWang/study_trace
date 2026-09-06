@@ -31,12 +31,18 @@ class StudentOut(StudentBase):
 class SubjectBase(BaseModel):
     name: str
     full_score: float = 100.0
-    is_default: bool = True
+    is_default: bool = False
     sort_order: int = 0
 
 
 class SubjectCreate(SubjectBase):
     pass
+
+
+class SubjectUpdate(BaseModel):
+    name: Optional[str] = None
+    full_score: Optional[float] = None
+    sort_order: Optional[int] = None
 
 
 class SubjectOut(SubjectBase):
