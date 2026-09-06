@@ -1,109 +1,192 @@
 <template>
   <div class="homework-view">
-    <!-- 顶部日期与导航 -->
-    <div class="header-bar">
-      <div class="date-nav">
-        <button class="nav-btn" @click="changeDate(-1)">❮</button>
-        <span class="date-text" @click="showCalendar = true">
-          {{ isToday ? '今日作业' : currentDate }}
-          <span class="cal-icon" title="打开月历打卡">📅</span>
-        </span>
-        <button class="nav-btn" :disabled="isToday" @click="changeDate(1)">❯</button>
+    <!-- 顶栏：打卡连击 + 日历总览 + 家长入口 -->
+    <div class="top-nav-bar">
+      <div class="streak-badge" v-if="streak > 0">
+        <van-icon name="fire" color="#f97316" size="15" />
+        <span>连续打卡 <b>{{ streak }}</b> 天</span>
       </div>
-      <div class="header-right">
-        <div class="streak-badge" v-if="streak > 0">
-          🔥 连续 <b>{{ streak }}</b> 天
-        </div>
-        <button class="lock-entry-btn" title="家长管理入口" @click="$router.push('/settings')">
-          🔒
+      <div v-else class="streak-badge-idle">
+        <van-icon name="passed" color="#2563eb" size="15" />
+        <span>今日学习打卡</span>
+      </div>
+
+      <div class="header-right-tools">
+        <button class="tool-icon-btn" title="月历打卡总览" @click="showCalendar = true">
+          <van-icon name="calendar-o" size="17" />
+        </button>
+        <button class="tool-icon-btn" title="家长管理入口" @click="$router.push('/settings')">
+          <van-icon name="setting-o" size="17" />
         </button>
       </div>
     </div>
 
-    <!-- 完成度进度条（红黄绿状态） -->
-    <div class="progress-card">
-      <div class="progress-info">
-        <span class="info-title">完成进度 ({{ completedCount }}/{{ totalCount }})</span>
-        <span class="info-rate" :style="{ color: statusColor }">{{ rate }}%</span>
+    <!-- 顶部 7 日横向胶囊日历条 (Week Strip，手势严格隔离) -->
+    <div 
+      class="week-strip-box"
+      @touchstart="handleTouchStart"
+      @touchend="handleTouchEnd"
+    >
+      <div
+        v-for="day in weekDays"
+        :key="day.dateStr"
+        class="week-day-pill"
+        :class="{ active: day.isSelected, today: day.isToday }"
+        @click="selectDay(day.dateStr)"
+      >
+        <span class="day-label">{{ day.label }}</span>
+        <span class="day-number">{{ day.dateNumber }}</span>
+        <span 
+          class="day-dot" 
+          :class="{ completed: day.isSelected ? (rate === 100 && totalCount > 0) : false }"
+        ></span>
       </div>
-      <van-progress
-        :percentage="rate"
-        :color="statusColor"
-        stroke-width="10"
-        :show-pivot="false"
-      />
     </div>
 
-    <!-- 学科快捷标签栏 -->
-    <div class="subject-tabs">
-      <div
-        class="tab-chip"
+    <!-- 今日进度概览卡片 (含 100% 达成微反馈) -->
+    <div class="st-card progress-summary-card">
+      <div class="progress-header">
+        <div class="st-section-header" style="margin-bottom: 0;">
+          <span class="st-icon-badge st-icon-badge--primary">
+            <van-icon name="chart-trending-o" />
+          </span>
+          <span class="section-title">{{ isToday ? '今日' : currentDate }} 作业进度</span>
+        </div>
+        <span class="progress-stat-text">
+          <b>{{ completedCount }}</b> / {{ totalCount }} 已完成
+        </span>
+      </div>
+
+      <div class="progress-bar-wrapper">
+        <van-progress
+          :percentage="rate"
+          :color="rate === 100 && totalCount > 0 ? 'var(--st-success, #10b981)' : 'var(--st-primary, #2563eb)'"
+          :show-pivot="false"
+          stroke-width="8"
+        />
+      </div>
+
+      <!-- 100% 全部完成成就微反馈 -->
+      <transition name="van-fade">
+        <div v-if="rate === 100 && totalCount > 0" class="all-done-banner">
+          <div class="st-icon-badge st-icon-badge--success" style="width: 22px; height: 22px;">
+            <van-icon name="passed" />
+          </div>
+          <span>太棒了！今日全部作业均已如期完成</span>
+        </div>
+      </transition>
+    </div>
+
+    <!-- 学科快捷筛选胶囊栏 (Chips) -->
+    <div class="subject-chips-bar" v-if="subjects.length > 0">
+      <span
+        class="st-chip"
         :class="{ active: selectedSubject === null }"
         @click="selectedSubject = null"
       >
-        全部
-      </div>
-      <div
+        全部 ({{ totalCount }})
+      </span>
+      <span
         v-for="sub in subjects"
         :key="sub.id"
-        class="tab-chip"
+        class="st-chip"
         :class="{ active: selectedSubject === sub.id }"
         @click="selectedSubject = sub.id"
       >
         {{ sub.name }}
-      </div>
+      </span>
     </div>
 
-    <!-- 作业清单 -->
+    <!-- 作业列表区 (左滑抽屉、手势解耦、无 Emoji) -->
     <van-pull-refresh v-model="refreshing" @refresh="fetchHomework">
-      <div class="hw-list" v-if="filteredItems.length > 0">
-        <div
-          v-for="item in filteredItems"
-          :key="item.id"
-          class="hw-card"
-          :class="{ completed: item.is_completed }"
-        >
-          <!-- 大打勾触控区 -->
-          <div class="check-box" @click="toggleComplete(item)">
-            <div class="check-circle" :class="{ checked: item.is_completed }">
-              <span v-if="item.is_completed">✓</span>
-            </div>
-          </div>
+      <div class="homework-list-wrapper" v-if="filteredItems.length > 0">
+        <div class="list-section-header">
+          <span class="list-title">待办作业 ({{ filteredItems.length }} 项)</span>
+          <span class="swipe-hint">
+            <van-icon name="exchange" /> 左滑卡片呼出操作
+          </span>
+        </div>
 
-          <!-- 作业详情 -->
-          <div class="hw-body">
-            <div class="hw-meta">
-              <span class="sub-tag">{{ item.subject_name }}</span>
-              <span class="time-text" v-if="item.completed_at">已完成</span>
+        <div class="homework-cards">
+          <van-swipe-cell
+            v-for="item in filteredItems"
+            :key="item.id"
+            class="hw-swipe-cell"
+          >
+            <!-- 卡片正面：克制扁平、无多余平铺按钮 -->
+            <div
+              class="st-card hw-card-face"
+              :class="{ 'is-done': item.is_completed }"
+              @click="toggleComplete(item)"
+            >
+              <!-- 大号圆形打勾微动效 -->
+              <div
+                class="hw-check-circle"
+                :class="{ checked: item.is_completed, 'st-animate-check': item.justToggled }"
+                @click.stop="toggleComplete(item)"
+              >
+                <van-icon v-if="item.is_completed" name="success" size="14" color="#ffffff" />
+              </div>
+
+              <!-- 标题与学科信息 -->
+              <div class="hw-content">
+                <div class="hw-meta-row">
+                  <span class="st-subject-tag" :class="getSubjectTagClass(item.subject_name)">
+                    {{ item.subject_name }}
+                  </span>
+                  <span class="hw-due-time" v-if="item.completed_at">
+                    <van-icon name="clock-o" /> 已于 {{ item.completed_at.substring(11, 16) }} 打卡
+                  </span>
+                </div>
+                <div class="hw-title" :class="{ strike: item.is_completed }">
+                  {{ item.content }}
+                </div>
+              </div>
+
+              <!-- 状态微指示 -->
+              <div class="hw-status-tag" :class="{ done: item.is_completed }">
+                {{ item.is_completed ? '已打卡' : '待完成' }}
+              </div>
             </div>
-            <div class="hw-text" :class="{ strike: item.is_completed }">
-              {{ item.content }}
-            </div>
-            <div class="hw-actions">
-              <button class="action-btn mistake-btn" @click.stop="handleToMistake(item)">
-                ＋ 记为错题
-              </button>
-              <button class="action-btn del-btn" @click.stop="handleDelete(item)">
-                删除
-              </button>
-            </div>
-          </div>
+
+            <!-- 左滑展开的抽屉操作按钮 (转错题 + 删除) -->
+            <template #right>
+              <div class="swipe-actions-box">
+                <button class="swipe-action-btn btn-mistake" @click.stop="handleToMistake(item)">
+                  <van-icon name="plus" size="16" />
+                  <span>转错题</span>
+                </button>
+                <button class="swipe-action-btn btn-delete" @click.stop="handleDelete(item)">
+                  <van-icon name="delete-o" size="16" />
+                  <span>删除</span>
+                </button>
+              </div>
+            </template>
+          </van-swipe-cell>
         </div>
       </div>
 
-      <div class="empty-state" v-else>
+      <!-- 清爽空状态 -->
+      <div class="empty-box" v-else>
         <van-empty description="今天暂无作业，点击下方添加吧" />
       </div>
     </van-pull-refresh>
 
-    <!-- 底部常驻快捷录入入口 -->
-    <div class="bottom-add-bar">
-      <van-button type="primary" round block icon="plus" @click="showAddModal = true">
+    <!-- 底部常驻磨砂悬浮录入栏 -->
+    <div class="floating-bottom-bar st-frosted-bar">
+      <van-button
+        type="primary"
+        round
+        block
+        icon="plus"
+        class="add-hw-btn"
+        @click="showAddModal = true"
+      >
         录入新作业
       </van-button>
     </div>
 
-    <!-- 录入作业弹窗（支持手动 / 拍照 OCR 批量录入） -->
+    <!-- 录入作业底部半屏抽屉 (支持手动 / 拍照 OCR 识别批量录入) -->
     <QuickAddModal
       v-model:show="showAddModal"
       :subjects="subjects"
@@ -143,20 +226,35 @@ const refreshing = ref(false);
 const showAddModal = ref(false);
 const showCalendar = ref(false);
 
-const handleDateSelect = (dateStr) => {
-  currentDate.value = dateStr;
-  fetchHomework();
-};
-
 const isToday = computed(() => {
   return currentDate.value === new Date().toISOString().split('T')[0];
 });
 
-// 红黄绿完成度颜色映射
-const statusColor = computed(() => {
-  if (rate.value === 100 && totalCount.value > 0) return '#10b981'; // 绿
-  if (rate.value >= 50) return '#f59e0b'; // 黄
-  return '#ef4444'; // 红
+// 计算以当前选中日期为锚点的周历条 (Mon ~ Sun)
+const weekDays = computed(() => {
+  const curr = new Date(currentDate.value);
+  const dayOfWeek = curr.getDay(); // 0 是周日, 1~6 是周一~周六
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(curr);
+  monday.setDate(curr.getDate() + diffToMonday);
+
+  const labels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+  const todayStr = new Date().toISOString().split('T')[0];
+  const list = [];
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const dateStr = d.toISOString().split('T')[0];
+    list.push({
+      dateStr,
+      label: labels[i],
+      dateNumber: d.getDate().toString(),
+      isToday: dateStr === todayStr,
+      isSelected: dateStr === currentDate.value
+    });
+  }
+  return list;
 });
 
 const filteredItems = computed(() => {
@@ -164,10 +262,55 @@ const filteredItems = computed(() => {
   return items.value.filter((i) => i.subject_id === selectedSubject.value);
 });
 
+// 学科标签颜色映射
+const getSubjectTagClass = (name) => {
+  if (!name) return 'st-subject-tag--neutral';
+  switch (name) {
+    case '数学': return 'st-subject-tag--primary';
+    case '英语': return 'st-subject-tag--purple';
+    case '语文': return 'st-subject-tag--success';
+    case '物理':
+    case '化学': return 'st-subject-tag--info';
+    case '生物':
+    case '地理': return 'st-subject-tag--warning';
+    case '历史':
+    case '道德与法治':
+    case '道法': return 'st-subject-tag--danger';
+    default: return 'st-subject-tag--neutral';
+  }
+};
+
+const selectDay = (dateStr) => {
+  currentDate.value = dateStr;
+  fetchHomework();
+};
+
 const changeDate = (days) => {
   const d = new Date(currentDate.value);
   d.setDate(d.getDate() + days);
   currentDate.value = d.toISOString().split('T')[0];
+  fetchHomework();
+};
+
+// 仅在顶部周历条监听左右滑动手势翻日
+let touchStartX = 0;
+const handleTouchStart = (e) => {
+  touchStartX = e.touches[0].clientX;
+};
+
+const handleTouchEnd = (e) => {
+  const diffX = e.changedTouches[0].clientX - touchStartX;
+  if (diffX > 60) {
+    changeDate(-1); // 右滑：前一天
+    showToast({ message: `切换至 ${currentDate.value}`, position: 'top', duration: 800 });
+  } else if (diffX < -60) {
+    changeDate(1); // 左滑：后一天
+    showToast({ message: `切换至 ${currentDate.value}`, position: 'top', duration: 800 });
+  }
+};
+
+const handleDateSelect = (dateStr) => {
+  currentDate.value = dateStr;
   fetchHomework();
 };
 
@@ -198,11 +341,16 @@ const fetchHomework = async () => {
 
 const toggleComplete = async (item) => {
   const targetStatus = !item.is_completed;
+  item.justToggled = true;
+  setTimeout(() => {
+    item.justToggled = false;
+  }, 250);
+
   try {
     await homeworkApi.update(item.id, { is_completed: targetStatus });
     item.is_completed = targetStatus;
     if (targetStatus) {
-      showToast({ message: '太棒了！又完成一项', icon: 'passed' });
+      showToast({ message: '太棒了！又完成一项', icon: 'passed', duration: 1200 });
     }
     fetchHomework();
   } catch (e) {
@@ -226,7 +374,7 @@ const handleDelete = (item) => {
   }).then(async () => {
     try {
       await homeworkApi.delete(item.id);
-      showToast('已删除');
+      showToast({ message: '已删除', position: 'bottom' });
       fetchHomework();
     } catch (e) {
       showToast('删除失败');
@@ -242,267 +390,343 @@ onMounted(async () => {
 
 <style scoped>
 .homework-view {
-  padding: 1rem 1rem 6rem;
-  background: #f8fafc;
   min-height: 100vh;
+  background-color: var(--st-bg-page, #f8fafc);
+  padding: 14px 16px 84px;
 }
 
-.header-bar {
+/* 顶栏信息 */
+.top-nav-bar {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 12px;
 }
 
-.date-nav {
+.streak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #c2410c;
+  background: #fff7ed;
+  padding: 4px 12px;
+  border-radius: var(--st-radius-full, 9999px);
+  border: 1px solid #fed7aa;
+}
+
+.streak-badge-idle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--st-primary, #2563eb);
+  background: var(--st-primary-light, #eff6ff);
+  padding: 4px 12px;
+  border-radius: var(--st-radius-full, 9999px);
+  border: 1px solid rgba(37, 99, 235, 0.15);
+}
+
+.header-right-tools {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
-.nav-btn {
-  border: none;
-  background: white;
+.tool-icon-btn {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  color: #475569;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: 50%;
+  background: var(--st-bg-card, #ffffff);
+  border: 1px solid var(--st-border-bold, #e2e8f0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--st-text-secondary, #64748b);
+  box-shadow: var(--st-shadow-card, 0 1px 3px rgba(15, 23, 42, 0.04));
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.nav-btn:disabled {
-  opacity: 0.3;
+.tool-icon-btn:hover {
+  border-color: var(--st-primary, #2563eb);
+  color: var(--st-primary, #2563eb);
 }
 
-.date-text {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #0f172a;
+/* 顶部 7 日横向胶囊日历条 */
+.week-strip-box {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.week-day-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 2px;
+  background-color: var(--st-bg-card, #ffffff);
+  border: 1px solid var(--st-border, #f1f5f9);
+  border-radius: var(--st-radius-md, 10px);
+  box-shadow: var(--st-shadow-card, 0 1px 3px rgba(15, 23, 42, 0.04));
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.week-day-pill.active {
+  background-color: var(--st-primary, #2563eb);
+  border-color: var(--st-primary, #2563eb);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+}
+
+.week-day-pill .day-label {
+  font-size: 11px;
+  color: var(--st-text-muted, #94a3b8);
+  margin-bottom: 2px;
+}
+
+.week-day-pill.active .day-label {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.week-day-pill .day-number {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--st-text-primary, #0f172a);
+}
+
+.week-day-pill.active .day-number {
+  color: #ffffff;
+}
+
+.week-day-pill .day-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  margin-top: 4px;
+  background-color: transparent;
+}
+
+.week-day-pill .day-dot.completed {
+  background-color: var(--st-success, #10b981);
+}
+
+.week-day-pill.active .day-dot.completed {
+  background-color: #ffffff;
+}
+
+/* 进度概览卡片 */
+.progress-summary-card {
+  margin-bottom: 14px;
+}
+
+.progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.progress-stat-text {
+  font-size: 12px;
+  color: var(--st-text-secondary, #64748b);
+}
+
+.progress-bar-wrapper {
+  margin-bottom: 6px;
+}
+
+.all-done-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background-color: var(--st-success-light, #ecfdf5);
+  border-radius: var(--st-radius-sm, 6px);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--st-success-dark, #059669);
+}
+
+/* 学科快捷筛选胶囊栏 */
+.subject-chips-bar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  margin-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.subject-chips-bar::-webkit-scrollbar {
+  display: none;
+}
+
+/* 作业列表区 */
+.list-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 0 4px;
+}
+
+.list-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--st-text-primary, #0f172a);
+}
+
+.swipe-hint {
+  font-size: 11px;
+  color: var(--st-text-muted, #94a3b8);
   display: inline-flex;
   align-items: center;
   gap: 4px;
 }
 
-.cal-icon {
-  font-size: 1rem;
-  opacity: 0.85;
-  transition: transform 0.2s ease;
-}
-
-.date-text:active .cal-icon {
-  transform: scale(1.2);
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.lock-entry-btn {
-  border: none;
-  background: white;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.streak-badge {
-  background: #fff7ed;
-  color: #ea580c;
-  padding: 0.3rem 0.7rem;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  border: 1px solid #ffedd5;
-  font-weight: 500;
-}
-
-.progress-card {
-  background: white;
-  border-radius: 16px;
-  padding: 1rem 1.25rem;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
-  margin-bottom: 1rem;
-}
-
-.progress-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.6rem;
-}
-
-.info-title {
-  font-size: 0.9rem;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.info-rate {
-  font-size: 1.2rem;
-  font-weight: 800;
-}
-
-.subject-tabs {
-  display: flex;
-  gap: 0.5rem;
-  overflow-x: auto;
-  padding-bottom: 0.5rem;
-  margin-bottom: 1rem;
-  scrollbar-width: none;
-}
-
-.subject-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.tab-chip {
-  padding: 0.35rem 0.85rem;
-  background: #f1f5f9;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  color: #475569;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.tab-chip.active {
-  background: #2563eb;
-  color: white;
-  font-weight: 600;
-}
-
-.hw-list {
+.homework-cards {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 10px;
 }
 
-.hw-card {
+.hw-swipe-cell {
+  border-radius: var(--st-radius-lg, 14px);
+  overflow: hidden;
+}
+
+.hw-card-face {
   display: flex;
-  align-items: flex-start;
-  background: white;
-  border-radius: 16px;
-  padding: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-  transition: all 0.2s;
-  border: 1px solid transparent;
-}
-
-.hw-card.completed {
-  background: #fcfdfd;
-  opacity: 0.75;
-}
-
-.check-box {
-  padding: 0.2rem 0.8rem 0 0;
+  align-items: center;
+  gap: 12px;
   cursor: pointer;
 }
 
-.check-circle {
-  width: 32px;
-  height: 32px;
+.hw-card-face.is-done {
+  background-color: #fafbfc;
+  border-color: #f1f5f9;
+}
+
+/* 圆形打勾交互区 */
+.hw-check-circle {
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  border: 2px solid #cbd5e1;
+  border: 2px solid var(--st-border-bold, #cbd5e1);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
-  color: white;
-  transition: all 0.2s;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  background-color: #ffffff;
 }
 
-.check-circle.checked {
-  background: #10b981;
-  border-color: #10b981;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+.hw-check-circle.checked {
+  background-color: var(--st-success, #10b981);
+  border-color: var(--st-success, #10b981);
 }
 
-.hw-body {
+.hw-content {
   flex: 1;
+  min-width: 0;
 }
 
-.hw-meta {
+.hw-meta-row {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.3rem;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
-.sub-tag {
-  background: #eff6ff;
-  color: #2563eb;
-  font-size: 0.75rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: 6px;
-  font-weight: 600;
+.hw-due-time {
+  font-size: 11px;
+  color: var(--st-text-muted, #94a3b8);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 
-.time-text {
-  font-size: 0.75rem;
-  color: #10b981;
+.hw-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--st-text-primary, #0f172a);
+  line-height: 1.4;
+  word-break: break-all;
 }
 
-.hw-text {
-  font-size: 1rem;
-  color: #1e293b;
-  line-height: 1.5;
-  margin-bottom: 0.5rem;
-  word-break: break-word;
-}
-
-.hw-text.strike {
+.hw-title.strike {
+  color: var(--st-text-muted, #94a3b8);
   text-decoration: line-through;
-  color: #94a3b8;
 }
 
-.hw-actions {
+.hw-status-tag {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--st-warning-dark, #d97706);
+  background-color: var(--st-warning-light, #fffbeb);
+  padding: 2px 8px;
+  border-radius: var(--st-radius-full, 9999px);
+  flex-shrink: 0;
+}
+
+.hw-status-tag.done {
+  color: var(--st-success-dark, #059669);
+  background-color: var(--st-success-light, #ecfdf5);
+}
+
+/* 左滑呼出的操作抽屉 */
+.swipe-actions-box {
   display: flex;
-  gap: 0.5rem;
+  height: 100%;
 }
 
-.action-btn {
+.swipe-action-btn {
   border: none;
-  background: none;
-  font-size: 0.8rem;
+  height: 100%;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  padding: 0.2rem 0.4rem;
 }
 
-.mistake-btn {
-  color: #ea580c;
-  background: #fff7ed;
-  border-radius: 6px;
+.swipe-action-btn.btn-mistake {
+  background-color: var(--st-primary, #2563eb);
 }
 
-.del-btn {
-  color: #94a3b8;
+.swipe-action-btn.btn-delete {
+  background-color: var(--st-danger, #ef4444);
 }
 
-.bottom-add-bar {
+.empty-box {
+  padding: 30px 0;
+}
+
+/* 底部常驻悬浮栏 */
+.floating-bottom-bar {
   position: fixed;
-  bottom: 60px;
+  bottom: 50px;
   left: 0;
   right: 0;
-  max-width: 480px;
+  max-width: 500px;
   margin: 0 auto;
-  padding: 0.75rem 1rem;
-  background: linear-gradient(to top, rgba(248, 250, 252, 1) 70%, rgba(248, 250, 252, 0));
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  z-index: 40;
 }
 
-.modal-content {
-  padding: 1.5rem;
-}
-
-.modal-content h3 {
-  margin-bottom: 1rem;
-  font-size: 1.15rem;
-  color: #0f172a;
+.add-hw-btn {
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
 }
 </style>

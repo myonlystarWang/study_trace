@@ -39,8 +39,12 @@
         </div>
       </div>
 
-      <!-- 顶部 7 日横向胶囊周历条 (Week Strip) -->
-      <div class="week-strip-box">
+      <!-- 顶部 7 日横向胶囊周历条 (Week Strip，独占左右滑动手势翻日) -->
+      <div 
+        class="week-strip-box"
+        @touchstart="handleTouchStart"
+        @touchend="handleTouchEnd"
+      >
         <div 
           v-for="(day, idx) in weekDays" 
           :key="idx" 
@@ -88,12 +92,8 @@
         </transition>
       </div>
 
-      <!-- 作业列表提示与左右滑动手势感应区 -->
-      <div 
-        class="homework-list-wrapper"
-        @touchstart="handleTouchStart"
-        @touchend="handleTouchEnd"
-      >
+      <!-- 作业列表提示与卡片区 (已彻底隔离滑动手势，保证卡片侧滑操作绝不误触上方日期) -->
+      <div class="homework-list-wrapper">
         <div class="list-section-header">
           <span class="list-title">待办作业 ({{ homeworkList.length }} 项)</span>
           <span class="swipe-hint">
@@ -125,7 +125,7 @@
               <!-- 中间内容 -->
               <div class="hw-content">
                 <div class="hw-meta-row">
-                  <span class="st-icon-badge" :class="getSubjectBadgeClass(item.subject)">
+                  <span class="st-subject-tag" :class="getSubjectTagClass(item.subject)">
                     {{ item.subject }}
                   </span>
                   <span class="hw-due-time">
@@ -217,7 +217,7 @@
         >
           <div class="mistake-card-header">
             <div class="subject-and-stage">
-              <span class="st-icon-badge" :class="getSubjectBadgeClass(item.subject)">
+              <span class="st-subject-tag" :class="getSubjectTagClass(item.subject)">
                 {{ item.subject }}
               </span>
               <span class="stage-pill">
@@ -304,10 +304,21 @@
 
         <div class="sheet-form">
           <div class="form-group">
-            <label class="form-label">选择学科</label>
+            <div class="form-label-row">
+              <label class="form-label" style="margin-bottom: 0;">选择学科</label>
+              <span 
+                v-if="!isAddingCustomSubject" 
+                class="add-custom-subject-btn"
+                @click="isAddingCustomSubject = true"
+              >
+                <van-icon name="plus" /> 添加新科目
+              </span>
+            </div>
+
+            <!-- 标准初高中学科 + 自定义学科 Chips -->
             <div class="sheet-subject-chips">
               <span 
-                v-for="sub in ['数学', '英语', '语文', '物理', '化学']" 
+                v-for="sub in availableSubjects" 
                 :key="sub"
                 class="st-chip"
                 :class="{ active: newHwSubject === sub }"
@@ -315,6 +326,17 @@
               >
                 {{ sub }}
               </span>
+            </div>
+
+            <!-- 动态添加新科目输入行 -->
+            <div v-if="isAddingCustomSubject" class="custom-subject-box">
+              <van-field 
+                v-model="customSubjectInput" 
+                placeholder="输入新科目 (如: 信息技术 / 科学)" 
+                class="custom-sub-input"
+              />
+              <van-button size="small" type="primary" @click="addCustomSubject">确认</van-button>
+              <van-button size="small" plain @click="isAddingCustomSubject = false">取消</van-button>
             </div>
           </div>
 
@@ -455,6 +477,25 @@ const showAddHomeworkSheet = ref(false);
 const newHwSubject = ref('数学');
 const newHwTitle = ref('');
 const newHwTime = ref('25分钟');
+// 预设与动态学科列表 (覆盖初高中全部 9 科及支持新增)
+const availableSubjects = ref(['数学', '英语', '语文', '物理', '化学', '生物', '历史', '地理', '道法']);
+const isAddingCustomSubject = ref(false);
+const customSubjectInput = ref('');
+
+const addCustomSubject = () => {
+  const name = customSubjectInput.value.trim();
+  if (!name) {
+    showToast('请输入科目名称');
+    return;
+  }
+  if (!availableSubjects.value.includes(name)) {
+    availableSubjects.value.push(name);
+  }
+  newHwSubject.value = name;
+  customSubjectInput.value = '';
+  isAddingCustomSubject.value = false;
+  showToast({ message: `已添加并选中「${name}」`, icon: 'success' });
+};
 
 const weekDays = ref([
   { label: '周一', dateNumber: '11', isToday: false, isAllDone: true },
@@ -632,17 +673,24 @@ const verifyPin = () => {
   }
 };
 
-// 学科标签样式辅助
-const getSubjectBadgeClass = (subject) => {
+// 学科专用横排标签样式映射 (确保横向排布、不纵向折行)
+const getSubjectTagClass = (subject) => {
   switch (subject) {
-    case '数学': return 'st-icon-badge--primary';
-    case '物理': return 'st-icon-badge--info';
-    case '英语': return 'st-icon-badge--purple';
-    case '化学': return 'st-icon-badge--warning';
-    case '语文': return 'st-icon-badge--success';
-    default: return 'st-icon-badge--neutral';
+    case '数学': return 'st-subject-tag--primary';
+    case '英语': return 'st-subject-tag--purple';
+    case '语文': return 'st-subject-tag--success';
+    case '物理':
+    case '化学': return 'st-subject-tag--info';
+    case '生物':
+    case '地理': return 'st-subject-tag--warning';
+    case '历史':
+    case '道德与法治':
+    case '道法': return 'st-subject-tag--danger';
+    default: return 'st-subject-tag--neutral';
   }
 };
+// 兼容旧调用别名
+const getSubjectBadgeClass = getSubjectTagClass;
 </script>
 
 <style scoped>
@@ -1129,10 +1177,23 @@ const getSubjectBadgeClass = (subject) => {
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
 }
 
-/* 底部半屏抽屉 (Bottom Sheet) 样式 */
+/* 底部半屏抽屉 (Bottom Sheet) 样式与桌面端居中适配 */
 .bottom-sheet-modal {
-  max-width: 500px;
-  margin: 0 auto;
+  max-width: 500px !important;
+  left: 0 !important;
+  right: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  width: 100% !important;
+}
+
+:deep(.bottom-sheet-modal) {
+  max-width: 500px !important;
+  left: 0 !important;
+  right: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  width: 100% !important;
 }
 
 .bottom-sheet-content {
@@ -1143,16 +1204,49 @@ const getSubjectBadgeClass = (subject) => {
   width: 36px;
   height: 4px;
   border-radius: 2px;
-  background-color: var(--st-border-bold);
+  background-color: var(--st-border-bold, #e2e8f0);
   margin: 0 auto 16px;
+}
+
+.form-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .form-label {
   display: block;
   font-size: 13px;
   font-weight: 600;
-  color: var(--st-text-regular);
-  margin-bottom: 8px;
+  color: var(--st-text-regular, #334155);
+}
+
+.add-custom-subject-btn {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--st-primary, #2563eb);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.custom-subject-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: var(--st-bg-subtle, #f1f5f9);
+  border-radius: var(--st-radius-md, 10px);
+}
+
+.custom-sub-input {
+  flex: 1;
+  background: #ffffff;
+  border-radius: var(--st-radius-sm, 6px);
+  padding: 6px 10px;
 }
 
 .sheet-subject-chips {
@@ -1162,9 +1256,9 @@ const getSubjectBadgeClass = (subject) => {
 }
 
 .sheet-input-field {
-  background-color: var(--st-bg-subtle);
-  border-radius: var(--st-radius-md);
-  border: 1px solid var(--st-border);
+  background-color: var(--st-bg-subtle, #f1f5f9);
+  border-radius: var(--st-radius-md, 10px);
+  border: 1px solid var(--st-border, #f1f5f9);
   padding: 10px 12px;
 }
 </style>

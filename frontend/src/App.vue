@@ -22,6 +22,8 @@
 </script>
 
 <style>
+@import './assets/design-tokens.css';
+
 * {
   box-sizing: border-box;
   margin: 0;

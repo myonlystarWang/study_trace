@@ -1,12 +1,29 @@
 <template>
-  <van-popup :show="show" position="bottom" round :style="{ maxHeight: '85%' }" @update:show="(v) => emit('update:show', v)">
+  <van-popup
+    :show="show"
+    position="bottom"
+    round
+    class="bottom-sheet-modal"
+    :style="{ maxHeight: '85%' }"
+    @update:show="(v) => emit('update:show', v)"
+  >
     <div class="quick-add">
-      <h3>录入作业</h3>
+      <div class="sheet-grabber"></div>
+      <div class="st-section-header">
+        <span class="st-icon-badge st-icon-badge--primary">
+          <van-icon name="plus" />
+        </span>
+        <span class="section-title">录入新作业</span>
+      </div>
 
       <!-- 模式切换 -->
       <div class="mode-tabs">
-        <div class="mode-tab" :class="{ active: mode === 'manual' }" @click="mode = 'manual'">✍️ 手动输入</div>
-        <div class="mode-tab" :class="{ active: mode === 'camera' }" @click="mode = 'camera'">📷 拍照识别</div>
+        <div class="mode-tab" :class="{ active: mode === 'manual' }" @click="mode = 'manual'">
+          <van-icon name="edit" /> 手动输入
+        </div>
+        <div class="mode-tab" :class="{ active: mode === 'camera' }" @click="mode = 'camera'">
+          <van-icon name="photograph" /> 拍照识别
+        </div>
       </div>
 
       <!-- 拍照识别模式 -->
@@ -30,16 +47,16 @@
       </div>
 
       <!-- 学科选择 -->
-      <div class="sub-grid">
-        <div
+      <div class="sheet-subject-chips">
+        <span
           v-for="sub in subjects"
           :key="sub.id"
-          class="sub-item"
+          class="st-chip"
           :class="{ active: selectedSubject === sub.id }"
           @click="selectedSubject = sub.id"
         >
           {{ sub.name }}
-        </div>
+        </span>
       </div>
 
       <!-- 可编辑文本（手动或 OCR 回填） -->
@@ -194,73 +211,81 @@ const submitBatch = async () => {
 
 <style scoped>
 .quick-add {
-  padding: 1.5rem;
+  padding: 1rem 1.25rem 1.75rem;
 }
-.quick-add h3 {
-  margin-bottom: 1rem;
-  font-size: 1.15rem;
-  color: #0f172a;
+
+.sheet-grabber {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background-color: var(--st-border-bold, #e2e8f0);
+  margin: 0 auto 14px;
 }
+
 .mode-tabs {
   display: flex;
-  gap: 0.5rem;
+  background-color: var(--st-bg-subtle, #f1f5f9);
+  border-radius: var(--st-radius-md, 10px);
+  padding: 3px;
+  gap: 4px;
   margin-bottom: 1rem;
 }
+
 .mode-tab {
   flex: 1;
   text-align: center;
-  padding: 0.5rem;
-  background: #f1f5f9;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  color: #475569;
+  padding: 6px 12px;
+  border-radius: var(--st-radius-sm, 6px);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--st-text-secondary, #64748b);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
 }
+
 .mode-tab.active {
-  background: #2563eb;
-  color: white;
+  background: #ffffff;
+  color: var(--st-text-primary, #0f172a);
   font-weight: 600;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
 }
+
 .camera-box {
   margin-bottom: 1rem;
   min-height: 60px;
 }
+
 .camera-uploader-row {
   display: flex;
   align-items: center;
   gap: 0.75rem;
 }
+
 .uploader-hint {
   font-size: 0.8rem;
   color: #64748b;
   line-height: 1.4;
 }
+
 .ocr-loading {
   margin-top: 0.75rem;
 }
+
 .ocr-tip {
   font-size: 0.8rem;
   color: #64748b;
   margin-top: 0.5rem;
 }
-.sub-grid {
+
+.sheet-subject-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 6px;
   margin-bottom: 1rem;
-}
-.sub-item {
-  padding: 0.35rem 0.75rem;
-  background: #f1f5f9;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  color: #475569;
-  cursor: pointer;
-}
-.sub-item.active {
-  background: #2563eb;
-  color: white;
-  font-weight: 600;
 }
 .split-preview {
   margin-top: 0.75rem;

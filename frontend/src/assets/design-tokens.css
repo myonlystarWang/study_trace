@@ -159,6 +159,56 @@
   color: var(--st-neutral);
 }
 
+/* 3.1 专用学科微标签系统 (Subject Tags - 彻底解决图标微徽章固定 26px 导致科目文字被强制纵向截断折行的 Bug) */
+.st-subject-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  height: 22px;
+  border-radius: var(--st-radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.st-subject-tag--primary {
+  background-color: var(--st-primary-light);
+  color: var(--st-primary);
+}
+
+.st-subject-tag--success {
+  background-color: var(--st-success-light);
+  color: var(--st-success);
+}
+
+.st-subject-tag--warning {
+  background-color: var(--st-warning-light);
+  color: var(--st-warning);
+}
+
+.st-subject-tag--danger {
+  background-color: var(--st-danger-light);
+  color: var(--st-danger);
+}
+
+.st-subject-tag--info {
+  background-color: var(--st-info-light);
+  color: var(--st-info);
+}
+
+.st-subject-tag--purple {
+  background-color: var(--st-purple-light);
+  color: var(--st-purple);
+}
+
+.st-subject-tag--neutral {
+  background-color: var(--st-neutral-light);
+  color: var(--st-neutral);
+}
+
 /* 4. 筛选胶囊标签 (Chips) */
 .st-chip {
   display: inline-flex;
@@ -202,3 +252,16 @@
 .st-animate-check {
   animation: st-check-elastic 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
+/* 7. 桌面端居中适配：确保 Teleport 到 body 的底部半屏抽屉在 PC 上居中对齐 500px 容器，杜绝吸附屏幕左下角 */
+.van-popup--bottom.bottom-sheet-modal,
+.bottom-sheet-modal {
+  max-width: 500px !important;
+  left: 0 !important;
+  right: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  width: 100% !important;
+  box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.15) !important;
+}
+

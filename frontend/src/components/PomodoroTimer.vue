@@ -1,26 +1,33 @@
 <template>
   <div class="pomodoro-container">
-    <!-- 悬浮小番茄触发球 -->
+    <!-- 悬浮小番茄/专注计时触发球 -->
     <div
       v-if="!showModal"
       class="floating-pomodoro-ball"
       :class="{ 'is-running': isRunning }"
       @click="showModal = true"
     >
-      <span class="pomodoro-icon">🍅</span>
+      <van-icon name="underway-o" size="18" />
       <span class="ball-timer" v-if="isRunning">{{ formattedTime }}</span>
     </div>
 
-    <!-- 专注番茄钟全屏/弹窗卡片 -->
+    <!-- 专注计时器全屏/底部半屏抽屉 -->
     <van-popup
       v-model:show="showModal"
       round
       position="bottom"
+      class="bottom-sheet-modal"
       :style="{ maxHeight: '85%' }"
       closeable
     >
       <div class="pomodoro-modal-content">
-        <h3 class="pomodoro-title">🍅 专注番茄钟</h3>
+        <div class="sheet-grabber"></div>
+        <div class="st-section-header" style="justify-content: center; margin-bottom: 4px;">
+          <span class="st-icon-badge st-icon-badge--danger">
+            <van-icon name="underway-o" />
+          </span>
+          <span class="section-title">专注计时器</span>
+        </div>
         <p class="pomodoro-subtitle">25 分钟高效专注，后台自动校准不漂移</p>
 
         <!-- 环形倒计时大表盘 -->
@@ -69,7 +76,8 @@
         </div>
 
         <div class="ios-audio-note">
-          <span>💡 提示：熄屏或切后台倒计时精准不暂停；iOS 锁屏受系统沙箱限制可能挂起网页声音，点亮屏幕即弹出完成提示。</span>
+          <van-icon name="info-o" />
+          <span>提示：熄屏或切后台倒计时精准不暂停；iOS 锁屏受系统沙箱限制可能挂起网页声音，点亮屏幕即弹出完成提示。</span>
         </div>
       </div>
     </van-popup>
@@ -133,7 +141,7 @@ const tick = () => {
     playDingSound();
 
     showDialog({
-      title: '🎉 番茄钟专注完成！',
+      title: '专注时段达成',
       message: '太棒了！已完成本次高效专注阶段，休息 5 分钟活动一下眼睛吧！',
       confirmButtonText: '收到'
     });
