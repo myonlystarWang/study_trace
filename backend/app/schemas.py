@@ -168,6 +168,7 @@ class NotificationResultOut(BaseModel):
 class NotificationSendOut(BaseModel):
     success: bool
     details: Dict[str, NotificationResultOut]
+    message: Optional[str] = None
 
 
 # M3 月度作业打卡日历契约

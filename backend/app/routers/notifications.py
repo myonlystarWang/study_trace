@@ -133,6 +133,13 @@ async def send_summary_now(
         student_id=student_id
     )
 
+    if res.get("status") == "rate_limited":
+        return NotificationSendOut(
+            success=False,
+            details={},
+            message=res.get("reason", "刚刚已推送过今日汇总，请稍候再试")
+        )
+
     details = res.get("details", {})
     has_success = any(v.get("success") for v in details.values())
     formatted_details = {
@@ -140,4 +147,9 @@ async def send_summary_now(
         for k, v in details.items()
     }
 
-    return NotificationSendOut(success=has_success, details=formatted_details)
+    return NotificationSendOut(
+        success=has_success,
+        details=formatted_details,
+        message=res.get("reason") if not has_success else None
+    )
+

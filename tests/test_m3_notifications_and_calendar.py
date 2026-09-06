@@ -305,10 +305,13 @@ def test_force_summary_dispatch_and_rate_limit(db_session: Session):
         data = resp.json()
         assert data["success"] is True
 
-        # 2. 紧接着立即二次触发，触发 30 秒频控保护
+        # 2. 紧接着立即二次触发，触发 30 秒频控保护，且透传友好提示
         resp_fast = client.post("/api/notifications/send-summary-now", headers=PARENT_PIN_HEADER)
         assert resp_fast.status_code == 200
-        assert resp_fast.json()["success"] is False
+        fast_data = resp_fast.json()
+        assert fast_data["success"] is False
+        assert "等待" in fast_data["message"]
+        assert "秒" in fast_data["message"]
 
 
 # ==============================================================================

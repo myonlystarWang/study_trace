@@ -363,14 +363,17 @@ const handleSendSummaryNow = async () => {
           confirmButtonText: '确定'
         });
       } else {
+        const msg = res.data.message || '部分渠道发送失败，请在上方检查各通道配置。';
+        const isRateLimited = msg.includes('秒') || msg.includes('等待') || msg.includes('频繁');
         showDialog({
-          title: '⚠️ 发送完成但部分失败',
-          message: '部分渠道发送失败，请在上方检查各通道配置。',
+          title: isRateLimited ? '⏳ 提示' : '⚠️ 发送未完成',
+          message: msg,
           confirmButtonText: '知道了'
         });
       }
     } catch (e) {
-      showToast('发送接口失败');
+      const errMsg = e.response?.data?.detail || e.response?.data?.message || '发送接口失败';
+      showToast(errMsg);
     } finally {
       sendingSummary.value = false;
     }
