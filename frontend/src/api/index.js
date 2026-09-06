@@ -25,11 +25,13 @@ export const homeworkApi = {
 
 export const mistakeApi = {
   getList: (params) => api.get('/mistakes', { params }),
+  getReviewQueue: (subjectId) => api.get('/mistakes', { params: { ebbinghaus_today: true, ...(subjectId ? { subject_id: subjectId } : {}) } }),
   getDetail: (id) => api.get(`/mistakes/${id}`),
   create: (data) => api.post('/mistakes', data),
   update: (id, data) => api.put(`/mistakes/${id}`, data),
   delete: (id) => api.delete(`/mistakes/${id}`),
   review: (id, result) => api.post(`/mistakes/${id}/review`, { mistake_id: id, result }),
+  submitReview: (id, result) => api.post(`/mistakes/${id}/review`, { mistake_id: id, result }),
   uploadImage: (formData) => api.post('/mistakes/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   })

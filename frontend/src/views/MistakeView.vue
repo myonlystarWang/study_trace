@@ -290,11 +290,13 @@ const newMistake = ref({
 });
 
 const onTabChange = () => {
+  mistakes.value = [];
   fetchMistakes();
 };
 
 const selectSubject = (subId) => {
   selectedSubject.value = subId;
+  mistakes.value = [];
   fetchMistakes();
 };
 
@@ -370,15 +372,22 @@ const fetchMistakes = async () => {
 
 const submitReview = async (id, result) => {
   try {
-    await mistakeApi.submitReview(id, result);
+    const res = await mistakeApi.submitReview(id, result);
+    const updated = res.data;
     if (result === 'remembered') {
-      showToast({ message: '掌握啦！记忆周期自动顺延', icon: 'passed' });
+      if (updated.mastery_status === '已掌握') {
+        showToast({ message: '太棒了！已完成 4 轮复习，彻底掌握并进入长效库！', icon: 'passed', duration: 2500 });
+      } else {
+        const nextDate = updated.next_review_date ? `下次: ${updated.next_review_date}` : '';
+        showToast({ message: `掌握啦！推进至第 ${updated.review_count} 轮 (${nextDate})`, icon: 'passed', duration: 2500 });
+      }
     } else {
-      showToast({ message: '已重置艾宾浩斯复习周期，明天将再次提醒', icon: 'replay' });
+      showToast({ message: '已重置艾宾浩斯复习周期，明天将再次提醒', icon: 'replay', duration: 2000 });
     }
     fetchMistakes();
   } catch (e) {
-    showToast('提交复习结果失败');
+    const msg = e.response?.data?.detail || '提交复习结果失败';
+    showToast(msg);
   }
 };
 
@@ -455,7 +464,8 @@ const submitAddMistake = async () => {
     closeAddModal();
     fetchMistakes();
   } catch (e) {
-    showToast('录入失败');
+    const msg = e.response?.data?.detail || '错题录入失败，请检查填写内容';
+    showToast(msg);
   } finally {
     submitting.value = false;
   }

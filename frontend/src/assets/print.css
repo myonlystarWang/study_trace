@@ -29,11 +29,9 @@
   .paper-preview-scroll {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 24px 12px 60px 12px;
+    padding: 16px 12px 60px 12px;
     background-color: #f1f5f9;
     min-height: calc(100vh - 56px);
-    display: flex;
-    justify-content: center;
   }
 
   .paper-page-frame {
@@ -44,7 +42,25 @@
     margin: 0 auto;
     background: #ffffff;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    border-radius: 2px;
+    border-radius: 4px;
+  }
+
+  /* 移动端流式全宽自适应，避免横向滚动与左侧截断 */
+  @media (max-width: 820px) {
+    .paper-preview-scroll {
+      padding: 10px 8px 60px 8px;
+      overflow-x: hidden;
+    }
+
+    .paper-page-frame {
+      width: 100% !important;
+      max-width: 100% !important;
+      min-height: auto !important;
+      padding: 14px 12px !important;
+      margin: 0 auto !important;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
   }
 
   .paper-page-sheet {

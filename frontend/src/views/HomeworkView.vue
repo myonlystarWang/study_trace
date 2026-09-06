@@ -12,11 +12,9 @@
       </div>
 
       <div class="header-right-tools">
-        <button class="tool-icon-btn" title="月历打卡总览" @click="showCalendar = true">
-          <van-icon name="calendar-o" size="17" />
-        </button>
-        <button class="tool-icon-btn" title="家长管理入口" @click="$router.push('/settings')">
-          <van-icon name="setting-o" size="17" />
+        <button class="calendar-pill-btn" @click="showCalendar = true">
+          <van-icon name="calendar-o" size="14" />
+          <span>选择日期</span>
         </button>
       </div>
     </div>
@@ -457,22 +455,24 @@ onMounted(async () => {
   gap: 8px;
 }
 
-.tool-icon-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+.calendar-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--st-radius-full, 9999px);
   background: var(--st-bg-card, #ffffff);
   border: 1px solid var(--st-border-bold, #e2e8f0);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--st-text-secondary, #64748b);
+  color: var(--st-text-secondary, #475569);
+  font-size: 12px;
+  font-weight: 500;
   box-shadow: var(--st-shadow-card, 0 1px 3px rgba(15, 23, 42, 0.04));
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.tool-icon-btn:hover {
+.calendar-pill-btn:hover {
   border-color: var(--st-primary, #2563eb);
   color: var(--st-primary, #2563eb);
 }

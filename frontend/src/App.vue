@@ -2,7 +2,7 @@
   <div class="app-container" :class="{ 'app-container--wide': $route.meta?.paperMode }">
     <router-view />
 
-    <!-- 孩子专注模式底部 Tabbar：彻底移除家长入口，仅保留作业打卡、错题本与学情成绩 -->
+    <!-- 底部导航栏：作业打卡、错题本、学情成绩、家长管理 -->
     <van-tabbar
       v-show="!$route.meta?.hideTabbar"
       :placeholder="!$route.meta?.hideTabbar"
@@ -13,6 +13,7 @@
       <van-tabbar-item to="/" icon="passed">作业打卡</van-tabbar-item>
       <van-tabbar-item to="/mistakes" icon="records-o">错题本</van-tabbar-item>
       <van-tabbar-item to="/scores" icon="chart-trending-o">学情成绩</van-tabbar-item>
+      <van-tabbar-item to="/settings" icon="setting-o">家长管理</van-tabbar-item>
     </van-tabbar>
   </div>
 </template>

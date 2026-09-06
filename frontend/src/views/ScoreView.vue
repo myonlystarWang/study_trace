@@ -19,7 +19,7 @@
             </span>
             <div>
               <div class="student-name">初一学情档案</div>
-              <div class="student-sub">已记录 {{ examList.length }} 场考试 · 7 科均衡追踪</div>
+              <div class="student-sub">已记录 {{ examList.length }} 场考试 · 全科均衡追踪</div>
             </div>
           </div>
           <div v-if="latestExam" class="latest-badge">
@@ -131,7 +131,7 @@
             <span class="st-icon-badge st-icon-badge--info">
               <van-icon name="aim" />
             </span>
-            <span class="card-title">7 科均衡学力雷达</span>
+            <span class="card-title">均衡学力雷达</span>
           </div>
           <div class="radar-exam-selector">
             <select v-model="selectedRadarExamId" @change="fetchRadarData" class="custom-select">
@@ -1226,6 +1226,7 @@ const handleDeleteExam = (exam) => {
   font-size: 15px;
   font-weight: 600;
   color: #0f172a;
+  white-space: nowrap !important;
 }
 
 .card-sub {
@@ -1299,6 +1300,9 @@ const handleDeleteExam = (exam) => {
   background: #f8fafc;
   color: #334155;
   outline: none;
+  max-width: 150px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .absent-warning-banner {

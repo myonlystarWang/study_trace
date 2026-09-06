@@ -1,18 +1,27 @@
 <template>
   <div class="paper-print-view">
     <!-- 顶部操作工具栏（仅屏幕展示，打印时彻底隐藏） -->
-    <div class="paper-toolbar no-print">
-      <div class="toolbar-left">
-        <van-button size="small" icon="arrow-left" @click="goBack">返回</van-button>
-        <span class="paper-title-tag">{{ paper.title || '试卷预览' }}</span>
-        <van-tag v-if="paper.status === 'reviewed'" type="success" size="medium">已完成打卡</van-tag>
-        <van-tag v-else-if="paper.status === 'printed'" type="warning" size="medium">已打印·待打卡</van-tag>
-        <van-tag v-else type="primary" plain size="medium">未打印·待重练</van-tag>
-      </div>
-      <div class="toolbar-right">
-        <van-button size="small" icon="info-o" @click="showPrintTip = true">打印提示</van-button>
-        <van-button size="small" type="primary" icon="passed" @click="openReviewModal">重练打卡</van-button>
-        <van-button size="small" type="success" icon="printer" @click="handlePrint">打印 / 存PDF</van-button>
+    <van-nav-bar
+      :title="paper.title || '初一错题周末重练卷'"
+      left-arrow
+      @click-left="goBack"
+      class="no-print paper-nav-bar"
+    >
+      <template #right>
+        <span
+          class="st-status-tag"
+          :class="paper.status === 'reviewed' ? 'st-status-tag--success' : (paper.status === 'printed' ? 'st-status-tag--warning' : 'st-status-tag--primary')"
+        >
+          {{ paper.status === 'reviewed' ? '已完成打卡' : (paper.status === 'printed' ? '已打印·待打卡' : '未打印·待重练') }}
+        </span>
+      </template>
+    </van-nav-bar>
+
+    <div class="paper-action-bar no-print">
+      <div class="action-bar-inner">
+        <van-button size="small" icon="info-o" class="paper-bar-btn" @click="showPrintTip = true">打印指南</van-button>
+        <van-button size="small" type="primary" plain icon="passed" class="paper-bar-btn" @click="openReviewModal">重练打卡</van-button>
+        <van-button size="small" type="primary" icon="printer" class="paper-bar-btn" @click="handlePrint">打印 / 存PDF</van-button>
       </div>
     </div>
 
@@ -94,12 +103,12 @@
                   <div class="question-header-row">
                     <div class="question-meta-badge">
                       <span class="q-number">{{ q.order_num }}.</span>
-                      <span class="q-subject-badge">{{ q.subject_name }}</span>
+                      <span class="st-subject-tag" :class="getSubjectTagClass(q.subject_name)">{{ q.subject_name }}</span>
                       <span v-if="paper.show_error_type && q.error_type" class="q-error-tag">【错因：{{ q.error_type }}】</span>
                     </div>
                     <div class="page-break-btn no-print" @click="toggleManualBreak(q.id)">
-                      <span v-if="manualBreaks.includes(q.id)" class="break-active"><van-icon name="cut" /> 已在此处换页（点击取消）</span>
-                      <span v-else class="break-idle"><van-icon name="cut" /> 在此题前换页</span>
+                      <span v-if="manualBreaks.includes(q.id)" class="break-active"><van-icon name="passed" /> 已换页</span>
+                      <span v-else class="break-idle"><van-icon name="cut" /> 换页微调</span>
                     </div>
                   </div>
 
@@ -246,6 +255,23 @@ const getSnippet = (text) => {
   return text.length > 18 ? text.slice(0, 18) + '...' : text;
 };
 
+const getSubjectTagClass = (name) => {
+  if (!name) return 'st-subject-tag--neutral';
+  switch (name) {
+    case '数学': return 'st-subject-tag--primary';
+    case '英语': return 'st-subject-tag--purple';
+    case '语文': return 'st-subject-tag--success';
+    case '物理':
+    case '化学': return 'st-subject-tag--info';
+    case '生物':
+    case '地理': return 'st-subject-tag--warning';
+    case '历史':
+    case '道德与法治':
+    case '道法': return 'st-subject-tag--danger';
+    default: return 'st-subject-tag--neutral';
+  }
+};
+
 // 得分统计段计算
 const scoreSegments = computed(() => {
   const total = paper.value.questions?.length || 0;
@@ -388,35 +414,36 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* 工具栏样式 */
-.paper-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 16px;
+/* 顶部导航与工具栏样式 */
+.paper-nav-bar {
   background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid var(--st-border, #f1f5f9);
+}
+
+.paper-action-bar {
+  background: #ffffff;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--st-border, #e2e8f0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   position: sticky;
   top: 0;
   z-index: 100;
 }
 
-.toolbar-left,
-.toolbar-right {
+.action-bar-inner {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
-.paper-title-tag {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1e293b;
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.paper-bar-btn {
+  flex: 1;
+  white-space: nowrap !important;
+  font-weight: 500;
+  border-radius: var(--st-radius-sm, 8px);
 }
 
 /* 试卷大抬头排版规范 */
@@ -707,26 +734,27 @@ onMounted(async () => {
 }
 
 .review-tag-btn {
-  padding: 4px 10px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  padding: 4px 12px;
+  border-radius: var(--st-radius-full, 9999px);
+  border: 1px solid var(--st-border, #e2e8f0);
   background: #ffffff;
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap !important;
 }
 
 .review-tag-btn.active {
-  background: #10b981;
+  background: var(--st-success, #10b981);
   color: #ffffff;
-  border-color: #10b981;
+  border-color: var(--st-success, #10b981);
   font-weight: 600;
 }
 
 .review-tag-btn.forgot-btn.active {
-  background: #ef4444;
+  background: var(--st-danger, #ef4444);
   color: #ffffff;
-  border-color: #ef4444;
+  border-color: var(--st-danger, #ef4444);
   font-weight: 600;
 }
 </style>
