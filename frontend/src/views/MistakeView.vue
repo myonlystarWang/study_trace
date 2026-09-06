@@ -17,39 +17,38 @@
       </div>
     </div>
 
-
-    <!-- 学科与筛选过滤器 -->
+    <!-- 学科与状态筛选栏 (Chips) -->
     <div class="filter-section">
       <div class="chips-row">
-        <div
-          class="chip"
+        <span
+          class="st-chip"
           :class="{ active: selectedSubject === null }"
           @click="selectSubject(null)"
         >
           全部学科
-        </div>
-        <div
+        </span>
+        <span
           v-for="sub in subjects"
           :key="sub.id"
-          class="chip"
+          class="st-chip"
           :class="{ active: selectedSubject === sub.id }"
           @click="selectSubject(sub.id)"
         >
           {{ sub.name }}
-        </div>
+        </span>
       </div>
 
       <!-- 状态过滤（仅在总库标签下展示） -->
-      <div class="chips-row" v-if="activeTab === 'all'">
-        <div
+      <div class="chips-row status-row" v-if="activeTab === 'all'">
+        <span
           v-for="status in ['全部状态', '未掌握', '待复习', '已掌握']"
           :key="status"
-          class="status-chip"
+          class="st-chip"
           :class="{ active: selectedStatus === (status === '全部状态' ? null : status) }"
           @click="selectedStatus = (status === '全部状态' ? null : status); fetchMistakes()"
         >
           {{ status }}
-        </div>
+        </span>
       </div>
     </div>
 
@@ -59,101 +58,154 @@
         <div
           v-for="item in mistakes"
           :key="item.id"
-          class="mistake-card"
+          class="st-card mistake-card"
         >
           <div class="card-header">
             <div class="header-left">
-              <span class="sub-badge">{{ item.subject_name }}</span>
-              <span class="source-text" v-if="item.source_reference">{{ item.source_reference }}</span>
+              <span class="st-subject-tag" :class="getSubjectTagClass(item.subject_name)">
+                {{ item.subject_name }}
+              </span>
+              <span class="source-text" v-if="item.source_reference">
+                {{ item.source_reference }}
+              </span>
             </div>
-            <span class="status-tag" :class="getStatusClass(item.mastery_status)">
+            <span class="hw-status-tag" :class="getStatusClass(item.mastery_status)">
               {{ item.mastery_status }}
             </span>
           </div>
 
-          <!-- 缩略图展示 -->
-          <div class="card-image-box" v-if="item.thumbnail_path">
-            <img :src="item.thumbnail_path" @click="previewImage(item.original_image_path || item.thumbnail_path)" alt="题目图" />
+          <!-- 缩略图展示 (点击可放大原图预览) -->
+          <div class="card-image-box" v-if="item.thumbnail_path" @click="previewImage(item.original_image_path || item.thumbnail_path)">
+            <img :src="item.thumbnail_path" alt="题目图" />
+            <span class="img-preview-tag">
+              <van-icon name="search" /> 点击放大原图
+            </span>
           </div>
 
           <!-- 题目文本内容 -->
           <div class="card-body">
-            <p class="question-text">{{ item.extracted_text || '暂无文字题干，请查看图片' }}</p>
+            <p class="question-text">{{ item.extracted_text || '暂无文字题干，请查看配图' }}</p>
             <div class="tags-row" v-if="item.error_type">
-              <span class="error-tag">{{ item.error_type }}</span>
+              <span class="error-tag">
+                <van-icon name="warning-o" /> {{ item.error_type }}
+              </span>
             </div>
           </div>
 
-          <!-- 艾宾浩斯复习操作区（在今日复习模式或待复习时醒目展示） -->
+          <!-- 艾宾浩斯复习操作区（在今日复习模式或未完全掌握时醒目展示） -->
           <div class="review-action-bar" v-if="activeTab === 'review' || item.mastery_status !== '已掌握'">
             <div class="review-stat">
-              复习次数: <b>{{ item.review_count || 0 }}</b> 次
-              <span v-if="item.next_review_date" class="next-date">下次: {{ item.next_review_date }}</span>
+              <span class="st-icon-badge st-icon-badge--purple" style="width: 20px; height: 20px; font-size: 11px;">
+                <van-icon name="replay" />
+              </span>
+              <span>第 <b>{{ item.review_count || 0 }}</b> 轮复习</span>
+              <span v-if="item.next_review_date" class="next-date">
+                (下次: {{ item.next_review_date }})
+              </span>
             </div>
             <div class="action-buttons">
-              <button class="rev-btn forget-btn" @click="submitReview(item.id, 'forgotten')">
-                ✕ 又忘了
-              </button>
-              <button class="rev-btn remember-btn" @click="submitReview(item.id, 'remembered')">
-                ✓ 掌握啦
-              </button>
+              <van-button
+                size="small"
+                plain
+                type="danger"
+                icon="cross"
+                class="rev-btn"
+                @click="submitReview(item.id, 'forgotten')"
+              >
+                又忘了
+              </van-button>
+              <van-button
+                size="small"
+                type="success"
+                icon="passed"
+                class="rev-btn"
+                @click="submitReview(item.id, 'remembered')"
+              >
+                掌握啦
+              </van-button>
             </div>
           </div>
         </div>
       </div>
 
+      <!-- 清爽空状态 -->
       <div class="empty-state" v-else>
         <van-empty :description="activeTab === 'review' ? '今日推荐复习已全部完成！太棒了' : '暂无相关错题'" />
       </div>
     </van-pull-refresh>
 
-    <!-- 底部悬浮添加按钮 -->
-    <div class="fab-add" @click="showAddModal = true">
-      <span>＋ 录入错题</span>
+    <!-- 底部常驻磨砂悬浮录入栏 -->
+    <div class="floating-bottom-bar st-frosted-bar">
+      <van-button
+        type="primary"
+        round
+        block
+        icon="plus"
+        class="add-mistake-btn"
+        @click="showAddModal = true"
+      >
+        录入新错题
+      </van-button>
     </div>
 
-    <!-- 录入错题弹窗 -->
-    <van-popup v-model:show="showAddModal" position="bottom" round :style="{ maxHeight: '85%' }">
+    <!-- 录入错题底部半屏抽屉 (Bottom Sheet) -->
+    <van-popup
+      v-model:show="showAddModal"
+      position="bottom"
+      round
+      class="bottom-sheet-modal"
+      :style="{ maxHeight: '85%' }"
+    >
       <div class="add-modal-body">
-        <h3>录入错题</h3>
-        
+        <div class="sheet-grabber"></div>
+        <div class="st-section-header">
+          <span class="st-icon-badge st-icon-badge--primary">
+            <van-icon name="plus" />
+          </span>
+          <span class="section-title">录入新错题</span>
+        </div>
+
         <div class="form-group">
-          <label>学科</label>
-          <div class="sub-grid">
-            <div
+          <label class="form-label">学科</label>
+          <div class="sheet-subject-chips">
+            <span
               v-for="sub in subjects"
               :key="sub.id"
-              class="sub-item"
+              class="st-chip"
               :class="{ active: newMistake.subject_id === sub.id }"
               @click="newMistake.subject_id = sub.id"
             >
               {{ sub.name }}
-            </div>
+            </span>
           </div>
         </div>
 
         <div class="form-group">
-          <label>来源说明（选填）</label>
-          <van-field v-model="newMistake.source_reference" placeholder="如：第三单元测验 / 周练习册 P20" />
+          <label class="form-label">来源说明（选填）</label>
+          <van-field
+            v-model="newMistake.source_reference"
+            placeholder="如：第三单元测验 / 周练习册 P20"
+            class="sheet-input-field"
+          />
         </div>
 
         <div class="form-group">
-          <label>错因分类</label>
-          <div class="error-types-grid">
-            <div
+          <label class="form-label">错因分类</label>
+          <div class="sheet-subject-chips">
+            <span
               v-for="err in ['概念模糊', '粗心大意', '计算错误', '思路卡壳']"
               :key="err"
-              class="err-item"
+              class="st-chip"
               :class="{ active: newMistake.error_type === err }"
               @click="newMistake.error_type = err"
             >
               {{ err }}
-            </div>
+            </span>
           </div>
         </div>
 
         <div class="form-group">
-          <label>拍照或上传错题图片</label>
+          <label class="form-label">拍照或上传错题图片</label>
           <van-uploader
             :after-read="handleUpload"
             v-model="fileList"
@@ -163,43 +215,47 @@
         </div>
 
         <div class="form-group">
-          <label>题干文字（可编辑）</label>
-          <van-button
-            size="small"
-            type="primary"
-            plain
-            :loading="ocrLoading"
-            :disabled="!uploadedFile"
-            class="ocr-extract-btn"
-            @click="extractText"
-          >
-            🔍 一键提取题干
-          </van-button>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" style="margin-bottom: 0;">题干文字（可编辑）</label>
+            <van-button
+              size="small"
+              type="primary"
+              plain
+              icon="scan"
+              :loading="ocrLoading"
+              :disabled="!uploadedFile"
+              class="ocr-extract-btn"
+              @click="extractText"
+            >
+              智能提取题干
+            </van-button>
+          </div>
           <van-field
             v-model="newMistake.extracted_text"
             type="textarea"
             rows="3"
             autosize
-            placeholder="填写、粘贴，或先上传图片后点「一键提取题干」"
+            placeholder="填写、粘贴，或先上传图片后点「智能提取题干」"
+            class="sheet-input-field"
           />
         </div>
 
         <div class="modal-footer-btns">
-          <van-button block @click="closeAddModal">取消</van-button>
-          <van-button type="primary" block :loading="submitting" @click="submitAddMistake">保存入册</van-button>
+          <van-button block round @click="closeAddModal">取消</van-button>
+          <van-button type="primary" block round :loading="submitting" @click="submitAddMistake">保存入册</van-button>
         </div>
       </div>
     </van-popup>
 
     <!-- 原图预览弹窗 -->
     <van-popup v-model:show="showPreview" round :style="{ padding: '10px', maxWidth: '90%' }">
-      <img :src="previewUrl" style="max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px;" />
+      <img :src="previewUrl" style="max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px;" alt="原图" />
     </van-popup>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { showToast } from 'vant';
 import { mistakeApi, settingsApi, ocrApi } from '../api';
 import { compressImage } from '../utils/imageCompress';
@@ -240,19 +296,45 @@ const selectSubject = (subId) => {
   fetchMistakes();
 };
 
+// 学科标签颜色映射
+const getSubjectTagClass = (name) => {
+  if (!name) return 'st-subject-tag--neutral';
+  switch (name) {
+    case '数学': return 'st-subject-tag--primary';
+    case '英语': return 'st-subject-tag--purple';
+    case '语文': return 'st-subject-tag--success';
+    case '物理':
+    case '化学': return 'st-subject-tag--info';
+    case '生物':
+    case '地理': return 'st-subject-tag--warning';
+    case '历史':
+    case '道德与法治':
+    case '道法': return 'st-subject-tag--danger';
+    default: return 'st-subject-tag--neutral';
+  }
+};
+
 const getStatusClass = (status) => {
-  if (status === '已掌握') return 'status-mastered';
-  if (status === '待复习') return 'status-review';
-  return 'status-unmastered';
+  if (status === '已掌握') return 'done';
+  return '';
 };
 
 const fetchSubjects = async () => {
   try {
     const res = await settingsApi.getSubjects();
     subjects.value = res.data;
-    if (subjects.value.length > 0) {
+    if (subjects.value.length > 0 && !newMistake.value.subject_id) {
       newMistake.value.subject_id = subjects.value[0].id;
     }
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+const fetchReviewQueueCount = async () => {
+  try {
+    const res = await mistakeApi.getReviewQueue();
+    reviewQueueCount.value = res.data.length;
   } catch (e) {
     console.error(e);
   }
@@ -261,23 +343,20 @@ const fetchSubjects = async () => {
 const fetchMistakes = async () => {
   refreshing.value = true;
   try {
-    const params = {
-      subject_id: selectedSubject.value || undefined,
-      ebbinghaus_today: activeTab.value === 'review',
-      mastery_status: activeTab.value === 'all' ? (selectedStatus.value || undefined) : undefined
-    };
-    const res = await mistakeApi.getList(params);
-    mistakes.value = res.data;
-
-    // 如果在全部标签，额外获取一下今日待复习数量
-    if (activeTab.value === 'all') {
-      const revRes = await mistakeApi.getList({ ebbinghaus_today: true });
-      reviewQueueCount.value = revRes.data.length;
-    } else {
+    if (activeTab.value === 'review') {
+      const res = await mistakeApi.getReviewQueue(selectedSubject.value);
+      mistakes.value = res.data;
       reviewQueueCount.value = res.data.length;
+    } else {
+      const res = await mistakeApi.getList({
+        subject_id: selectedSubject.value,
+        mastery_status: selectedStatus.value
+      });
+      mistakes.value = res.data;
+      fetchReviewQueueCount();
     }
   } catch (e) {
-    showToast('加载错题失败');
+    showToast('获取错题列表失败');
   } finally {
     refreshing.value = false;
   }
@@ -285,107 +364,77 @@ const fetchMistakes = async () => {
 
 const submitReview = async (id, result) => {
   try {
-    await mistakeApi.review(id, result);
+    await mistakeApi.submitReview(id, result);
     if (result === 'remembered') {
-      showToast({ message: '太棒了！已推进复习进度', icon: 'passed' });
+      showToast({ message: '掌握啦！记忆周期自动顺延', icon: 'passed' });
     } else {
-      showToast({ message: '已重设为明日复习', icon: 'replay' });
+      showToast({ message: '已重置艾宾浩斯复习周期，明天将再次提醒', icon: 'replay' });
     }
     fetchMistakes();
   } catch (e) {
-    showToast('记录复习失败');
+    showToast('提交复习结果失败');
   }
 };
 
-const handleUpload = async (fileItem) => {
-  showToast({ message: '正在压缩图片...', duration: 1000 });
+const handleUpload = async (file) => {
+  uploadedFile.value = file;
   try {
-    const compressed = await compressImage(fileItem.file, 1600, 0.82);
-    uploadedFile.value = compressed.file;
-    const formData = new FormData();
-    formData.append('file', compressed.file);
-    const res = await mistakeApi.uploadImage(formData);
-    newMistake.value.original_image_path = res.data.original_url;
-    newMistake.value.thumbnail_path = res.data.thumbnail_url;
-    newMistake.value.storage_key = res.data.storage_key || res.data.original_url.replace(/^\/?(uploads\/)?/, '');
-    showToast({ message: '图片上传成功', icon: 'success' });
+    showToast({ type: 'loading', message: '处理并上传中...', forbidClick: true, duration: 0 });
+    const compressed = await compressImage(file.file);
+    const res = await ocrApi.upload(compressed);
+    newMistake.value.original_image_path = res.data.original_image_path;
+    newMistake.value.thumbnail_path = res.data.thumbnail_path;
+    newMistake.value.storage_key = res.data.storage_key;
+    showToast({ type: 'success', message: '图片上传成功' });
   } catch (e) {
-    showToast('上传失败');
+    showToast('图片上传失败，请重试');
   }
 };
 
 const extractText = async () => {
-  if (!uploadedFile.value && !newMistake.value.storage_key) {
+  if (!newMistake.value.storage_key) {
     showToast('请先上传错题图片');
     return;
   }
+
   ocrLoading.value = true;
-  if (pollTimerM) clearInterval(pollTimerM);
   try {
-    const fd = new FormData();
-    if (newMistake.value.storage_key) {
-      // 优先复用服务端已落盘的原图路径，避免大图二次网络传输
-      fd.append('image_path', newMistake.value.storage_key);
-    } else if (uploadedFile.value) {
-      fd.append('file', uploadedFile.value);
-    }
-    fd.append('mode', 'auto');
-    const res = await ocrApi.createTask(fd);
+    const res = await ocrApi.createTask(newMistake.value.storage_key);
     const taskId = res.data.task_id;
     pollTimerM = setInterval(async () => {
       try {
-        const r = await ocrApi.getTask(taskId);
-        const t = r.data;
-        if (t.status === 'succeeded') {
+        const statusRes = await ocrApi.getTask(taskId);
+        if (statusRes.data.status === 'completed') {
           clearInterval(pollTimerM);
-          pollTimerM = null;
           ocrLoading.value = false;
-          newMistake.value.extracted_text = t.result.text;
-          showToast({ message: `识别完成（${t.result.engine}）`, icon: 'success' });
-        } else if (t.status === 'failed') {
+          newMistake.value.extracted_text = statusRes.data.extracted_text;
+          showToast({ message: '识别成功，题干已自动提取！', icon: 'success' });
+        } else if (statusRes.data.status === 'failed') {
           clearInterval(pollTimerM);
-          pollTimerM = null;
           ocrLoading.value = false;
-          showToast('识别失败，请手动输入题干');
+          showToast('题干提取失败，请手动输入');
         }
-      } catch (e) {
+      } catch (err) {
         clearInterval(pollTimerM);
-        pollTimerM = null;
         ocrLoading.value = false;
-        showToast('查询识别状态失败');
       }
-    }, 600);
+    }, 500);
   } catch (e) {
     ocrLoading.value = false;
-    showToast('提交识别失败');
+    showToast('发起识别任务失败');
   }
-};
-
-const resetModalState = () => {
-  if (pollTimerM) {
-    clearInterval(pollTimerM);
-    pollTimerM = null;
-  }
-  ocrLoading.value = false;
-  fileList.value = [];
-  uploadedFile.value = null;
-  newMistake.value.extracted_text = '';
-  newMistake.value.source_reference = '';
-  newMistake.value.original_image_path = null;
-  newMistake.value.thumbnail_path = null;
-  newMistake.value.storage_key = null;
-};
-
-const closeAddModal = () => {
-  resetModalState();
-  showAddModal.value = false;
 };
 
 const submitAddMistake = async () => {
-  if (!newMistake.value.extracted_text.trim() && !newMistake.value.original_image_path) {
-    showToast('请至少输入题干文字或上传图片');
+  if (!newMistake.value.subject_id) {
+    showToast('请选择学科');
     return;
   }
+  if (!newMistake.value.extracted_text && !newMistake.value.thumbnail_path) {
+    showToast('请至少填写题干文字或上传错题图片');
+    return;
+  }
+
   submitting.value = true;
   try {
     await mistakeApi.create({
@@ -396,31 +445,37 @@ const submitAddMistake = async () => {
       original_image_path: newMistake.value.original_image_path,
       thumbnail_path: newMistake.value.thumbnail_path
     });
-    showToast({ message: '错题已归入艾宾浩斯复习流', icon: 'success' });
-    showAddModal.value = false;
-    resetModalState();
+    showToast({ message: '错题录入成功！', icon: 'success' });
+    closeAddModal();
     fetchMistakes();
   } catch (e) {
-    showToast('保存错题失败');
+    showToast('录入失败');
   } finally {
     submitting.value = false;
   }
 };
 
-const previewImage = (url) => {
-  previewUrl.value = url;
-  showPreview.value = true;
+const closeAddModal = () => {
+  showAddModal.value = false;
+  fileList.value = [];
+  uploadedFile.value = null;
+  newMistake.value = {
+    subject_id: subjects.value.length > 0 ? subjects.value[0].id : 1,
+    source_reference: '',
+    error_type: '概念模糊',
+    extracted_text: '',
+    original_image_path: null,
+    thumbnail_path: null,
+    storage_key: null
+  };
 };
 
-watch(showAddModal, (v) => {
-  if (!v) {
-    if (pollTimerM) {
-      clearInterval(pollTimerM);
-      pollTimerM = null;
-    }
-    ocrLoading.value = false;
+const previewImage = (url) => {
+  if (url) {
+    previewUrl.value = url;
+    showPreview.value = true;
   }
-});
+};
 
 onMounted(async () => {
   await fetchSubjects();
@@ -430,19 +485,22 @@ onMounted(async () => {
 
 <style scoped>
 .mistake-view {
-  padding: 0.5rem 1rem 6rem;
-  background: #f8fafc;
   min-height: 100vh;
+  background-color: var(--st-bg-page, #f8fafc);
+  padding: 14px 16px 84px;
 }
 
+/* 顶部导航与组卷入口 */
 .mistake-header-bar {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 2px 10px 2px 2px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  align-items: center;
+  margin-bottom: 12px;
+  background: var(--st-bg-card, #ffffff);
+  border-radius: var(--st-radius-lg, 14px);
+  padding: 4px 12px;
+  border: 1px solid var(--st-border, #f1f5f9);
+  box-shadow: var(--st-shadow-card, 0 1px 3px rgba(15, 23, 42, 0.04));
 }
 
 .mistake-tabs {
@@ -453,16 +511,16 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--st-primary-light, #eff6ff);
+  color: var(--st-primary, #2563eb);
   padding: 6px 12px;
-  border-radius: 16px;
+  border-radius: var(--st-radius-full, 9999px);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  border: 1px solid #bfdbfe;
+  border: 1px solid rgba(37, 99, 235, 0.2);
   white-space: nowrap;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .paper-quick-btn:active {
@@ -470,16 +528,19 @@ onMounted(async () => {
   transform: scale(0.97);
 }
 
+/* 筛选栏 */
 .filter-section {
-
-  margin: 0.75rem 0;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .chips-row {
   display: flex;
-  gap: 0.4rem;
+  gap: 6px;
   overflow-x: auto;
-  padding-bottom: 0.4rem;
+  padding-bottom: 2px;
   scrollbar-width: none;
 }
 
@@ -487,223 +548,189 @@ onMounted(async () => {
   display: none;
 }
 
-.chip, .status-chip {
-  padding: 0.3rem 0.75rem;
-  background: #f1f5f9;
-  border-radius: 16px;
-  font-size: 0.8rem;
-  color: #475569;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.chip.active, .status-chip.active {
-  background: #2563eb;
-  color: white;
-  font-weight: 600;
-}
-
+/* 错题列表 */
 .mistake-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 12px;
 }
 
 .mistake-card {
-  background: white;
-  border-radius: 16px;
-  padding: 1rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.6rem;
 }
 
-.sub-badge {
-  background: #eff6ff;
-  color: #2563eb;
-  font-size: 0.75rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: 6px;
-  font-weight: 600;
-  margin-right: 0.5rem;
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .source-text {
-  font-size: 0.75rem;
-  color: #64748b;
+  font-size: 11px;
+  color: var(--st-text-secondary, #64748b);
 }
 
-.status-tag {
-  font-size: 0.75rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: 6px;
-  font-weight: 600;
-}
-
-.status-unmastered {
-  background: #fee2e2;
-  color: #ef4444;
-}
-
-.status-review {
-  background: #fef3c7;
-  color: #d97706;
-}
-
-.status-mastered {
-  background: #d1fae5;
-  color: #059669;
-}
-
+/* 略缩图容器 */
 .card-image-box {
-  margin-bottom: 0.6rem;
+  position: relative;
+  width: 100%;
   max-height: 160px;
+  border-radius: var(--st-radius-md, 10px);
   overflow: hidden;
-  border-radius: 8px;
-  background: #f1f5f9;
+  cursor: pointer;
+  background: var(--st-bg-subtle, #f1f5f9);
   display: flex;
   justify-content: center;
+  align-items: center;
 }
 
 .card-image-box img {
   width: 100%;
+  max-height: 160px;
   object-fit: cover;
 }
 
+.img-preview-tag {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  background: rgba(15, 23, 42, 0.7);
+  color: #ffffff;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--st-radius-full, 9999px);
+  backdrop-filter: blur(4px);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .question-text {
-  font-size: 0.95rem;
-  color: #1e293b;
+  font-size: 14px;
+  color: var(--st-text-primary, #0f172a);
   line-height: 1.5;
-  margin-bottom: 0.5rem;
+  margin: 0 0 6px 0;
 }
 
 .tags-row {
   display: flex;
-  gap: 0.4rem;
-  margin-bottom: 0.5rem;
+  gap: 6px;
 }
 
 .error-tag {
-  background: #f3f4f6;
-  color: #4b5563;
-  font-size: 0.75rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
+  background: var(--st-warning-light, #fffbeb);
+  color: var(--st-warning-dark, #d97706);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: var(--st-radius-sm, 6px);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
 }
 
+/* 艾宾浩斯复习操作区 */
 .review-action-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #f1f5f9;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--st-border, #f1f5f9);
 }
 
 .review-stat {
-  font-size: 0.8rem;
-  color: #64748b;
+  font-size: 12px;
+  color: var(--st-text-secondary, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .next-date {
-  margin-left: 0.4rem;
-  color: #ea580c;
+  color: var(--st-purple, #7c3aed);
+  font-size: 11px;
 }
 
 .action-buttons {
   display: flex;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
 .rev-btn {
-  border: none;
-  padding: 0.35rem 0.8rem;
-  border-radius: 8px;
-  font-size: 0.8rem;
   font-weight: 600;
-  cursor: pointer;
 }
 
-.forget-btn {
-  background: #fff7ed;
-  color: #ea580c;
+.empty-state {
+  padding: 40px 0;
 }
 
-.remember-btn {
-  background: #ecfdf5;
-  color: #059669;
-}
-
-.fab-add {
+/* 底部常驻悬浮栏 */
+.floating-bottom-bar {
   position: fixed;
-  bottom: 70px;
-  right: 20px;
-  background: #2563eb;
-  color: white;
-  padding: 0.75rem 1.25rem;
-  border-radius: 30px;
-  font-size: 0.95rem;
+  bottom: 50px;
+  left: 0;
+  right: 0;
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  z-index: 40;
+}
+
+.add-mistake-btn {
   font-weight: 600;
-  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
-  cursor: pointer;
-  z-index: 99;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
 }
 
+/* 弹窗抽屉 */
 .add-modal-body {
-  padding: 1.5rem;
+  padding: 1rem 1.25rem 1.75rem;
 }
 
-.add-modal-body h3 {
-  margin-bottom: 1.25rem;
-  font-size: 1.15rem;
-  color: #0f172a;
+.sheet-grabber {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background-color: var(--st-border-bold, #e2e8f0);
+  margin: 0 auto 14px;
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 14px;
 }
 
-.form-group label {
+.form-label {
   display: block;
-  font-size: 0.85rem;
+  font-size: 13px;
   font-weight: 600;
-  color: #475569;
-  margin-bottom: 0.4rem;
+  color: var(--st-text-regular, #334155);
+  margin-bottom: 8px;
 }
 
-.ocr-extract-btn {
-  margin-bottom: 0.5rem;
-}
-
-.sub-grid, .error-types-grid {
+.sheet-subject-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 6px;
 }
 
-.sub-item, .err-item {
-  padding: 0.35rem 0.75rem;
-  background: #f1f5f9;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  color: #475569;
-  cursor: pointer;
-}
-
-.sub-item.active, .err-item.active {
-  background: #2563eb;
-  color: white;
-  font-weight: 600;
+.sheet-input-field {
+  background-color: var(--st-bg-subtle, #f1f5f9);
+  border-radius: var(--st-radius-md, 10px);
+  border: 1px solid var(--st-border, #f1f5f9);
+  padding: 8px 12px;
 }
 
 .modal-footer-btns {
   display: flex;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
+  gap: 12px;
+  margin-top: 18px;
 }
 </style>
