@@ -44,7 +44,7 @@
         <div class="st-card">
           <div class="st-section-header">
             <span class="st-icon-badge st-icon-badge--primary">
-              <van-icon name="bell-o" />
+              <van-icon name="volume-o" />
             </span>
             <span>推送提醒设置</span>
           </div>
@@ -74,13 +74,16 @@
                 <span class="st-icon-badge st-icon-badge--success">
                   <van-icon name="chat-o" />
                 </span>
-                <span class="channel-title">微信公众号推送 (PushPlus 首选推荐)</span>
+                <span class="channel-title">微信公众号 (PushPlus)</span>
               </div>
-              <span class="st-status-tag st-status-tag--success">实名免费 200条/天</span>
+              <span class="st-status-tag st-status-tag--success">免费 200条/天</span>
             </div>
             <van-field
               v-model="notifConfig.pushplus_token"
               label="Token"
+              label-width="70px"
+              center
+              class="channel-field"
               placeholder="微信扫码关注 pushplus 获取的 token"
             >
               <template #button>
@@ -88,6 +91,7 @@
                   size="small"
                   type="primary"
                   plain
+                  class="channel-test-btn"
                   :loading="testingChannel === 'pushplus'"
                   @click="handleTestChannel('pushplus', notifConfig.pushplus_token)"
                 >
@@ -110,21 +114,25 @@
             <div class="channel-header">
               <div class="channel-header-left">
                 <span class="st-icon-badge st-icon-badge--warning">
-                  <van-icon name="bell-o" />
+                  <van-icon name="comment-o" />
                 </span>
-                <span class="channel-title">Server酱 (Turbo版 备选)</span>
+                <span class="channel-title">Server酱 (Turbo版)</span>
               </div>
-              <span class="st-status-tag st-status-tag--warning">免费限 5条/天</span>
+              <span class="st-status-tag st-status-tag--warning">免费 5条/天</span>
             </div>
             <van-field
               v-model="notifConfig.serverchan_key"
               label="SendKey"
+              label-width="70px"
+              center
+              class="channel-field"
               placeholder="Server酱的 SCT SendKey"
             >
               <template #button>
                 <van-button
                   size="small"
                   type="default"
+                  class="channel-test-btn"
                   :loading="testingChannel === 'serverchan'"
                   @click="handleTestChannel('serverchan', notifConfig.serverchan_key)"
                 >
@@ -141,19 +149,23 @@
                 <span class="st-icon-badge st-icon-badge--purple">
                   <van-icon name="phone-o" />
                 </span>
-                <span class="channel-title">iOS Bark 推送 (全家 iPhone 首选)</span>
+                <span class="channel-title">iOS Bark 推送</span>
               </div>
-              <span class="st-status-tag st-status-tag--purple">无需 HTTPS 免账号</span>
+              <span class="st-status-tag st-status-tag--purple">iPhone 首选 · 免账号</span>
             </div>
             <van-field
               v-model="notifConfig.bark_key"
               label="Bark Key"
+              label-width="70px"
+              center
+              class="channel-field"
               placeholder="Bark App 中的设备 Key 或完整 URL"
             >
               <template #button>
                 <van-button
                   size="small"
                   type="default"
+                  class="channel-test-btn"
                   :loading="testingChannel === 'bark'"
                   @click="handleTestChannel('bark', notifConfig.bark_key)"
                 >
@@ -170,19 +182,23 @@
                 <span class="st-icon-badge st-icon-badge--neutral">
                   <van-icon name="cluster-o" />
                 </span>
-                <span class="channel-title">群机器人 Webhook (企微 / 钉钉 / 飞书)</span>
+                <span class="channel-title">群机器人 Webhook</span>
               </div>
-              <span class="st-status-tag st-status-tag--neutral">100% 免费零门槛</span>
+              <span class="st-status-tag st-status-tag--neutral">企微/钉钉/飞书</span>
             </div>
             <van-field
               v-model="notifConfig.webhook_url"
               label="Webhook"
+              label-width="70px"
+              center
+              class="channel-field"
               placeholder="群机器人的完整 Webhook 链接"
             >
               <template #button>
                 <van-button
                   size="small"
                   type="default"
+                  class="channel-test-btn"
                   :loading="testingChannel === 'webhook'"
                   @click="handleTestChannel('webhook', notifConfig.webhook_url)"
                 >
@@ -213,7 +229,7 @@
               :loading="sendingSummary"
               @click="handleSendSummaryNow"
             >
-              立即生成并发送今日汇总 (即时推送快照)
+              立即生成并发送今日汇总
             </van-button>
           </div>
         </div>
@@ -285,16 +301,16 @@
             <!-- 月度核心指标网格 -->
             <div class="monthly-stats-grid">
               <div class="monthly-stat-item">
-                <span class="m-stat-val text-primary">{{ monthlyData?.average_completion_rate ?? '--' }}%</span>
-                <span class="m-stat-label">月均打卡率</span>
+                <div class="m-stat-val text-primary">{{ monthlyData?.average_completion_rate ?? '--' }}%</div>
+                <div class="m-stat-label">月均打卡率</div>
               </div>
               <div class="monthly-stat-item">
-                <span class="m-stat-val">{{ monthlyData?.recorded_days ?? 0 }} / {{ monthlyData?.total_days ?? 0 }}</span>
-                <span class="m-stat-label">有效打卡天数</span>
+                <div class="m-stat-val">{{ monthlyData?.recorded_days ?? 0 }} / {{ monthlyData?.total_days ?? 0 }}</div>
+                <div class="m-stat-label">有效打卡天数</div>
               </div>
               <div class="monthly-stat-item">
-                <span class="m-stat-val text-succ">{{ monthlyData?.perfect_days ?? 0 }} 天</span>
-                <span class="m-stat-label">全满卡天数</span>
+                <div class="m-stat-val text-succ">{{ monthlyData?.perfect_days ?? 0 }} 天</div>
+                <div class="m-stat-label">全满卡天数</div>
               </div>
             </div>
 
@@ -788,8 +804,14 @@ const renderMonthlyCharts = () => {
             data: rates,
             smooth: true,
             connectNulls: true,
-            showSymbol: false,
-            itemStyle: { color: '#10b981' },
+            showSymbol: true,
+            symbol: 'circle',
+            symbolSize: 6,
+            itemStyle: {
+              color: '#10b981',
+              borderWidth: 2,
+              borderColor: '#ffffff'
+            },
             lineStyle: { width: 2.5, color: '#10b981' },
             areaStyle: {
               color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
@@ -948,6 +970,7 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 6px;
+  gap: 8px;
 }
 
 .channel-header-left {
@@ -960,6 +983,32 @@ onUnmounted(() => {
   font-size: 13px;
   font-weight: 600;
   color: var(--st-text-primary, #0f172a);
+  white-space: nowrap;
+}
+
+.channel-field {
+  background: transparent;
+  padding: 6px 0 2px;
+}
+
+.channel-field :deep(.van-field__label) {
+  width: 70px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--st-text-primary, #0f172a);
+  margin-right: 8px;
+}
+
+.channel-field :deep(.van-field__control) {
+  font-size: 13px;
+}
+
+.channel-test-btn {
+  height: 28px;
+  min-width: 52px;
+  padding: 0 10px;
+  font-size: 12px;
+  border-radius: var(--st-radius-sm, 6px);
 }
 
 .channel-hint {
@@ -1071,22 +1120,34 @@ onUnmounted(() => {
   background: #f8fafc;
   border: 1px solid var(--st-border, #e2e8f0);
   border-radius: var(--st-radius-sm, 8px);
-  padding: 8px 6px;
-  text-align: center;
+  padding: 10px 4px;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
 }
 
 .m-stat-val {
   font-size: 15px;
   font-weight: 700;
   color: var(--st-text-primary, #0f172a);
+  height: 22px;
+  line-height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .m-stat-label {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--st-text-secondary, #64748b);
-  margin-top: 2px;
+  height: 16px;
+  line-height: 16px;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .text-primary {
