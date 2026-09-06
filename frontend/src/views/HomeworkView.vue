@@ -98,7 +98,7 @@
           <div class="st-icon-badge st-icon-badge--success" style="width: 22px; height: 22px;">
             <van-icon name="passed" />
           </div>
-          <span>太棒了！今日全部作业均已如期完成</span>
+          <span>太棒了！{{ weekendRollover ? '周末大作业与今日任务已全部完成' : '今日全部作业均已如期完成' }}</span>
         </div>
       </transition>
     </div>
@@ -125,74 +125,157 @@
 
     <!-- 作业列表区 (左滑抽屉、手势解耦、无 Emoji) -->
     <van-pull-refresh v-model="refreshing" @refresh="fetchHomework">
-      <div class="homework-list-wrapper" v-if="filteredItems.length > 0">
-        <div class="list-section-header">
-          <span class="list-title">待办作业 ({{ filteredItems.length }} 项)</span>
-          <span class="swipe-hint">
-            <van-icon name="exchange" /> 左滑卡片呼出操作
-          </span>
+      <div class="homework-list-wrapper" v-if="filteredItems.length > 0 || filteredRolloverItems.length > 0">
+        <!-- 分区1：周末顺延大作业（如果存在 filteredRolloverItems） -->
+        <div class="rollover-section" v-if="filteredRolloverItems.length > 0">
+          <div class="list-section-header rollover-header">
+            <div class="rollover-title-box">
+              <span class="list-title">周末顺延大作业 ({{ filteredRolloverItems.length }} 项)</span>
+              <span class="rollover-badge-tag">
+                <van-icon name="underway-o" /> 来自周五 · 截止周日晚
+              </span>
+            </div>
+            <span class="swipe-hint">
+              <van-icon name="exchange" /> 左滑操作
+            </span>
+          </div>
+
+          <div class="homework-cards">
+            <van-swipe-cell
+              v-for="item in filteredRolloverItems"
+              :key="'rollover-' + item.id"
+              class="hw-swipe-cell hw-swipe-cell--rollover"
+            >
+              <!-- 卡片正面：克制扁平、无多余平铺按钮 -->
+              <div
+                class="st-card hw-card-face"
+                :class="{ 'is-done': item.is_completed }"
+                @click="toggleComplete(item)"
+              >
+                <!-- 大号圆形打勾微动效 -->
+                <div
+                  class="hw-check-circle"
+                  :class="{ checked: item.is_completed, 'st-animate-check': item.justToggled }"
+                  @click.stop="toggleComplete(item)"
+                >
+                  <van-icon v-if="item.is_completed" name="success" size="14" color="#ffffff" />
+                </div>
+
+                <!-- 标题与学科信息 -->
+                <div class="hw-content">
+                  <div class="hw-meta-row">
+                    <span class="st-subject-tag" :class="getSubjectTagClass(item.subject_name)">
+                      {{ item.subject_name }}
+                    </span>
+                    <span class="rollover-origin-tag">周五顺延</span>
+                    <span class="hw-due-time" v-if="item.completed_at">
+                      <van-icon name="clock-o" /> 已于 {{ item.completed_at.substring(11, 16) }} 打卡
+                    </span>
+                  </div>
+                  <div class="hw-title" :class="{ strike: item.is_completed }">
+                    {{ item.content }}
+                  </div>
+                </div>
+
+                <!-- 状态微指示 -->
+                <div class="hw-status-tag" :class="{ done: item.is_completed }">
+                  {{ item.is_completed ? '已打卡' : '待完成' }}
+                </div>
+              </div>
+
+              <!-- 左滑展开的抽屉操作按钮 (编辑 + 转错题 + 删除) -->
+              <template #right>
+                <div class="swipe-actions-box">
+                  <button class="swipe-action-btn btn-edit" @click.stop="openEditModal(item)">
+                    <van-icon name="edit" size="15" />
+                    <span>编辑</span>
+                  </button>
+                  <button class="swipe-action-btn btn-mistake" @click.stop="handleToMistake(item)">
+                    <van-icon name="plus" size="15" />
+                    <span>转错题</span>
+                  </button>
+                  <button class="swipe-action-btn btn-delete" @click.stop="handleDelete(item)">
+                    <van-icon name="delete-o" size="15" />
+                    <span>删除</span>
+                  </button>
+                </div>
+              </template>
+            </van-swipe-cell>
+          </div>
         </div>
 
-        <div class="homework-cards">
-          <van-swipe-cell
-            v-for="item in filteredItems"
-            :key="item.id"
-            class="hw-swipe-cell"
-          >
-            <!-- 卡片正面：克制扁平、无多余平铺按钮 -->
-            <div
-              class="st-card hw-card-face"
-              :class="{ 'is-done': item.is_completed }"
-              @click="toggleComplete(item)"
+        <!-- 分区2：今日独立任务/当日作业 -->
+        <div class="today-section" v-if="filteredItems.length > 0">
+          <div class="list-section-header" :class="{ 'with-top-margin': filteredRolloverItems.length > 0 }">
+            <span class="list-title">
+              {{ filteredRolloverItems.length > 0 ? '今日独立任务' : '待办作业' }} ({{ filteredItems.length }} 项)
+            </span>
+            <span class="swipe-hint" v-if="filteredRolloverItems.length === 0">
+              <van-icon name="exchange" /> 左滑卡片呼出操作
+            </span>
+          </div>
+
+          <div class="homework-cards">
+            <van-swipe-cell
+              v-for="item in filteredItems"
+              :key="item.id"
+              class="hw-swipe-cell"
             >
-              <!-- 大号圆形打勾微动效 -->
+              <!-- 卡片正面：克制扁平、无多余平铺按钮 -->
               <div
-                class="hw-check-circle"
-                :class="{ checked: item.is_completed, 'st-animate-check': item.justToggled }"
-                @click.stop="toggleComplete(item)"
+                class="st-card hw-card-face"
+                :class="{ 'is-done': item.is_completed }"
+                @click="toggleComplete(item)"
               >
-                <van-icon v-if="item.is_completed" name="success" size="14" color="#ffffff" />
-              </div>
-
-              <!-- 标题与学科信息 -->
-              <div class="hw-content">
-                <div class="hw-meta-row">
-                  <span class="st-subject-tag" :class="getSubjectTagClass(item.subject_name)">
-                    {{ item.subject_name }}
-                  </span>
-                  <span class="hw-due-time" v-if="item.completed_at">
-                    <van-icon name="clock-o" /> 已于 {{ item.completed_at.substring(11, 16) }} 打卡
-                  </span>
+                <!-- 大号圆形打勾微动效 -->
+                <div
+                  class="hw-check-circle"
+                  :class="{ checked: item.is_completed, 'st-animate-check': item.justToggled }"
+                  @click.stop="toggleComplete(item)"
+                >
+                  <van-icon v-if="item.is_completed" name="success" size="14" color="#ffffff" />
                 </div>
-                <div class="hw-title" :class="{ strike: item.is_completed }">
-                  {{ item.content }}
+
+                <!-- 标题与学科信息 -->
+                <div class="hw-content">
+                  <div class="hw-meta-row">
+                    <span class="st-subject-tag" :class="getSubjectTagClass(item.subject_name)">
+                      {{ item.subject_name }}
+                    </span>
+                    <span class="hw-due-time" v-if="item.completed_at">
+                      <van-icon name="clock-o" /> 已于 {{ item.completed_at.substring(11, 16) }} 打卡
+                    </span>
+                  </div>
+                  <div class="hw-title" :class="{ strike: item.is_completed }">
+                    {{ item.content }}
+                  </div>
+                </div>
+
+                <!-- 状态微指示 -->
+                <div class="hw-status-tag" :class="{ done: item.is_completed }">
+                  {{ item.is_completed ? '已打卡' : '待完成' }}
                 </div>
               </div>
 
-              <!-- 状态微指示 -->
-              <div class="hw-status-tag" :class="{ done: item.is_completed }">
-                {{ item.is_completed ? '已打卡' : '待完成' }}
-              </div>
-            </div>
-
-            <!-- 左滑展开的抽屉操作按钮 (编辑 + 转错题 + 删除) -->
-            <template #right>
-              <div class="swipe-actions-box">
-                <button class="swipe-action-btn btn-edit" @click.stop="openEditModal(item)">
-                  <van-icon name="edit" size="15" />
-                  <span>编辑</span>
-                </button>
-                <button class="swipe-action-btn btn-mistake" @click.stop="handleToMistake(item)">
-                  <van-icon name="plus" size="15" />
-                  <span>转错题</span>
-                </button>
-                <button class="swipe-action-btn btn-delete" @click.stop="handleDelete(item)">
-                  <van-icon name="delete-o" size="15" />
-                  <span>删除</span>
-                </button>
-              </div>
-            </template>
-          </van-swipe-cell>
+              <!-- 左滑展开的抽屉操作按钮 (编辑 + 转错题 + 删除) -->
+              <template #right>
+                <div class="swipe-actions-box">
+                  <button class="swipe-action-btn btn-edit" @click.stop="openEditModal(item)">
+                    <van-icon name="edit" size="15" />
+                    <span>编辑</span>
+                  </button>
+                  <button class="swipe-action-btn btn-mistake" @click.stop="handleToMistake(item)">
+                    <van-icon name="plus" size="15" />
+                    <span>转错题</span>
+                  </button>
+                  <button class="swipe-action-btn btn-delete" @click.stop="handleDelete(item)">
+                    <van-icon name="delete-o" size="15" />
+                    <span>删除</span>
+                  </button>
+                </div>
+              </template>
+            </van-swipe-cell>
+          </div>
         </div>
       </div>
 
@@ -286,6 +369,7 @@ const totalCount = ref(0);
 const completedCount = ref(0);
 const rate = ref(0);
 const items = ref([]);
+const weekendRollover = ref(null);
 const subjects = ref([]);
 const selectedSubject = ref(null);
 const refreshing = ref(false);
@@ -329,6 +413,12 @@ const weekDays = computed(() => {
 const filteredItems = computed(() => {
   if (!selectedSubject.value) return items.value;
   return items.value.filter((i) => i.subject_id === selectedSubject.value);
+});
+
+const filteredRolloverItems = computed(() => {
+  if (!weekendRollover.value || !weekendRollover.value.items) return [];
+  if (!selectedSubject.value) return weekendRollover.value.items;
+  return weekendRollover.value.items.filter((i) => i.subject_id === selectedSubject.value);
 });
 
 // 学科标签颜色映射
@@ -401,6 +491,7 @@ const fetchHomework = async () => {
     rate.value = res.data.rate;
     streak.value = res.data.streak;
     items.value = res.data.items;
+    weekendRollover.value = res.data.weekend_rollover || null;
   } catch (e) {
     showToast('加载作业失败');
   } finally {
@@ -720,11 +811,60 @@ onMounted(async () => {
   gap: 4px;
 }
 
+.homework-list-wrapper {
+  padding-bottom: 84px; /* 避让底部悬浮操作栏与 Tabbar，确保最后一个卡片完整呈现不被截断 */
+}
+
+.rollover-section {
+  margin-bottom: 16px;
+}
+
+.rollover-header {
+  margin-bottom: 8px;
+}
+
+.rollover-title-box {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rollover-badge-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #7c3aed;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  padding: 2px 8px;
+  border-radius: var(--st-radius-full, 9999px);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rollover-origin-tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: #7c3aed;
+  background: #ede9fe;
+  padding: 1px 6px;
+  border-radius: 4px;
+  line-height: 1.3;
+}
+
+.hw-swipe-cell--rollover .hw-card-face {
+  border-left: 3.5px solid #8b5cf6;
+}
+
+.list-section-header.with-top-margin {
+  margin-top: 14px;
+}
+
 .homework-cards {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding-bottom: 84px; /* 避让底部悬浮操作栏与 Tabbar，确保最后一个卡片完整呈现不被截断 */
 }
 
 .hw-swipe-cell {

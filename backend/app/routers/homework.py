@@ -17,26 +17,46 @@ router = APIRouter(prefix="/api/homework", tags=["作业打卡"])
 def calculate_streak(student_id: int, db: Session) -> int:
     """
     实时聚合计算连续满打卡天数（Streak）：
-    当天所有任务完成计入 streak；当天有未完成但昨天全完成时保持 streak 不断；
-    跨月完全通过日期推算保障。
+    - 平日（周一至周四）：当日所有作业完成计入 streak；
+    - 周末（周五至周日）：引入周末宽限期闭环。周五大作业持续顺延至周日晚；
+      若当前正值周六且周五作业存在，处于宽限期不中断 streak；
+      在周日晚前周五作业全部清零后，周五、周六、周日三天统一计为连续满卡。
     """
     today = date.today()
 
-    # 获取该学生有作业记录的所有去重日期
-    dates_query = db.query(HomeworkItem.date).filter(
-        HomeworkItem.student_id == student_id
-    ).distinct().order_by(HomeworkItem.date.desc()).all()
-
-    recorded_dates = [d[0] for d in dates_query]
-    if not recorded_dates:
-        return 0
-
     # 辅助函数：判断指定日期的作业是否全部完成
     def is_date_fully_completed(check_date: date) -> bool:
+        # 1. 检查该日期自身的独立作业
         items = db.query(HomeworkItem).filter(
             HomeworkItem.student_id == student_id,
             HomeworkItem.date == check_date
         ).all()
+
+        # 2. 周末宽限期处理
+        if check_date.weekday() in [5, 6]:  # 周六 (5) 或周日 (6)
+            days_to_fri = 1 if check_date.weekday() == 5 else 2
+            friday_date = check_date - timedelta(days=days_to_fri)
+            fri_items = db.query(HomeworkItem).filter(
+                HomeworkItem.student_id == student_id,
+                HomeworkItem.date == friday_date
+            ).all()
+
+            own_completed = all(it.is_completed for it in items) if items else True
+            fri_completed = bool(fri_items and all(it.is_completed for it in fri_items))
+
+            is_active_weekend = (today >= friday_date and today <= friday_date + timedelta(days=2))
+
+            if is_active_weekend:
+                # 今天是周六：宽限期生效，只要周六自身任务完成，周五大作业允许继续推进
+                if check_date.weekday() == 5:
+                    return own_completed
+                # 今天是周日：看周五大作业和周日任务是否全数完成
+                elif check_date.weekday() == 6:
+                    return (fri_completed or not fri_items) and own_completed
+            else:
+                # 历史过往周末：周五大作业和周末自身任务必须最终全部完成
+                return (fri_completed or not fri_items) and own_completed
+
         if not items:
             return False
         return all(item.is_completed for item in items)
@@ -45,28 +65,20 @@ def calculate_streak(student_id: int, db: Session) -> int:
     current_check = today
 
     # 1. 检查今日是否已完成
-    today_items = db.query(HomeworkItem).filter(
-        HomeworkItem.student_id == student_id,
-        HomeworkItem.date == today
-    ).all()
-
-    if today_items and all(item.is_completed for item in today_items):
+    if is_date_fully_completed(today):
         streak += 1
         current_check = today - timedelta(days=1)
     else:
         # 今日还未全完成，检查昨日
         yesterday = today - timedelta(days=1)
         if is_date_fully_completed(yesterday):
-            # 昨日完成了，从昨天开始往前倒推
             current_check = yesterday
         else:
-            # 昨天都没完成，streak 为 0
             return 0
 
     # 2. 依次往前追溯前一天
     while True:
         if is_date_fully_completed(current_check):
-            # 如果今日已经加过 1 且此时 current_check 就是 yesterday，避免重复加
             if current_check != today or streak == 0:
                 streak += 1
             current_check -= timedelta(days=1)
@@ -104,19 +116,70 @@ def get_homework_list(
             "date": item.date,
             "content": item.content,
             "is_completed": item.is_completed,
-            "completed_at": item.completed_at,
+            "completed_at": item.completed_at.isoformat() if item.completed_at else None,
             "source_image_path": item.source_image_path,
             "created_at": item.created_at,
+            "is_weekend_rollover": False,
         }
         items_out.append(item_dict)
 
+    # 周末跨天顺延透视：周六 (5) 或周日 (6) 自动透视对应周五的作业
+    weekend_rollover = None
+    if query_date.weekday() in [5, 6]:
+        days_to_fri = 1 if query_date.weekday() == 5 else 2
+        friday_date = query_date - timedelta(days=days_to_fri)
+        friday_items = db.query(HomeworkItem).filter(
+            HomeworkItem.student_id == student_id,
+            HomeworkItem.date == friday_date
+        ).order_by(HomeworkItem.id.asc()).all()
+
+        if friday_items:
+            fri_completed = sum(1 for it in friday_items if it.is_completed)
+            fri_total = len(friday_items)
+            fri_rate = int((fri_completed / fri_total) * 100) if fri_total > 0 else 0
+            fri_items_out = []
+            for it in friday_items:
+                fri_items_out.append({
+                    "id": it.id,
+                    "student_id": it.student_id,
+                    "subject_id": it.subject_id,
+                    "subject_name": it.subject.name if it.subject else "",
+                    "date": it.date,
+                    "content": it.content,
+                    "is_completed": it.is_completed,
+                    "completed_at": it.completed_at.isoformat() if it.completed_at else None,
+                    "source_image_path": it.source_image_path,
+                    "created_at": it.created_at,
+                    "is_weekend_rollover": True,
+                })
+
+            weekend_rollover = {
+                "source_date": str(friday_date),
+                "total": fri_total,
+                "completed": fri_completed,
+                "rate": fri_rate,
+                "items": fri_items_out
+            }
+
+    # 如果存在周末顺延作业，则综合计算周末全局总数与完成率
+    effective_total = total
+    effective_completed = completed
+    effective_rate = rate
+    if weekend_rollover:
+        effective_total += weekend_rollover["total"]
+        effective_completed += weekend_rollover["completed"]
+        effective_rate = int((effective_completed / effective_total) * 100) if effective_total > 0 else 0
+
     return {
         "date": query_date,
-        "total": total,
-        "completed": completed,
-        "rate": rate,
+        "total": effective_total,
+        "completed": effective_completed,
+        "rate": effective_rate,
         "streak": streak,
-        "items": items_out
+        "items": items_out,
+        "today_total": total,
+        "today_completed": completed,
+        "weekend_rollover": weekend_rollover
     }
 
 
