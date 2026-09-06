@@ -20,11 +20,13 @@
     </van-nav-bar>
 
     <div class="score-content">
-      <!-- 汇总概览卡片 -->
-      <div class="summary-card">
+      <!-- 汇总概览卡片 (扁平纯白质感，统一全站设计语言) -->
+      <div class="st-card summary-card">
         <div class="summary-header">
           <div class="student-info">
-            <span class="avatar-badge">🎓</span>
+            <span class="st-icon-badge st-icon-badge--primary" style="width: 36px; height: 36px; font-size: 18px;">
+              <van-icon name="award-o" />
+            </span>
             <div>
               <div class="student-name">初一学情档案</div>
               <div class="student-sub">已记录 {{ examList.length }} 场考试 · 7 科均衡追踪</div>
@@ -57,7 +59,12 @@
       <!-- 薄弱学科诊断预警条 -->
       <div v-if="weakSubjects.length > 0" class="weak-diagnostic-box">
         <div class="diagnostic-header">
-          <span class="diag-title">⚠️ 薄弱学科诊断建议 ({{ weakSubjects.length }} 门)</span>
+          <div class="diag-title-row">
+            <span class="st-icon-badge st-icon-badge--danger" style="width: 22px; height: 22px; font-size: 12px;">
+              <van-icon name="warning" />
+            </span>
+            <span class="diag-title">薄弱学科诊断建议 ({{ weakSubjects.length }} 门)</span>
+          </div>
           <span class="diag-tip">基于满分率 &lt; 60% 或 顽固错题 &ge; 3</span>
         </div>
         <div class="weak-tags-list">
@@ -79,44 +86,48 @@
         </div>
       </div>
       <div v-else class="weak-good-box">
-        <span class="good-icon">🎉</span>
+        <span class="st-icon-badge st-icon-badge--success" style="width: 22px; height: 22px; font-size: 12px; margin-right: 6px;">
+          <van-icon name="passed" />
+        </span>
         <span class="good-text">各科基础扎实，目前未触发薄弱预警，继续保持！</span>
       </div>
 
       <!-- 走势折线图卡片 -->
-      <div class="chart-card">
+      <div class="st-card chart-card">
         <div class="chart-card-header">
           <div class="card-title-group">
-            <span class="card-icon">📈</span>
+            <span class="st-icon-badge st-icon-badge--primary">
+              <van-icon name="chart-trending-o" />
+            </span>
             <span class="card-title">成绩走势分析</span>
           </div>
           <span class="card-sub">{{ selectedSubjectName }} 满分率变动</span>
         </div>
 
-        <!-- 科目筛选切换 Pills -->
+        <!-- 科目筛选切换 Chips -->
         <div class="subject-pills-scroll">
-          <button
-            class="pill-btn"
+          <span
+            class="st-chip"
             :class="{ active: selectedSubjectId === null }"
             @click="changeTrendSubject(null, '全科总分')"
           >
             全科总分
-          </button>
-          <button
+          </span>
+          <span
             v-for="sub in coreSubjects"
             :key="sub.id"
-            class="pill-btn"
+            class="st-chip"
             :class="{ active: selectedSubjectId === sub.id }"
             @click="changeTrendSubject(sub.id, sub.name)"
           >
             {{ sub.name }}
-          </button>
+          </span>
         </div>
 
         <!-- 折线图 DOM -->
         <div ref="trendChartRef" class="echarts-container"></div>
         <div v-if="trendItems.length === 1" class="chart-footnote">
-          💡 当前仅有 1 次考试数据，已作为独立参考点呈现，后续录入将自动生成连贯走势。
+          <van-notice-bar left-icon="info-o" :scrollable="false" text="当前仅有 1 次考试数据，已作为独立参考点呈现，后续录入将自动生成连贯走势。" />
         </div>
         <div v-else-if="trendItems.length === 0" class="chart-empty-tip">
           暂无该科目的考试记录
@@ -124,10 +135,12 @@
       </div>
 
       <!-- 7科均衡学力雷达图卡片 -->
-      <div class="chart-card">
+      <div class="st-card chart-card">
         <div class="chart-card-header">
           <div class="card-title-group">
-            <span class="card-icon">🕸️</span>
+            <span class="st-icon-badge st-icon-badge--info">
+              <van-icon name="aim" />
+            </span>
             <span class="card-title">7 科均衡学力雷达</span>
           </div>
           <div class="radar-exam-selector">
@@ -144,13 +157,13 @@
 
         <!-- 缺考特别标注 -->
         <div v-if="radarAbsentSubjects.length > 0" class="absent-warning-banner">
-          <span class="absent-warn-icon">⚠️</span>
+          <van-icon name="warning" color="#ef4444" style="margin-right: 4px;" />
           <span><b>{{ radarAbsentSubjects.join('、') }}</b> 缺考，已按规则排除在雷达轴外，避免图形失真</span>
         </div>
 
         <!-- 不足 3 科 Fallback 友好提示 -->
         <div v-if="radarMessage" class="radar-fallback-box">
-          <span class="fallback-icon">📐</span>
+          <van-icon name="info-o" color="#94a3b8" size="24" style="margin-bottom: 4px;" />
           <p class="fallback-title">{{ radarMessage }}</p>
           <p class="fallback-sub">至少需要 3 门科目实考成绩才可构建闭合多边形</p>
         </div>
@@ -160,7 +173,9 @@
       <div class="ledger-section">
         <div class="ledger-section-header">
           <div class="card-title-group">
-            <span class="card-icon">📋</span>
+            <span class="st-icon-badge st-icon-badge--neutral">
+              <van-icon name="orders-o" />
+            </span>
             <span class="card-title">考试历史台账</span>
           </div>
           <span class="ledger-count">共 {{ examList.length }} 场</span>
@@ -170,7 +185,7 @@
           <div
             v-for="exam in examList"
             :key="exam.id"
-            class="exam-card"
+            class="st-card exam-card"
           >
             <div class="exam-card-top">
               <div class="exam-meta">
@@ -203,7 +218,7 @@
             </div>
 
             <div class="exam-date-row">
-              <span>📅 {{ exam.exam_date }}</span>
+              <span><van-icon name="calendar-o" /> {{ exam.exam_date }}</span>
               <span v-if="exam.class_rank" class="rank-tag">班排 {{ exam.class_rank }}</span>
               <span v-if="exam.grade_rank" class="rank-tag">校排 {{ exam.grade_rank }}</span>
             </div>
@@ -261,28 +276,40 @@
       </div>
     </div>
 
-    <!-- 家长 PIN 码门禁弹窗（保护录入与修改） -->
-    <van-dialog
+    <!-- 家长 PIN 码门禁抽屉（保护录入与修改） -->
+    <van-popup
       v-model:show="showPinModal"
-      title="家长身份验证"
-      show-cancel-button
-      :confirm-button-text="'验证并继续'"
-      @confirm="handleConfirmPin"
+      position="bottom"
+      round
+      class="bottom-sheet-modal"
+      :style="{ padding: '16px 20px 32px' }"
     >
-      <div style="padding: 1.25rem 1rem;">
-        <p style="font-size: 13px; color: #64748b; margin-bottom: 12px; text-align: center;">
-          考试成绩录入与修改属于家长权限，请输入 6 位管理口令：
-        </p>
-        <van-field
-          v-model="parentPinInput"
-          type="password"
-          maxlength="6"
-          placeholder="请输入口令 (默认 888888)"
-          center
-          style="background: #f8fafc; border-radius: 8px;"
-        />
+      <div style="width: 36px; height: 4px; background: #e2e8f0; border-radius: 2px; margin: 0 auto 16px;"></div>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="st-icon-badge st-icon-badge--warning">
+            <van-icon name="lock" />
+          </span>
+          <span style="font-size: 16px; font-weight: 600; color: #0f172a;">家长身份验证</span>
+        </div>
+        <van-icon name="cross" size="18" color="#94a3b8" style="cursor: pointer;" @click="showPinModal = false" />
       </div>
-    </van-dialog>
+      <p style="font-size: 13px; color: #64748b; margin-bottom: 16px; line-height: 1.5;">
+        考试成绩录入与修改属于家长权限，请输入 6 位管理口令：
+      </p>
+      <van-field
+        v-model="parentPinInput"
+        type="password"
+        maxlength="6"
+        placeholder="请输入口令 (默认 888888)"
+        center
+        style="background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 16px;"
+      />
+      <div style="display: flex; gap: 10px;">
+        <van-button round block plain @click="showPinModal = false">取消</van-button>
+        <van-button type="primary" round block @click="handleConfirmPin">验证并继续</van-button>
+      </div>
+    </van-popup>
 
     <!-- 成绩录入 / 编辑弹窗 -->
     <van-popup
@@ -290,7 +317,7 @@
       position="bottom"
       round
       safe-area-inset-bottom
-      class="edit-popup"
+      class="edit-popup bottom-sheet-modal"
       :style="{ height: '90%' }"
     >
       <div class="popup-wrapper">
@@ -981,11 +1008,12 @@ const handleDeleteExam = (exam) => {
 
 /* 概览卡片 */
 .summary-card {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  border-radius: 16px;
+  background: var(--st-bg-card, #ffffff);
+  border-radius: var(--st-radius-md, 14px);
   padding: 16px;
-  color: #fff;
-  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.15);
+  color: var(--st-text-primary, #0f172a);
+  box-shadow: var(--st-shadow-card);
+  border: 1px solid var(--st-border, #f1f5f9);
 }
 
 .summary-header {
@@ -1001,57 +1029,51 @@ const handleDeleteExam = (exam) => {
   gap: 10px;
 }
 
-.avatar-badge {
-  font-size: 24px;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 6px;
-  border-radius: 12px;
-}
-
 .student-name {
   font-size: 16px;
   font-weight: 600;
-  color: #f8fafc;
+  color: var(--st-text-primary, #0f172a);
 }
 
 .student-sub {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--st-text-secondary, #64748b);
   margin-top: 2px;
 }
 
 .latest-badge {
   text-align: right;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--st-primary-light, #eff6ff);
   padding: 6px 12px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(37, 99, 235, 0.15);
 }
 
 .badge-label {
   display: block;
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--st-primary, #2563eb);
 }
 
 .badge-val {
   font-size: 16px;
   font-weight: 700;
-  color: #38bdf8;
+  color: var(--st-primary, #2563eb);
 }
 
 .badge-val small {
   font-size: 11px;
-  color: #cbd5e1;
+  color: var(--st-text-secondary, #64748b);
 }
 
 .summary-stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--st-bg-page, #f8fafc);
   padding: 10px;
-  border-radius: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--st-border, #f1f5f9);
   text-align: center;
 }
 
@@ -1063,30 +1085,39 @@ const handleDeleteExam = (exam) => {
 .stat-num {
   font-size: 18px;
   font-weight: 700;
-  color: #fff;
+  color: var(--st-text-primary, #0f172a);
 }
 
 .stat-tit {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--st-text-secondary, #64748b);
   margin-top: 2px;
 }
 
 .text-warn {
-  color: #f87171 !important;
+  color: var(--st-danger, #ef4444) !important;
 }
 
 .text-succ {
-  color: #34d399 !important;
+  color: var(--st-success, #10b981) !important;
 }
 
 /* 薄弱预警诊断 */
 .weak-diagnostic-box {
   background: #fff;
-  border-radius: 14px;
+  border-radius: var(--st-radius-md, 14px);
   padding: 12px;
-  border-left: 4px solid #ef4444;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.08);
+  border-left: 4px solid var(--st-danger, #ef4444);
+  box-shadow: var(--st-shadow-card);
+  border-top: 1px solid var(--st-border, #f1f5f9);
+  border-right: 1px solid var(--st-border, #f1f5f9);
+  border-bottom: 1px solid var(--st-border, #f1f5f9);
+}
+
+.diag-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .diagnostic-header {
