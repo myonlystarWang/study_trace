@@ -3,9 +3,7 @@
     <!-- 顶部导航栏 -->
     <van-nav-bar
       title="学情成绩分析"
-      left-arrow
       right-text="录入成绩"
-      @click-left="$router.push('/')"
       @click-right="handleRequestCreate"
     />
 

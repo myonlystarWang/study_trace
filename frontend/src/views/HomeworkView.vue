@@ -1,20 +1,30 @@
 <template>
   <div class="homework-view">
-    <!-- 顶栏：打卡连击 + 日历总览 + 家长入口 -->
+    <!-- 顶栏：品牌门面 (Logo + 智学迹) + 打卡连击胶囊 + 日历微纽 -->
     <div class="top-nav-bar">
-      <div class="streak-badge" v-if="streak > 0">
-        <van-icon name="fire" color="#f97316" size="15" />
-        <span>连续打卡 <b>{{ streak }}</b> 天</span>
-      </div>
-      <div v-else class="streak-badge-idle">
-        <van-icon name="passed" color="#2563eb" size="15" />
-        <span>今日学习打卡</span>
+      <div class="brand-header">
+        <div class="brand-logo-badge">
+          <van-icon name="bookmark" />
+        </div>
+        <div class="brand-text-wrap">
+          <span class="brand-title">智学迹</span>
+          <span class="brand-subtitle">StudyTrace</span>
+        </div>
       </div>
 
       <div class="header-right-tools">
+        <div class="streak-pill" v-if="streak > 0" title="当前连续打卡天数">
+          <van-icon name="fire" color="#f97316" size="13" />
+          <span>连打 <b>{{ streak }}</b> 天</span>
+        </div>
+        <div v-else class="streak-pill streak-pill--idle">
+          <van-icon name="passed" color="#2563eb" size="13" />
+          <span>今日打卡</span>
+        </div>
+
         <button class="calendar-pill-btn" @click="showCalendar = true">
-          <van-icon name="calendar-o" size="14" />
-          <span>选择日期</span>
+          <van-icon name="calendar-o" size="13" />
+          <span>日期</span>
         </button>
       </div>
     </div>
@@ -423,36 +433,74 @@ onMounted(async () => {
   margin-bottom: 12px;
 }
 
-.streak-badge {
+.brand-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-logo-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 16px;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  flex-shrink: 0;
+}
+
+.brand-text-wrap {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.brand-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--st-text-primary, #0f172a);
+  line-height: 1.15;
+  letter-spacing: -0.2px;
+}
+
+.brand-subtitle {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--st-primary, #2563eb);
+  letter-spacing: 0.5px;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.streak-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  gap: 4px;
+  height: 28px;
+  font-size: 12px;
   font-weight: 600;
   color: #c2410c;
   background: #fff7ed;
-  padding: 4px 12px;
+  padding: 0 9px;
   border-radius: var(--st-radius-full, 9999px);
   border: 1px solid #fed7aa;
+  white-space: nowrap;
 }
 
-.streak-badge-idle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
+.streak-pill--idle {
   color: var(--st-primary, #2563eb);
   background: var(--st-primary-light, #eff6ff);
-  padding: 4px 12px;
-  border-radius: var(--st-radius-full, 9999px);
-  border: 1px solid rgba(37, 99, 235, 0.15);
+  border-color: rgba(37, 99, 235, 0.15);
 }
 
 .header-right-tools {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .calendar-pill-btn {
