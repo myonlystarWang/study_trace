@@ -99,13 +99,9 @@
                 </van-button>
               </template>
             </van-field>
-            <div class="channel-hint">
-              <van-notice-bar
-                left-icon="info-o"
-                :scrollable="false"
-                wrapable
-                text="提示：微信关注“PushPlus推送加”公众号，必须完成手机号实名认证方可享有 200 条/天免费额度；未实名接口将返回 905。"
-              />
+            <div class="channel-caption">
+              <van-icon name="info-o" class="caption-icon" />
+              <span>关注“PushPlus推送加”公众号并完成手机实名认证生效（未实名接口将返回 905）</span>
             </div>
           </div>
 
@@ -350,17 +346,7 @@
               </van-uploader>
             </template>
           </van-cell>
-          <div style="margin-top: 10px;">
-            <van-notice-bar
-              left-icon="warning-o"
-              color="#ef4444"
-              background="#fef2f2"
-              wrapable
-              :scrollable="false"
-              style="border-radius: var(--st-radius-sm, 8px);"
-              text="安全须知：导出的备份 Zip 压缩包包含本地 SQLite 数据库（含已配置的通知 Token 与 Key 等敏感凭据），请妥善保存在私密设备中，切勿外传或公开发布。"
-            />
-          </div>
+
         </div>
 
         <!-- 卡片 5: 安全设置与系统关于 -->
@@ -698,8 +684,16 @@ const handleSendSummaryNow = async () => {
 };
 
 const handleExportBackup = () => {
-  window.open(backupApi.exportUrl, '_blank');
-  showToast({ message: '已启动备份下载', icon: 'passed' });
+  showConfirmDialog({
+    title: '导出安全提示',
+    message: '导出的 Zip 压缩包包含本地数据库与通知密钥等敏感凭据，请妥善保存在私密设备中，切勿公开外传。确认立即导出备份？',
+    confirmButtonText: '确认导出',
+    cancelButtonText: '取消',
+    confirmButtonColor: '#2563eb'
+  }).then(() => {
+    window.open(backupApi.exportUrl, '_blank');
+    showToast({ message: '已启动备份下载', icon: 'passed' });
+  }).catch(() => {});
 };
 
 const handleImportBackup = async (fileItem) => {
@@ -1011,11 +1005,21 @@ onUnmounted(() => {
   border-radius: var(--st-radius-sm, 6px);
 }
 
-.channel-hint {
+.channel-caption {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 11px;
-  color: var(--st-text-secondary, #64748b);
+  color: var(--st-text-muted, #94a3b8);
   line-height: 1.4;
-  margin-top: 6px;
+  margin-top: 4px;
+  padding: 0 2px;
+}
+
+.caption-icon {
+  font-size: 12px;
+  color: var(--st-text-muted, #94a3b8);
+  flex-shrink: 0;
 }
 
 .notif-action-row {
