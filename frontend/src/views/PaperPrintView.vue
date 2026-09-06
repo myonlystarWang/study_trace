@@ -11,8 +11,8 @@
       </div>
       <div class="toolbar-right">
         <van-button size="small" icon="info-o" @click="showPrintTip = true">打印提示</van-button>
-        <van-button size="small" type="primary" icon="passed" @click="openReviewModal">📝 重练打卡</van-button>
-        <van-button size="small" type="success" icon="printer" @click="handlePrint">🖨️ 打印 / 存PDF</van-button>
+        <van-button size="small" type="primary" icon="passed" @click="openReviewModal">重练打卡</van-button>
+        <van-button size="small" type="success" icon="printer" @click="handlePrint">打印 / 存PDF</van-button>
       </div>
     </div>
 
@@ -25,7 +25,7 @@
       class="paper-warning-bar no-print"
       wrapable
     >
-      <span>排版提示：{{ paper.warnings.join('；') }}。建议留意打印预览，或使用下方「✂️ 在此题前换页」微调。</span>
+      <span>排版提示：{{ paper.warnings.join('；') }}。建议留意打印预览，或使用下方「在此题前换页」微调。</span>
     </van-notice-bar>
 
 
@@ -98,8 +98,8 @@
                       <span v-if="paper.show_error_type && q.error_type" class="q-error-tag">【错因：{{ q.error_type }}】</span>
                     </div>
                     <div class="page-break-btn no-print" @click="toggleManualBreak(q.id)">
-                      <span v-if="manualBreaks.includes(q.id)" class="break-active">✂️ 已在此处换页（点击取消）</span>
-                      <span v-else class="break-idle">✂️ 在此题前换页</span>
+                      <span v-if="manualBreaks.includes(q.id)" class="break-active"><van-icon name="cut" /> 已在此处换页（点击取消）</span>
+                      <span v-else class="break-idle"><van-icon name="cut" /> 在此题前换页</span>
                     </div>
                   </div>
 
@@ -130,7 +130,7 @@
     </div>
 
     <!-- 打印提示弹窗 -->
-    <van-dialog v-model:show="showPrintTip" title="🖨️ A4 打印与另存 PDF 指南" confirm-button-text="知道了">
+    <van-dialog v-model:show="showPrintTip" title="A4 打印与另存 PDF 指南" confirm-button-text="知道了">
       <div class="print-tip-content">
         <p>为保证最佳试卷排版与格线效果，请在浏览器的打印预览面板中确认：</p>
         <ol>
@@ -145,7 +145,7 @@
     <!-- 批量重练打卡弹窗 -->
     <van-dialog
       v-model:show="showReviewModal"
-      title="📝 周末试卷批量重练打卡"
+      title="周末试卷批量重练打卡"
       show-cancel-button
       confirm-button-text="确认打卡"
       :confirm-button-disabled="!isAllReviewed"
@@ -179,14 +179,14 @@
                 :class="{ active: reviewMap[q.id] === 'remembered' }"
                 @click="reviewMap[q.id] = 'remembered'"
               >
-                ✅ 掌握
+                <van-icon name="passed" /> 掌握
               </button>
               <button
                 class="review-tag-btn forgot-btn"
                 :class="{ active: reviewMap[q.id] === 'forgotten' }"
                 @click="reviewMap[q.id] = 'forgotten'"
               >
-                ❌ 遗忘
+                <van-icon name="cross" /> 遗忘
               </button>
             </div>
           </div>

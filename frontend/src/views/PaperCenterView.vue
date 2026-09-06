@@ -14,8 +14,13 @@
 
     <div class="paper-center-body">
       <!-- 预设快捷模式卡片 -->
-      <div class="section-card preset-card">
-        <div class="section-title">⚡ 一键快捷组卷预设</div>
+      <div class="st-card section-card preset-card">
+        <div class="st-section-header" style="margin-bottom: 12px;">
+          <span class="st-icon-badge st-icon-badge--primary">
+            <van-icon name="fire-o" />
+          </span>
+          <span class="section-title">一键快捷组卷预设</span>
+        </div>
         <div class="preset-grid">
           <div
             v-for="p in presets"
@@ -24,7 +29,11 @@
             :class="{ active: currentPreset === p.key }"
             @click="switchPreset(p.key)"
           >
-            <div class="preset-icon">{{ p.icon }}</div>
+            <div class="preset-icon">
+              <span :class="['st-icon-badge', `st-icon-badge--${p.badgeColor}`]">
+                <van-icon :name="p.icon" />
+              </span>
+            </div>
             <div class="preset-name">{{ p.name }}</div>
             <div class="preset-desc">{{ p.desc }}</div>
           </div>
@@ -32,9 +41,14 @@
       </div>
 
       <!-- 学科过滤滑动条 -->
-      <div class="section-card filter-card">
-        <div class="filter-header">
-          <div class="section-title">📚 学科筛选</div>
+      <div class="st-card section-card filter-card">
+        <div class="filter-header" style="margin-bottom: 12px;">
+          <div class="st-section-header" style="margin-bottom: 0;">
+            <span class="st-icon-badge st-icon-badge--info">
+              <van-icon name="filter-o" />
+            </span>
+            <span class="section-title">学科筛选</span>
+          </div>
           <div class="select-actions">
             <span class="action-link" @click="selectAllCandidates">全选本页</span>
             <span class="action-divider">|</span>
@@ -42,22 +56,22 @@
           </div>
         </div>
         <div class="subject-chips">
-          <div
-            class="sub-chip"
+          <span
+            class="st-chip"
             :class="{ active: selectedSubjectId === null }"
             @click="filterBySubject(null)"
           >
             全部 ({{ candidates.length }})
-          </div>
-          <div
+          </span>
+          <span
             v-for="sub in subjects"
             :key="sub.id"
-            class="sub-chip"
+            class="st-chip"
             :class="{ active: selectedSubjectId === sub.id }"
             @click="filterBySubject(sub.id)"
           >
             {{ sub.name }} ({{ getSubjectCount(sub.id) }})
-          </div>
+          </span>
         </div>
         <div class="filter-footer-row">
           <van-checkbox v-model="includeAllSubjects" @change="() => fetchCandidates(false)" shape="square">
@@ -68,7 +82,7 @@
 
 
       <!-- 错题选择列表 -->
-      <div class="section-card questions-card">
+      <div class="st-card section-card questions-card">
         <div class="list-summary">
           <span>待选题目 (当前展示 {{ filteredCandidates.length }} 题 · 累计已选 {{ selectedIds.length }} 题)</span>
         </div>
@@ -109,8 +123,13 @@
       </div>
 
       <!-- 试卷排版与外观配置 -->
-      <div class="section-card config-card">
-        <div class="section-title">⚙️ 试卷排版规范配置</div>
+      <div class="st-card section-card config-card">
+        <div class="st-section-header" style="margin-bottom: 14px;">
+          <span class="st-icon-badge st-icon-badge--neutral">
+            <van-icon name="setting-o" />
+          </span>
+          <span class="section-title">试卷排版规范配置</span>
+        </div>
 
         <div class="config-row">
           <div class="config-label">试卷主标题</div>
@@ -175,11 +194,12 @@
         round
         size="large"
         class="compose-submit-btn"
+        icon="description"
         :loading="generating"
         :disabled="selectedIds.length === 0"
         @click="generatePaper"
       >
-        📄 一键生成 A4 重练卷
+        一键生成 A4 重练卷
       </van-button>
     </div>
 
@@ -194,10 +214,16 @@
       position="bottom"
       round
       closeable
+      class="bottom-sheet-modal"
       :style="{ height: '70%', display: 'flex', flexDirection: 'column' }"
     >
       <div class="history-sheet-header">
-        <h3>📋 历史组卷记录</h3>
+        <div class="st-section-header">
+          <span class="st-icon-badge st-icon-badge--neutral">
+            <van-icon name="records-o" />
+          </span>
+          <h3 class="section-title" style="margin: 0; font-size: 16px;">历史组卷记录</h3>
+        </div>
         <span class="history-sheet-subtitle">已生成的周末重练卷可重新预览、补打或打卡</span>
       </div>
       <div class="history-sheet-content">
@@ -254,10 +280,10 @@ import { paperApi, settingsApi } from '../api';
 const router = useRouter();
 
 const presets = [
-  { key: 'this_week', name: '本周新增', desc: '周一至今录入', icon: '🌟' },
-  { key: 'ebbinghaus', name: '艾宾浩斯', desc: '临界待复习题', icon: '🧠' },
-  { key: 'unmastered', name: '高频未掌握', desc: '复习≥2次顽固题', icon: '⚠️' },
-  { key: 'all', name: '全库自选', desc: '自由筛选勾选', icon: '📚' },
+  { key: 'this_week', name: '本周新增', desc: '周一至今录入', icon: 'star-o', badgeColor: 'warning' },
+  { key: 'ebbinghaus', name: '艾宾浩斯', desc: '临界待复习题', icon: 'replay', badgeColor: 'purple' },
+  { key: 'unmastered', name: '高频未掌握', desc: '复习≥2次顽固题', icon: 'warning-o', badgeColor: 'danger' },
+  { key: 'all', name: '全库自选', desc: '自由筛选勾选', icon: 'notes-o', badgeColor: 'primary' },
 ];
 
 const currentPreset = ref('this_week');
@@ -451,11 +477,12 @@ onMounted(async () => {
 }
 
 .section-card {
-  background: #ffffff;
-  border-radius: 12px;
+  background: var(--st-bg-card, #ffffff);
+  border-radius: var(--st-radius-md, 14px);
   padding: 14px;
   margin-bottom: 12px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--st-border, #f1f5f9);
+  box-shadow: var(--st-shadow-card);
 }
 
 .section-title {
@@ -713,7 +740,7 @@ onMounted(async () => {
   height: 44px;
   font-size: 15px;
   font-weight: 600;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: var(--st-primary, #2563eb);
   border: none;
 }
 
