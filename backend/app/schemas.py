@@ -273,3 +273,156 @@ class PaperHistoryOut(BaseModel):
     status: str
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+
+# --------------------------------------------------------------------------
+# M5 成绩台账、学情图表与月度深度看板契约
+# --------------------------------------------------------------------------
+
+class ExamScoreIn(BaseModel):
+    subject_id: int
+    score: Optional[float] = None
+    full_score: float = 100.0
+    class_average: Optional[float] = None
+    class_rank: Optional[int] = None
+    grade_rank: Optional[int] = None
+    is_absent: bool = False
+
+
+class ExamScoreOut(BaseModel):
+    id: int
+    subject_id: int
+    subject_name: str
+    score: Optional[float] = None
+    full_score: float
+    rate: Optional[float] = None  # 百分比 0~100
+    class_average: Optional[float] = None
+    class_rank: Optional[int] = None
+    grade_rank: Optional[int] = None
+    is_absent: bool = False
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ExamCreateIn(BaseModel):
+    title: str
+    exam_type: str = "期中"
+    exam_date: date
+    class_rank: Optional[int] = None
+    grade_rank: Optional[int] = None
+    remarks: Optional[str] = None
+    scores: List[ExamScoreIn] = []
+
+
+class ExamUpdateIn(BaseModel):
+    title: Optional[str] = None
+    exam_type: Optional[str] = None
+    exam_date: Optional[date] = None
+    class_rank: Optional[int] = None
+    grade_rank: Optional[int] = None
+    remarks: Optional[str] = None
+    scores: Optional[List[ExamScoreIn]] = None
+
+
+class ExamListItemOut(BaseModel):
+    id: int
+    title: str
+    exam_type: str
+    exam_date: date
+    total_score: Optional[float] = None
+    total_full_score: Optional[float] = None
+    rate: Optional[float] = None
+    class_rank: Optional[int] = None
+    grade_rank: Optional[int] = None
+    subject_count: int
+    absent_count: int = 0
+    scores: List[ExamScoreOut] = []
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ExamDetailOut(BaseModel):
+    id: int
+    student_id: int
+    title: str
+    exam_type: str
+    exam_date: date
+    total_score: Optional[float] = None
+    total_full_score: Optional[float] = None
+    rate: Optional[float] = None
+    class_rank: Optional[int] = None
+    grade_rank: Optional[int] = None
+    remarks: Optional[str] = None
+    scores: List[ExamScoreOut] = []
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ExamTrendsItemOut(BaseModel):
+    exam_id: int
+    title: str
+    exam_type: str
+    exam_date: date
+    score: Optional[float] = None
+    full_score: Optional[float] = None
+    rate: Optional[float] = None
+    class_rank: Optional[int] = None
+    grade_rank: Optional[int] = None
+    is_absent: bool = False
+
+
+class ExamTrendsOut(BaseModel):
+    target: str  # "total" 或具体学科名称
+    subject_id: Optional[int] = None
+    items: List[ExamTrendsItemOut] = []
+
+
+class RadarIndicatorOut(BaseModel):
+    subject_id: int
+    name: str
+    max: float = 100.0
+
+
+class ExamRadarOut(BaseModel):
+    exam_id: Optional[int] = None
+    exam_title: Optional[str] = None
+    exam_date: Optional[date] = None
+    indicators: List[RadarIndicatorOut] = []
+    values: List[float] = []
+    absent_subjects: List[str] = []
+    message: Optional[str] = None
+
+
+class SubjectWeaknessItemOut(BaseModel):
+    subject_id: int
+    subject_name: str
+    recent_rate: Optional[float] = None
+    unmastered_mistakes_count: int = 0
+    is_weak: bool = False
+    reason: Optional[str] = None
+
+
+class DailyCompletionItemOut(BaseModel):
+    date: str  # YYYY-MM-DD
+    rate: int  # 0~100
+    total: int
+    completed: int
+
+
+class SubjectMissingCountOut(BaseModel):
+    subject_id: int
+    subject_name: str
+    missing_count: int
+
+
+class MonthlyAnalyticsOut(BaseModel):
+    year: int
+    month: int
+    total_days: int
+    recorded_days: int
+    perfect_days: int
+    average_completion_rate: float
+    daily_trends: List[DailyCompletionItemOut] = []
+    subject_missing_distribution: List[SubjectMissingCountOut] = []
+
+
+

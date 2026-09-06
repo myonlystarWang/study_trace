@@ -26,7 +26,7 @@ scheduler = AsyncIOScheduler(timezone=SHANGHAI_TZ)
 _lock_file = None
 
 
-def acquire_scheduler_lock() -> bool:
+def acquire_scheduler_lock(lock_path_override: Optional[Path] = None) -> bool:
     """
     Windows 原生文件锁防重 (保护 uvicorn --reload 下仅单实例运行调度器)
     使用 msvcrt.locking(..., LK_NBLCK, 1)
@@ -38,7 +38,7 @@ def acquire_scheduler_lock() -> bool:
     lock_dir = Path("data/temp")
     try:
         lock_dir.mkdir(parents=True, exist_ok=True)
-        lock_path = lock_dir / "scheduler.lock"
+        lock_path = lock_path_override or (lock_dir / "scheduler.lock")
         
         _lock_file = open(lock_path, "a+")
         

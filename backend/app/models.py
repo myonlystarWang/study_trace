@@ -16,6 +16,7 @@ class Student(Base):
 
     homework_items = relationship("HomeworkItem", back_populates="student", cascade="all, delete-orphan")
     mistake_records = relationship("MistakeRecord", back_populates="student", cascade="all, delete-orphan")
+    exam_records = relationship("ExamRecord", back_populates="student", cascade="all, delete-orphan")
 
 
 class Subject(Base):
@@ -138,3 +139,45 @@ class Paper(Base):
     student_name = Column(String(50), nullable=False, default="初一同学")
     status = Column(String(20), default="draft", index=True)  # draft / printed / reviewed
     created_at = Column(DateTime, default=datetime.now, index=True)
+
+
+class ExamRecord(Base):
+    __tablename__ = "exam_records"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, default=1, index=True)
+    title = Column(String(100), nullable=False)  # 考试名称，如 "初一上学期期中考试"
+    exam_type = Column(String(30), default="期中", index=True)  # 期中 / 期末 / 月考 / 周测 / 单元测试
+    exam_date = Column(Date, nullable=False, index=True)
+    total_score = Column(Float, nullable=True)  # 实得分总计（缺考科目不计入）
+    total_full_score = Column(Float, nullable=True)  # 满分总计（缺考科目不计入）
+    class_rank = Column(Integer, nullable=True)  # 班级排名
+    grade_rank = Column(Integer, nullable=True)  # 年级排名
+    remarks = Column(Text, nullable=True)  # 考后反思与总结
+    created_at = Column(DateTime, default=datetime.now, index=True)
+
+    student = relationship("Student", back_populates="exam_records")
+    scores = relationship("ExamScore", back_populates="exam", cascade="all, delete-orphan", order_by="ExamScore.id")
+
+
+class ExamScore(Base):
+    __tablename__ = "exam_scores"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    exam_id = Column(Integer, ForeignKey("exam_records.id", ondelete="CASCADE"), nullable=False, index=True)
+    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False, index=True)
+    score = Column(Float, nullable=True)  # 实际得分，缺考时为 null
+    full_score = Column(Float, nullable=False, default=100.0)  # 本科目满分
+    class_average = Column(Float, nullable=True)  # 班级平均分
+    class_rank = Column(Integer, nullable=True)  # 单科班级排名
+    grade_rank = Column(Integer, nullable=True)  # 单科年级排名
+    is_absent = Column(Boolean, default=False)  # 是否缺考
+
+    __table_args__ = (
+        UniqueConstraint("exam_id", "subject_id", name="uq_exam_subject"),
+    )
+
+    exam = relationship("ExamRecord", back_populates="scores")
+    subject = relationship("Subject")
+
+

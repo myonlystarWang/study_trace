@@ -92,20 +92,21 @@ async def test_dispatch_notification_is_truly_parallel():
 # ==============================================================================
 # P0-4 真实性断言: Windows 文件锁防重二次加锁必须被拒绝 (无假性通过)
 # ==============================================================================
-def test_windows_msvcrt_scheduler_lock_real_assertion():
+def test_windows_msvcrt_scheduler_lock_real_assertion(tmp_path):
     """验证调度器文件锁机制：重复加锁必须返回 False，释放后可重新获得"""
+    test_lock = tmp_path / "test_scheduler.lock"
     release_scheduler_lock()
 
-    first_locked = acquire_scheduler_lock()
+    first_locked = acquire_scheduler_lock(lock_path_override=test_lock)
     assert first_locked is True, "首次加锁必须成功"
 
     # 重复/第二进程获取必须返回 False
-    second_locked = acquire_scheduler_lock()
+    second_locked = acquire_scheduler_lock(lock_path_override=test_lock)
     assert second_locked is False, "第二进程/重复获取锁必须被拦截并返回 False (杜绝假性通过)"
 
     # 释放后第三次获取必须成功
     release_scheduler_lock()
-    third_locked = acquire_scheduler_lock()
+    third_locked = acquire_scheduler_lock(lock_path_override=test_lock)
     assert third_locked is True, "锁释放后重新获取必须成功"
     release_scheduler_lock()
 

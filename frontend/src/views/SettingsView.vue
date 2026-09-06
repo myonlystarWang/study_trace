@@ -175,6 +175,122 @@
         </div>
       </van-cell-group>
 
+      <!-- 成绩管理与月度学情看板（家长专属深度分析） -->
+      <van-cell-group inset title="📊 成绩管理与月度学情看板 (家长专属)" style="margin-top: 1.5rem;">
+        <van-cell
+          title="成绩管理与录入"
+          is-link
+          icon="chart-trending-o"
+          label="录入历次大考小测成绩、查看单科与全科雷达学情"
+          @click="$router.push('/scores')"
+        />
+
+        <div class="monthly-analytics-box">
+          <div class="monthly-header">
+            <span class="monthly-title">📅 月度作业打卡深度透视</span>
+            <div class="month-stepper">
+              <van-button size="mini" icon="arrow-left" @click="changeMonth(-1)" />
+              <span class="current-month-text">{{ currentYear }} 年 {{ currentMonth }} 月</span>
+              <van-button size="mini" icon="arrow" @click="changeMonth(1)" />
+            </div>
+          </div>
+
+          <!-- 月度核心指标网格 -->
+          <div class="monthly-stats-grid">
+            <div class="monthly-stat-item">
+              <span class="m-stat-val text-primary">{{ monthlyData?.average_completion_rate ?? '--' }}%</span>
+              <span class="m-stat-label">月均打卡率</span>
+            </div>
+            <div class="monthly-stat-item">
+              <span class="m-stat-val">{{ monthlyData?.recorded_days ?? 0 }} / {{ monthlyData?.total_days ?? 0 }}</span>
+              <span class="m-stat-label">有效打卡天数</span>
+            </div>
+            <div class="monthly-stat-item">
+              <span class="m-stat-val text-succ">{{ monthlyData?.perfect_days ?? 0 }} 天</span>
+              <span class="m-stat-label">全满卡天数</span>
+            </div>
+          </div>
+
+          <!-- 整月每日打卡率走势折线图 -->
+          <div class="monthly-chart-title">📈 每日作业打卡率走势 (1~{{ monthlyData?.total_days || 30 }}日)</div>
+          <div ref="monthlyTrendChartRef" class="monthly-echarts-container"></div>
+
+          <!-- 各科目未完成频次分布柱状图 -->
+          <div class="monthly-chart-title" style="margin-top: 14px;">📊 各科目未完成频次分布</div>
+          <div v-show="monthlyData?.subject_missing_distribution?.length > 0" ref="monthlyMissingChartRef" class="monthly-echarts-container bar-height"></div>
+          <div v-if="!monthlyData?.subject_missing_distribution?.length" class="monthly-perfect-tip">
+            🎉 本月暂无科目未完成记录，各项作业皆如期完成！
+          </div>
+        </div>
+      </van-cell-group>
+
+      <!-- A4 周末重练卷与组卷记录（家长空间入口与历史） -->
+      <van-cell-group inset title="🖨️ A4 周末重练卷 (家长专属管理)" style="margin-top: 1.5rem;">
+        <van-cell
+          title="前往组卷中心"
+          is-link
+          icon="notes-o"
+          label="定制错题排版、选择留白尺寸、生成专属 A4 练习卷"
+          @click="$router.push('/paper')"
+        />
+        <van-cell
+          title="最近组卷历史记录"
+          :value="paperHistoryLoading ? '加载中...' : `${paperHistory.length} 份`"
+          :label="paperHistory.length ? '点击试卷卡片可直接预览、重新打印或批量打卡' : '尚未生成过重练卷'"
+        />
+
+        <div v-if="paperHistory.length > 0" class="history-list-box">
+          <div
+            v-for="item in paperHistory"
+            :key="item.id"
+            class="history-card"
+            @click="$router.push(`/paper/print?id=${item.id}`)"
+          >
+            <div class="history-card-header">
+              <span class="history-card-title">{{ item.title || '初一错题周末重练卷' }}</span>
+              <van-tag v-if="item.status === 'reviewed'" type="success" size="medium">已打卡完成</van-tag>
+              <van-tag v-else-if="item.status === 'printed'" color="#d97706" plain size="medium">已打印·待打卡</van-tag>
+              <van-tag v-else type="primary" plain size="medium">未打印·草稿</van-tag>
+            </div>
+            <div class="history-card-desc">
+              <span>共 {{ item.total_questions }} 题</span>
+              <span class="dot">·</span>
+              <span>预估 {{ item.estimated_pages }} 页</span>
+              <span class="dot">·</span>
+              <span>学生: {{ item.student_name }}</span>
+            </div>
+            <div class="history-card-footer">
+              <span class="history-time">{{ formatTime(item.created_at) }}</span>
+              <div class="history-btns">
+                <van-button
+                  size="mini"
+                  type="primary"
+                  plain
+                  @click.stop="$router.push(`/paper/print?id=${item.id}`)"
+                >
+                  查看试卷
+                </van-button>
+                <van-button
+                  v-if="item.status !== 'reviewed'"
+                  size="mini"
+                  type="warning"
+                  plain
+                  style="margin-left: 6px;"
+                  @click.stop="$router.push(`/paper/print?id=${item.id}&action=review`)"
+                >
+                  去打卡
+                </van-button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else-if="!paperHistoryLoading" class="history-empty-box">
+          <van-empty description="暂无历史组卷记录，去组一张吧" image-size="60">
+            <van-button round size="small" type="primary" @click="$router.push('/paper')">立即组卷</van-button>
+          </van-empty>
+        </div>
+      </van-cell-group>
+
       <!-- 数据安全与备份 -->
       <van-cell-group inset title="数据安全与一键备份" style="margin-top: 1.5rem;">
         <van-cell title="全站数据导出备份" is-link label="包含 SQLite 数据库与所有错题高清原图" @click="handleExportBackup" />
@@ -227,9 +343,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { showToast, showConfirmDialog, showDialog } from 'vant';
-import { settingsApi, backupApi, notificationApi } from '../api';
+import { settingsApi, backupApi, notificationApi, paperApi, examApi } from '../api';
+import echarts from '../utils/echarts';
 
 const isUnlocked = ref(sessionStorage.getItem('parent_unlocked') === 'true');
 const inputPin = ref('');
@@ -255,6 +372,15 @@ const savingConfig = ref(false);
 const testingChannel = ref('');
 const sendingSummary = ref(false);
 
+// 月度深度看板状态与图表
+const currentYear = ref(new Date().getFullYear());
+const currentMonth = ref(new Date().getMonth() + 1);
+const monthlyData = ref(null);
+const monthlyTrendChartRef = ref(null);
+const monthlyMissingChartRef = ref(null);
+let monthlyTrendChartInstance = null;
+let monthlyMissingChartInstance = null;
+
 const handleVerifyPin = async () => {
   if (!inputPin.value) {
     showToast('请输入口令');
@@ -269,6 +395,8 @@ const handleVerifyPin = async () => {
     showToast({ message: '解锁成功', icon: 'success' });
     fetchSubjects();
     fetchNotificationConfig();
+    fetchPaperHistory();
+    fetchMonthlyAnalytics();
   } catch (e) {
     const msg = e.response?.data?.detail || '口令错误';
     showToast({ message: msg, icon: 'cross' });
@@ -438,13 +566,191 @@ const submitChangePin = async () => {
   }
 };
 
+const paperHistory = ref([]);
+const paperHistoryLoading = ref(false);
+
+const fetchPaperHistory = async () => {
+  paperHistoryLoading.value = true;
+  try {
+    const res = await paperApi.getHistory({ limit: 20 });
+    paperHistory.value = res.data;
+  } catch (err) {
+    console.error('获取历史组卷失败', err);
+  } finally {
+    paperHistoryLoading.value = false;
+  }
+};
+
+const changeMonth = (delta) => {
+  let y = currentYear.value;
+  let m = currentMonth.value + delta;
+  if (m > 12) {
+    m = 1;
+    y += 1;
+  } else if (m < 1) {
+    m = 12;
+    y -= 1;
+  }
+  currentYear.value = y;
+  currentMonth.value = m;
+  fetchMonthlyAnalytics();
+};
+
+const fetchMonthlyAnalytics = async () => {
+  try {
+    const res = await examApi.getMonthlyAnalytics(currentYear.value, currentMonth.value);
+    monthlyData.value = res.data;
+    renderMonthlyCharts();
+  } catch (e) {
+    console.error('Failed to load monthly analytics:', e);
+  }
+};
+
+const renderMonthlyCharts = () => {
+  nextTick(() => {
+    // 1. 每日打卡率走势折线图
+    if (monthlyTrendChartRef.value) {
+      if (!monthlyTrendChartInstance) {
+        monthlyTrendChartInstance = echarts.init(monthlyTrendChartRef.value);
+      }
+      const days = monthlyData.value?.daily_trends?.map(d => `${parseInt(d.date.split('-')[2])}日`) || [];
+      const rates = monthlyData.value?.daily_trends?.map(d => (d.total > 0 ? d.rate : null)) || [];
+
+      monthlyTrendChartInstance.setOption({
+        tooltip: {
+          trigger: 'axis',
+          formatter: (params) => {
+            const p = params[0];
+            const item = monthlyData.value?.daily_trends?.[p.dataIndex];
+            if (!item || item.total === 0) {
+              return `<b>${item?.date || ''}</b><br/>当天无作业打卡记录`;
+            }
+            return `<b>${item.date}</b><br/>打卡率：${item.rate}%<br/>完成：${item.completed} / ${item.total} 项`;
+          }
+        },
+        grid: { top: 25, right: 15, bottom: 25, left: 40 },
+        xAxis: {
+          type: 'category',
+          data: days,
+          axisLabel: { fontSize: 10, color: '#64748b', interval: 4 },
+          axisLine: { lineStyle: { color: '#e2e8f0' } }
+        },
+        yAxis: {
+          type: 'value',
+          min: 0,
+          max: 100,
+          axisLabel: { formatter: '{value}%', fontSize: 10, color: '#64748b' },
+          splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } }
+        },
+        series: [
+          {
+            name: '打卡率',
+            type: 'line',
+            data: rates,
+            smooth: true,
+            connectNulls: true,
+            showSymbol: false,
+            itemStyle: { color: '#10b981' },
+            lineStyle: { width: 2.5, color: '#10b981' },
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(16, 185, 129, 0.25)' },
+                { offset: 1, color: 'rgba(16, 185, 129, 0.01)' }
+              ])
+            }
+          }
+        ]
+      }, true);
+    }
+
+    // 2. 各科未完成频次分布柱状图
+    if (monthlyMissingChartRef.value && monthlyData.value?.subject_missing_distribution?.length > 0) {
+      if (!monthlyMissingChartInstance) {
+        monthlyMissingChartInstance = echarts.init(monthlyMissingChartRef.value);
+      }
+      const subs = monthlyData.value.subject_missing_distribution.map(s => s.subject_name);
+      const counts = monthlyData.value.subject_missing_distribution.map(s => s.missing_count);
+
+      monthlyMissingChartInstance.setOption({
+        tooltip: {
+          trigger: 'axis',
+          formatter: '{b}: 遗漏未完成 {c} 次'
+        },
+        grid: { top: 25, right: 15, bottom: 25, left: 35 },
+        xAxis: {
+          type: 'category',
+          data: subs,
+          axisLabel: { fontSize: 11, color: '#475569' },
+          axisLine: { lineStyle: { color: '#e2e8f0' } }
+        },
+        yAxis: {
+          type: 'value',
+          minInterval: 1,
+          axisLabel: { fontSize: 10, color: '#64748b' },
+          splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } }
+        },
+        series: [
+          {
+            name: '未完成次数',
+            type: 'bar',
+            data: counts,
+            barWidth: '40%',
+            itemStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: '#f59e0b' },
+                { offset: 1, color: '#fbbf24' }
+              ]),
+              borderRadius: [4, 4, 0, 0]
+            },
+            label: {
+              show: true,
+              position: 'top',
+              fontSize: 11,
+              color: '#d97706'
+            }
+          }
+        ]
+      }, true);
+    }
+  });
+};
+
+const handleSettingsResize = () => {
+  if (monthlyTrendChartInstance) monthlyTrendChartInstance.resize();
+  if (monthlyMissingChartInstance) monthlyMissingChartInstance.resize();
+};
+
+const formatTime = (isoString) => {
+  if (!isoString) return '';
+  try {
+    const d = new Date(isoString);
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${m}-${day} ${h}:${min}`;
+  } catch (e) {
+    return isoString;
+  }
+};
+
 onMounted(() => {
+  window.addEventListener('resize', handleSettingsResize);
   if (isUnlocked.value) {
     fetchSubjects();
     fetchNotificationConfig();
+    fetchPaperHistory();
+    fetchMonthlyAnalytics();
   }
 });
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleSettingsResize);
+  if (monthlyTrendChartInstance) monthlyTrendChartInstance.dispose();
+  if (monthlyMissingChartInstance) monthlyMissingChartInstance.dispose();
+});
 </script>
+
 
 <style scoped>
 .settings-view {
@@ -544,15 +850,162 @@ onMounted(() => {
   color: #92400e;
   line-height: 1.5;
 }
-</style>
-      <!-- M4 A4 周末重练卷入口 (家长空间专属) -->
-      <van-cell-group inset title="🖨️ A4 周末重练卷 (家长专属管理)" style="margin-top: 1.5rem;">
-        <van-cell
-          title="生成 A4 周末重练试卷"
-          value="4套预设 / 自选组卷"
-          is-link
-          to="/paper"
-        />
-      </van-cell-group>
 
-      
+.history-list-box {
+  padding: 8px 12px 14px;
+}
+
+.history-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.history-card:last-child {
+  margin-bottom: 0;
+}
+
+.history-card:active {
+  background: #f1f5f9;
+}
+
+.history-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.history-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.history-card-desc {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.history-card-desc .dot {
+  color: #cbd5e1;
+}
+
+.history-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 6px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.history-time {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.history-empty-box {
+  padding: 8px 0 16px;
+}
+
+.monthly-analytics-box {
+  padding: 12px 14px;
+}
+
+.monthly-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.monthly-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.month-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.current-month-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.monthly-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.monthly-stat-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 6px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.m-stat-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.m-stat-label {
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.text-primary {
+  color: #2563eb !important;
+}
+
+.text-succ {
+  color: #10b981 !important;
+}
+
+.monthly-chart-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 4px;
+}
+
+.monthly-echarts-container {
+  width: 100%;
+  height: 180px;
+}
+
+.monthly-echarts-container.bar-height {
+  height: 170px;
+}
+
+.monthly-perfect-tip {
+  font-size: 11px;
+  color: #166534;
+  background: #f0fdf4;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #bbf7d0;
+  text-align: center;
+  margin-top: 6px;
+}
+</style>

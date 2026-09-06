@@ -49,6 +49,23 @@ def check_node_version():
         sys.exit(1)
 
 
+def get_lan_ips():
+    """获取本机在家庭局域网中的候选 IP 地址"""
+    import socket
+    ips = []
+    try:
+        candidates = socket.gethostbyname_ex(socket.gethostname())[2]
+        for ip in candidates:
+            if ip.startswith("127.") or ip.startswith("198.18."):
+                continue
+            ips.append(ip)
+    except Exception:
+        pass
+    # 优先将真实的局域网非 .1 网段排在最前面
+    ips.sort(key=lambda x: (x.endswith(".1"), x))
+    return ips
+
+
 def run_prod():
     """生产模式：单端口一体化托管（8000 端口）"""
     print("🚀 正在启动「学迹 StudyTrace」生产服务（单端口 8000 模式）...")
@@ -59,8 +76,10 @@ def run_prod():
 
     import uvicorn
     print("✨ 服务已就绪！")
-    print("🌐 本地访问地址: http://127.0.0.1:8000")
-    print("📱 家庭内网手机访问: http://<你的电脑内网IP>:8000")
+    print("🌐 本地电脑访问: http://127.0.0.1:8000")
+    lan_ips = get_lan_ips()
+    for ip in lan_ips:
+        print(f"📱 家庭内网手机/平板访问: http://{ip}:8000")
     print("🔒 退出请按 Ctrl + C")
     uvicorn.run("backend.app.main:app", host="0.0.0.0", port=8000, reload=False)
 

@@ -65,8 +65,6 @@ export const notificationApi = {
   sendSummaryNow: (channels) => api.post('/notifications/send-summary-now', { channels })
 };
 
-export default api;
-
 export const paperApi = {
   getCandidates: (params) => api.get('/paper/candidates', { params }),
   compose: (data) => api.post('/paper/compose', data),
@@ -76,4 +74,18 @@ export const paperApi = {
   getHistory: (params) => api.get('/paper/history', { params })
 };
 
+export const examApi = {
+  getList: (examType) => api.get('/exams', { params: examType ? { exam_type: examType } : {} }),
+  getDetail: (id) => api.get(`/exams/${id}`),
+  create: (data) => api.post('/exams', data),
+  update: (id, data) => api.put(`/exams/${id}`, data),
+  delete: (id) => api.delete(`/exams/${id}`),
+  getTrends: (subjectId) => api.get('/exams/charts/trends', { params: subjectId ? { subject_id: subjectId } : {} }),
+  getRadar: (examId) => api.get('/exams/charts/radar', { params: examId ? { exam_id: examId } : {} }),
+  getWeaknesses: () => api.get('/exams/diagnostics/weaknesses'),
+  getMonthlyAnalytics: (year, month) => api.get('/exams/analytics/monthly', { params: { year, month } })
+};
+
+
 export default api;
+

@@ -2,13 +2,21 @@
   <div class="app-container" :class="{ 'app-container--wide': $route.meta?.paperMode }">
     <router-view />
 
-    <!-- 孩子专注模式底部 Tabbar：彻底移除家长入口，仅保留作业与错题 -->
-    <van-tabbar route active-color="#2563eb" inactive-color="#94a3b8" placeholder>
+    <!-- 孩子专注模式底部 Tabbar：彻底移除家长入口，仅保留作业打卡、错题本与学情成绩 -->
+    <van-tabbar
+      v-show="!$route.meta?.hideTabbar"
+      :placeholder="!$route.meta?.hideTabbar"
+      route
+      active-color="#2563eb"
+      inactive-color="#94a3b8"
+    >
       <van-tabbar-item to="/" icon="passed">作业打卡</van-tabbar-item>
       <van-tabbar-item to="/mistakes" icon="records-o">错题本</van-tabbar-item>
+      <van-tabbar-item to="/scores" icon="chart-trending-o">学情成绩</van-tabbar-item>
     </van-tabbar>
   </div>
 </template>
+
 
 <script setup>
 </script>

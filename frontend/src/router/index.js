@@ -4,6 +4,7 @@ import MistakeView from '../views/MistakeView.vue';
 import SettingsView from '../views/SettingsView.vue';
 import PaperCenterView from '../views/PaperCenterView.vue';
 import PaperPrintView from '../views/PaperPrintView.vue';
+import ScoreView from '../views/ScoreView.vue';
 
 const routes = [
   {
@@ -17,6 +18,11 @@ const routes = [
     component: MistakeView
   },
   {
+    path: '/scores',
+    name: 'scores',
+    component: ScoreView
+  },
+  {
     path: '/paper',
     name: 'paper-center',
     component: PaperCenterView,
@@ -24,6 +30,7 @@ const routes = [
       hideTabbar: true
     }
   },
+
   {
     path: '/paper/print',
     name: 'paper-print',
@@ -37,8 +44,9 @@ const routes = [
     path: '/settings',
     name: 'settings',
     component: SettingsView
-  }
+  },
 ];
+
 
 const router = createRouter({
   history: createWebHistory(),
