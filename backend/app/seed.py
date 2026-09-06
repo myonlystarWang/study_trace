@@ -23,7 +23,12 @@ def seed_database():
             student = Student(id=1, name="初一同学", grade="初一")
             db.add(student)
 
-        # 2. 确保预置初一 7 科存在
+        # 2. 确保预置初一 7 科存在并处理“道德与法治”重命名为“道法”
+        legacy_sub = db.query(Subject).filter(Subject.name == "道德与法治").first()
+        if legacy_sub:
+            legacy_sub.name = "道法"
+            db.commit()
+
         for sub_data in DEFAULT_SUBJECTS:
             existing = db.query(Subject).filter(Subject.name == sub_data["name"]).first()
             if not existing:
