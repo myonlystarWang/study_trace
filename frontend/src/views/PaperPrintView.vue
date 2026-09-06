@@ -266,7 +266,7 @@ const getSubjectTagClass = (name) => {
     case '生物':
     case '地理': return 'st-subject-tag--warning';
     case '历史':
-    case '道德与法治':
+    case '道法':
     case '道法': return 'st-subject-tag--danger';
     default: return 'st-subject-tag--neutral';
   }

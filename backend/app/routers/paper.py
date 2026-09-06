@@ -24,7 +24,7 @@ from backend.app.schemas import (
 router = APIRouter(prefix="/api/paper", tags=["A4 周末重练卷"])
 
 # 初一预置核心 7 科白名单
-CORE_7_SUBJECTS = ["数学", "语文", "英语", "道德与法治", "历史", "地理", "生物"]
+CORE_7_SUBJECTS = ["数学", "语文", "英语", "道法", "历史", "地理", "生物"]
 
 
 def _calc_space_mm(space_level: str) -> int:

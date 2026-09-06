@@ -242,18 +242,29 @@ const isSmartMode = computed(() => {
   return activeParsedGroups.value.length > 0;
 });
 
-// 学科别名与标准化对应表
-const subjectAliasMap = {
-  '语文': ['语文', '国文'],
-  '数学': ['数学'],
-  '英语': ['英语', '英文', '外语'],
-  '道德与法治': ['道德与法治', '道法', '政治', '思想品德', '思品'],
-  '历史': ['历史'],
-  '地理': ['地理'],
-  '生物': ['生物', '生物学'],
-  '物理': ['物理'],
-  '化学': ['化学'],
-  '科学': ['科学']
+// 学科同义词与别名分组矩阵（支持双向任意别名无缝互通）
+const aliasGroups = [
+  ['语文', '国文'],
+  ['数学'],
+  ['英语', '英文', '外语'],
+  ['道德与法治', '道法', '政治', '思想品德', '思品'],
+  ['历史'],
+  ['地理'],
+  ['生物', '生物学'],
+  ['物理'],
+  ['化学'],
+  ['科学']
+];
+
+// 为学科获取全部同义词与别名列表
+const getAliasesForSubject = (subjectName) => {
+  const clean = (subjectName || '').trim();
+  for (const group of aliasGroups) {
+    if (group.includes(clean) || group.some((alias) => clean.includes(alias) || alias.includes(clean))) {
+      return Array.from(new Set([...group, clean]));
+    }
+  }
+  return [clean];
 };
 
 // 识别行首学科标记
@@ -262,7 +273,7 @@ const matchSubjectHeader = (line, subjectsList) => {
   if (!trimmed) return null;
 
   for (const sub of subjectsList) {
-    const aliases = subjectAliasMap[sub.name] || [sub.name];
+    const aliases = getAliasesForSubject(sub.name);
     for (const alias of aliases) {
       // 匹配：语文：作业 / 【语文】作业 / 语文 练习册 / 语文:
       const regex = new RegExp(`^[\\s【\\[（(]*(${alias})[\\s】\\]）)]*[:：\\s]\\s*(.*)$`);
@@ -286,12 +297,15 @@ const matchSubjectHeader = (line, subjectsList) => {
 
   // 匹配以学科名直接起头的内容
   for (const sub of subjectsList) {
-    if (trimmed.startsWith(sub.name)) {
-      const remainder = trimmed.slice(sub.name.length).replace(/^[:：\s]+/, '').trim();
-      return {
-        subject: sub,
-        remainder
-      };
+    const aliases = getAliasesForSubject(sub.name);
+    for (const alias of aliases) {
+      if (trimmed.startsWith(alias)) {
+        const remainder = trimmed.slice(alias.length).replace(/^[:：\s]+/, '').trim();
+        return {
+          subject: sub,
+          remainder
+        };
+      }
     }
   }
 

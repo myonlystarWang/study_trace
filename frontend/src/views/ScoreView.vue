@@ -480,7 +480,7 @@ const formData = ref({
 // 计算属性
 const coreSubjects = computed(() => {
   return subjects.value.filter(s =>
-    ['语文', '数学', '英语', '道德与法治', '历史', '地理', '生物'].includes(s.name)
+    ['语文', '数学', '英语', '道法', '历史', '地理', '生物'].includes(s.name)
   );
 });
 
@@ -823,7 +823,7 @@ const openCreateModal = () => {
   isEditing.value = false;
   editingExamId.value = null;
 
-  const order7 = ['语文', '数学', '英语', '道德与法治', '历史', '地理', '生物'];
+  const order7 = ['语文', '数学', '英语', '道法', '历史', '地理', '生物'];
   const sortedSubs = [...subjects.value].sort((a, b) => {
     const ia = order7.indexOf(a.name);
     const ib = order7.indexOf(b.name);
@@ -859,7 +859,7 @@ const openEditModal = (exam) => {
   isEditing.value = true;
   editingExamId.value = exam.id;
 
-  const order7 = ['语文', '数学', '英语', '道德与法治', '历史', '地理', '生物'];
+  const order7 = ['语文', '数学', '英语', '道法', '历史', '地理', '生物'];
   const sortedSubs = [...subjects.value].sort((a, b) => {
     const ia = order7.indexOf(a.name);
     const ib = order7.indexOf(b.name);

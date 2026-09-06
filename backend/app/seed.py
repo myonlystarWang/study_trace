@@ -7,7 +7,7 @@ DEFAULT_SUBJECTS = [
     {"name": "数学", "full_score": 120.0, "sort_order": 1},
     {"name": "语文", "full_score": 120.0, "sort_order": 2},
     {"name": "英语", "full_score": 120.0, "sort_order": 3},
-    {"name": "道德与法治", "full_score": 100.0, "sort_order": 4},
+    {"name": "道法", "full_score": 100.0, "sort_order": 4},
     {"name": "历史", "full_score": 100.0, "sort_order": 5},
     {"name": "地理", "full_score": 100.0, "sort_order": 6},
     {"name": "生物", "full_score": 100.0, "sort_order": 7},

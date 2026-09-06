@@ -383,9 +383,9 @@ def seed_m4_data():
                 "next_review_date": today - timedelta(days=2),
             },
 
-            # 道德与法治 3 题
+            # 道法 3 题
             {
-                "subject": "道德与法治",
+                "subject": "道法",
                 "source_ref": "M4_DEMO_MOR_01",
                 "error_type": "概念模糊",
                 "extracted_text": "材料分析题：\n某初中开展‘做更好的自己’主题班会。小明同学说：‘我数学成绩很好，但我性格内向，不善于表达，我觉得自己很失败。’\n请运用所学知识回答：\n（1）小明应如何正确接纳与欣赏自己？\n（2）请你为小明提出两条如何做更好的自己的具体建议。",
@@ -395,7 +395,7 @@ def seed_m4_data():
                 "next_review_date": today,
             },
             {
-                "subject": "道德与法治",
+                "subject": "道法",
                 "source_ref": "M4_DEMO_MOR_02",
                 "error_type": "粗心大意",
                 "extracted_text": "辨析题：‘遵守社会规则会限制我们的自由，因此追求真正的自由就不应受到规则的约束。’请运用‘自由与规则’的关系对此观点进行简要评析。",
@@ -405,7 +405,7 @@ def seed_m4_data():
                 "next_review_date": today,
             },
             {
-                "subject": "道德与法治",
+                "subject": "道法",
                 "source_ref": "M4_DEMO_MOR_03",
                 "error_type": "概念模糊",
                 "extracted_text": "友谊的特质是什么？结合初中生活实际，简述我们应如何澄清对友谊的片面认识，呵护珍贵友谊？",

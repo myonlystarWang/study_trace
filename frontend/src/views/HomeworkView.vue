@@ -13,13 +13,21 @@
       </div>
 
       <div class="header-right-tools">
-        <div class="streak-pill" v-if="streak > 0" title="当前连续打卡天数">
+        <!-- 满卡状态：所有作业已完成 -->
+        <div class="streak-pill" v-if="rate === 100 && totalCount > 0" title="今日作业已全部打卡完成！">
           <van-icon name="fire" color="#f97316" size="13" />
-          <span>连打 <b>{{ streak }}</b> 天</span>
+          <span>连打 <b>{{ streak > 0 ? streak : 1 }}</b> 天</span>
         </div>
-        <div v-else class="streak-pill streak-pill--idle">
-          <van-icon name="passed" color="#2563eb" size="13" />
-          <span>今日打卡</span>
+        <!-- 进行中状态：有作业但未全部完成 -->
+        <div class="streak-pill streak-pill--idle" v-else-if="totalCount > 0" title="今日作业打卡中">
+          <van-icon name="underway-o" color="#2563eb" size="13" />
+          <span v-if="completedCount > 0">打卡中 <b>{{ completedCount }}/{{ totalCount }}</b></span>
+          <span v-else>待打卡 <b>{{ totalCount }}</b> 项</span>
+        </div>
+        <!-- 无作业状态 -->
+        <div class="streak-pill streak-pill--idle" v-else title="今日暂无作业">
+          <van-icon name="notes-o" color="#64748b" size="13" />
+          <span>暂无作业</span>
         </div>
 
         <button class="calendar-pill-btn" @click="showCalendar = true">
@@ -167,15 +175,19 @@
               </div>
             </div>
 
-            <!-- 左滑展开的抽屉操作按钮 (转错题 + 删除) -->
+            <!-- 左滑展开的抽屉操作按钮 (编辑 + 转错题 + 删除) -->
             <template #right>
               <div class="swipe-actions-box">
+                <button class="swipe-action-btn btn-edit" @click.stop="openEditModal(item)">
+                  <van-icon name="edit" size="15" />
+                  <span>编辑</span>
+                </button>
                 <button class="swipe-action-btn btn-mistake" @click.stop="handleToMistake(item)">
-                  <van-icon name="plus" size="16" />
+                  <van-icon name="plus" size="15" />
                   <span>转错题</span>
                 </button>
                 <button class="swipe-action-btn btn-delete" @click.stop="handleDelete(item)">
-                  <van-icon name="delete-o" size="16" />
+                  <van-icon name="delete-o" size="15" />
                   <span>删除</span>
                 </button>
               </div>
@@ -233,6 +245,29 @@
 
     <!-- 25分钟专注番茄钟 (hideFloatingBall=true，由底部并列入口驱动) -->
     <PomodoroTimer ref="pomodoroRef" :hide-floating-ball="true" />
+
+    <!-- 作业编辑弹窗 -->
+    <van-dialog
+      v-model:show="showEditModal"
+      title="修改作业内容"
+      show-cancel-button
+      confirm-button-text="保存修改"
+      @confirm="submitEditHomework"
+    >
+      <div style="padding: 1rem 1rem 0.5rem;">
+        <div style="margin-bottom: 8px; font-size: 12px; color: #64748b;">
+          所属学科：<span class="st-subject-tag" :class="getSubjectTagClass(editingItem?.subject_name)">{{ editingItem?.subject_name }}</span>
+        </div>
+        <van-field
+          v-model="editContent"
+          type="textarea"
+          rows="3"
+          autosize
+          placeholder="请输入修改后的作业内容"
+          class="homework-input-field"
+        />
+      </div>
+    </van-dialog>
   </div>
 </template>
 
@@ -256,6 +291,9 @@ const selectedSubject = ref(null);
 const refreshing = ref(false);
 const showAddModal = ref(false);
 const showCalendar = ref(false);
+const showEditModal = ref(false);
+const editingItem = ref(null);
+const editContent = ref('');
 
 const isToday = computed(() => {
   return currentDate.value === new Date().toISOString().split('T')[0];
@@ -306,7 +344,8 @@ const getSubjectTagClass = (name) => {
     case '地理': return 'st-subject-tag--warning';
     case '历史':
     case '道德与法治':
-    case '道法': return 'st-subject-tag--danger';
+    case '道法':
+    case '政治': return 'st-subject-tag--danger';
     default: return 'st-subject-tag--neutral';
   }
 };
@@ -394,6 +433,27 @@ const handleToMistake = async (item) => {
     showToast({ message: '已成功归档到错题本！', icon: 'records-o' });
   } catch (e) {
     showToast('转错题失败');
+  }
+};
+
+const openEditModal = (item) => {
+  editingItem.value = item;
+  editContent.value = item.content;
+  showEditModal.value = true;
+};
+
+const submitEditHomework = async () => {
+  if (!editContent.value || !editContent.value.trim()) {
+    showToast('作业内容不可为空');
+    return;
+  }
+  try {
+    await homeworkApi.update(editingItem.value.id, { content: editContent.value.trim() });
+    showToast({ message: '作业已修改', icon: 'success' });
+    showEditModal.value = false;
+    fetchHomework();
+  } catch (e) {
+    showToast('修改失败');
   }
 };
 
@@ -664,6 +724,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding-bottom: 84px; /* 避让底部悬浮操作栏与 Tabbar，确保最后一个卡片完整呈现不被截断 */
 }
 
 .hw-swipe-cell {
@@ -769,6 +830,10 @@ onMounted(async () => {
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
+}
+
+.swipe-action-btn.btn-edit {
+  background-color: var(--st-warning, #f59e0b);
 }
 
 .swipe-action-btn.btn-mistake {

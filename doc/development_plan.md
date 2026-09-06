@@ -119,7 +119,7 @@
 
 1. **数据模型**（Alembic 迁移）：`Students` / `Subjects` / `HomeworkItems` / `MistakeRecords` / `MistakeReviews` / `Settings`
 
-- 预置初一 7 科：语文、数学、英语、道德与法治、历史、地理、生物
+- 预置初一 7 科：语文、数学、英语、道法、历史、地理、生物
 - 不建 `DailyCheckins`（见问题 #16）
 
 2. **图片链路**（问题 #9）：
