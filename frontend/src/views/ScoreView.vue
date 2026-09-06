@@ -995,9 +995,9 @@ const handleDeleteExam = (exam) => {
 
 <style scoped>
 .score-view {
-  min-height: 100vh;
+  flex: 1;
   background-color: #f8fafc;
-  padding-bottom: 70px;
+  padding-bottom: 16px;
 }
 
 .score-content {

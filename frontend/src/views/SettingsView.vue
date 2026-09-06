@@ -877,13 +877,12 @@ onUnmounted(() => {
 
 <style scoped>
 .settings-view {
-  min-height: 100vh;
+  flex: 1;
   background-color: var(--st-bg-page, #f8fafc);
-  padding-bottom: 3.5rem;
 }
 
 .settings-container {
-  padding: 12px 14px 60px;
+  padding: 12px 14px 16px;
   max-width: 600px;
   margin: 0 auto;
 }

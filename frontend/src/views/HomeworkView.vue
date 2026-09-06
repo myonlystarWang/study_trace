@@ -410,9 +410,9 @@ onMounted(async () => {
 
 <style scoped>
 .homework-view {
-  min-height: 100vh;
+  flex: 1;
   background-color: var(--st-bg-page, #f8fafc);
-  padding: 14px 16px 84px;
+  padding: 12px 14px 16px;
 }
 
 /* 顶栏信息 */

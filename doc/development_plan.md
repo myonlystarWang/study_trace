@@ -358,3 +358,68 @@ BaseOCREngine.recognize(image_path) -> OcrResult(lines[], text, confidence, engi
 1. **Cloudflare 托管域名**（M6 阻塞）：需一个 NS 指向 Cloudflare 的域名。若无，需注册（Cloudflare Registrar 最便宜约 $10/年，或把已有域名 NS 转入）
 2. ~~**GitHub 推送凭证**（M6）~~：【已解决】本机 SSH key 已完成认证，已切换 remote 为 SSH 协议并成功推送到 GitHub 远端仓库
 3. **OCR 基准测试图**（M2）：20 张真实作业/试卷照片
+
+---
+
+## 十二、【预留架构规划】AI 语音与非结构化长文本智能解析分发体系
+
+> **定位说明**：预留设计，供未来通过长语音录音或直接粘贴大段非结构化文本（如微信群发布的班级每日作业通知单），由后台自动解析意图并直接调用现有业务接口完成数据落地，免去人工逐项表单录入。
+
+### 1. 整体数据流与分层管道
+
+```
+[用户语音输入 / 粘贴大段非结构化文本]
+               │
+               ▼
+[音频转写 STT (Web Audio API / 离线 faster-whisper)]
+               │
+               ▼
+[LLM 意图识别与实体提取 (Structured JSON Schema)]
+  ├── 识别意图 (Intent): 布置作业 / 录错题 / 记考试 / 查安排
+  └── 抽取实体 (Entities): 学科, 日期, 题目/作业内容, 分值等
+               │
+               ▼
+[动作分发器 (Action Dispatcher / Function Calling)]
+  ├── 批量布置作业  ➔ POST /api/homework
+  ├── 快速收录错题  ➔ POST /api/mistakes
+  └── 考试成绩录入  ➔ POST /api/exams
+               │
+               ▼
+[前端半自动确认弹窗 (Human-in-the-Loop 卡片)] ➔ 最终落盘
+```
+
+### 2. 接口预留契约规范
+- **预留端点**：`POST /api/ai/parse-intent`
+- **请求负载**：
+  ```json
+  {
+    "raw_text": "今天语文背诵木兰诗，数学完成课本P45第3、4题，英语抄写单词Unit 2五遍",
+    "audio_file_path": null,
+    "context_date": "2026-09-06"
+  }
+  ```
+- **响应动作契约**：
+  ```json
+  {
+    "intent": "batch_create_homework",
+    "confidence": 0.98,
+    "actions": [
+      {
+        "endpoint": "/api/homework",
+        "method": "POST",
+        "payload": { "subject_name": "语文", "date": "2026-09-06", "content": "背诵木兰诗" }
+      },
+      {
+        "endpoint": "/api/homework",
+        "method": "POST",
+        "payload": { "subject_name": "数学", "date": "2026-09-06", "content": "完成课本P45第3、4题" }
+      },
+      {
+        "endpoint": "/api/homework",
+        "method": "POST",
+        "payload": { "subject_name": "英语", "date": "2026-09-06", "content": "抄写单词Unit 2五遍" }
+      }
+    ]
+  }
+  ```
+- **交互保障**：自动分发前在前端弹出可编辑的“AI 解析待办卡片”，孩子或家长一键“确定入库”或单项修改，保障系统数据的确定性与可靠性。

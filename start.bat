@@ -1,6 +1,7 @@
 @echo off
 chcp 65001 >nul
 title StudyTrace
+set PYTHONUTF8=1
 
 set "FNM_NODE_DIR=%APPDATA%\fnm\node-versions\v22.23.2\installation"
 set "FNM_BIN_DIR=%LOCALAPPDATA%\Microsoft\WinGet\Packages\Schniz.fnm_Microsoft.Winget.Source_8wekyb3d8bbwe"

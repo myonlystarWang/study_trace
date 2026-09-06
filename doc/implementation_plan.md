@@ -57,7 +57,17 @@
 
 ### V2 — 进阶扩展范围（后续迭代）
 
-1. **离线语音长录音转写**：后端集成 `faster-whisper`，本地快速完成语音日记或作业语音转文字；
+1. **AI 语音与非结构化长文本意图解析分发引擎 (Voice & Text Intent Parser & Dispatcher)**:
+   - **预留能力定位**：支持通过麦克风长语音输入或直接粘贴家校大段非结构化作业通知（如班级群发作业清单），由 AI 意图解析器自动结构化提取并自动化分发调用系统现有 RESTful API，免去孩子或家长手工逐项填表。
+   - **分层处理管道架构 (Pipeline Architecture)**：
+     - **采集与转写层 (Capture & STT)**：前端通过 Web Audio API 捕获录音或用户直接粘贴大段非结构化文字；音频流交由后端轻量本地 `faster-whisper` 或开放 STT 接口完成文字转写。
+     - **意图分类与实体抽取层 (LLM Intent & Entity Extraction)**：设计统一 Prompt 规范将文本解析为强类型 JSON 动作契约，分类识别四大核心意图：
+       - `intent: "batch_create_homework"` -> 提取目标日期、学科、作业条目列表；
+       - `intent: "create_mistake"` -> 提取学科、题目文本、错因类型、来源标记；
+       - `intent: "record_exam_score"` -> 提取考试名称、日期、科目及得分；
+       - `intent: "schedule_query"` -> 查询某天或某科目的作业与复习安排。
+     - **自动化编排与分发器 (Action Dispatcher)**：调度系统内置 API 客户端，自动组装 Payload 并调用对应接口（`POST /api/homework`、`POST /api/mistakes`、`POST /api/exams`）。
+     - **人机协同确认环 (Human-in-the-Loop)**：前端弹窗展示 AI 解析出的动作清单与预填数据预览卡片，支持一键确认入库或快捷微调，保障核心数据精准无误。
 2. **AI 名师学情长文诊断**：一键调用大模型根据学期成绩走势与错题分布生成深度提分建议；
 3. **知识点图谱体系**：初中各科系统化知识点树形目录与薄弱知识点穿透下钻；
 4. **手写笔记智能擦除**：通过轻量图像模型擦除试卷上原本写下的红笔批改与铅笔字迹。

@@ -37,13 +37,16 @@ body {
   background-color: #f1f5f9;
   color: #0f172a;
   min-height: 100vh;
-  padding-bottom: env(safe-area-inset-bottom);
+  min-height: 100dvh;
 }
 
 .app-container {
   max-width: 500px;
   margin: 0 auto;
   min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
   position: relative;
   background-color: #f8fafc;
   box-shadow: 0 0 25px rgba(0, 0, 0, 0.05);

@@ -2,14 +2,13 @@
   <div class="mistake-view">
     <!-- 顶部主标签页切换与周末组卷快捷入口 -->
     <div class="mistake-header-bar">
-      <van-tabs v-model:active="activeTab" color="#2563eb" line-width="40px" @change="onTabChange" class="mistake-tabs">
-        <van-tab title="今日复习" name="review">
-          <template #title>
-            <span>今日待复习</span>
-            <van-badge v-if="reviewQueueCount > 0" :content="reviewQueueCount" />
-          </template>
-        </van-tab>
-        <van-tab title="错题总库" name="all"></van-tab>
+      <van-tabs v-model:active="activeTab" color="#2563eb" line-width="36px" shrink @change="onTabChange" class="mistake-tabs">
+        <van-tab
+          title="今日复习"
+          :badge="reviewQueueCount > 0 ? reviewQueueCount : null"
+          name="review"
+        />
+        <van-tab title="错题总库" name="all" />
       </van-tabs>
       <div class="paper-quick-btn" @click="$router.push('/paper')">
         <van-icon name="notes-o" />
@@ -501,9 +500,9 @@ onMounted(async () => {
 
 <style scoped>
 .mistake-view {
-  min-height: 100vh;
+  flex: 1;
   background-color: var(--st-bg-page, #f8fafc);
-  padding: 14px 16px 84px;
+  padding: 12px 14px 16px;
 }
 
 /* 顶部导航与组卷入口 */
@@ -514,13 +513,22 @@ onMounted(async () => {
   margin-bottom: 12px;
   background: var(--st-bg-card, #ffffff);
   border-radius: var(--st-radius-lg, 14px);
-  padding: 4px 12px;
+  padding: 2px 10px;
   border: 1px solid var(--st-border, #f1f5f9);
   box-shadow: var(--st-shadow-card, 0 1px 3px rgba(15, 23, 42, 0.04));
 }
 
 .mistake-tabs {
   flex: 1;
+}
+
+.mistake-tabs :deep(.van-tabs__nav) {
+  padding-left: 0;
+}
+
+.mistake-tabs :deep(.van-tab) {
+  padding: 0 14px;
+  font-size: 14px;
 }
 
 .paper-quick-btn {
