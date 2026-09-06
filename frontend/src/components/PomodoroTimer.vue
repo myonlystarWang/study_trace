@@ -1,8 +1,8 @@
 <template>
   <div class="pomodoro-container">
-    <!-- 悬浮小番茄/专注计时触发球 -->
+    <!-- 悬浮小番茄/专注计时触发球 (当 hideFloatingBall 为 true 时不显示独立浮球，由外部并列入口调用) -->
     <div
-      v-if="!showModal"
+      v-if="!hideFloatingBall && !showModal"
       class="floating-pomodoro-ball"
       :class="{ 'is-running': isRunning }"
       @click="showModal = true"
@@ -88,6 +88,13 @@
 import { ref, computed, onUnmounted } from 'vue';
 import { showDialog, showToast } from 'vant';
 
+const props = defineProps({
+  hideFloatingBall: {
+    type: Boolean,
+    default: false
+  }
+});
+
 const showModal = ref(false);
 const selectedMinutes = ref(25);
 const remainingSeconds = ref(25 * 60);
@@ -96,6 +103,17 @@ const isPaused = ref(false);
 
 let timerId = null;
 let targetEndTime = 0; // 核心：目标结束绝对时间戳，切后台不漂移
+
+defineExpose({
+  open: () => { showModal.value = true; },
+  close: () => { showModal.value = false; },
+  isRunning,
+  formattedTime: computed(() => {
+    const m = Math.floor(remainingSeconds.value / 60);
+    const s = remainingSeconds.value % 60;
+    return `${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`;
+  })
+});
 
 const formattedTime = computed(() => {
   const m = Math.floor(remainingSeconds.value / 60);

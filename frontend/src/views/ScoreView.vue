@@ -4,20 +4,10 @@
     <van-nav-bar
       title="学情成绩分析"
       left-arrow
+      right-text="录入成绩"
       @click-left="$router.push('/')"
-    >
-      <template #right>
-        <van-button
-          size="small"
-          type="primary"
-          round
-          icon="plus"
-          @click="handleRequestCreate"
-        >
-          录入成绩
-        </van-button>
-      </template>
-    </van-nav-bar>
+      @click-right="handleRequestCreate"
+    />
 
     <div class="score-content">
       <!-- 汇总概览卡片 (扁平纯白质感，统一全站设计语言) -->
@@ -105,7 +95,7 @@
         </div>
 
         <!-- 科目筛选切换 Chips -->
-        <div class="subject-pills-scroll">
+        <div class="subject-pills-scroll st-scroll-x">
           <span
             class="st-chip"
             :class="{ active: selectedSubjectId === null }"
@@ -177,8 +167,19 @@
               <van-icon name="orders-o" />
             </span>
             <span class="card-title">考试历史台账</span>
+            <span class="ledger-count">({{ examList.length }} 场)</span>
           </div>
-          <span class="ledger-count">共 {{ examList.length }} 场</span>
+          <van-button
+            size="mini"
+            type="primary"
+            plain
+            round
+            icon="plus"
+            style="padding: 0 10px; height: 26px; font-weight: 600;"
+            @click="handleRequestCreate"
+          >
+            录入考试
+          </van-button>
         </div>
 
         <div v-if="examList.length > 0" class="ledger-list">

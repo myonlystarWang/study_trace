@@ -1,375 +1,421 @@
 <template>
   <div class="settings-view">
-    <van-nav-bar title="家长管理视图" left-arrow @click-left="$router.push('/')" />
+    <van-nav-bar title="家长管理视图" left-arrow @click-left="$router.push('/')" fixed placeholder />
 
-    <!-- 门禁口令验证卡片 -->
-    <div class="st-card pin-gate-card" v-if="!isUnlocked">
-      <div class="gate-icon-circle">
-        <van-icon name="lock" size="32" color="#d97706" />
+    <div class="settings-container">
+      <!-- 门禁口令验证卡片 -->
+      <div class="st-card pin-gate-card" v-if="!isUnlocked">
+        <div class="gate-icon-circle">
+          <van-icon name="lock" size="32" color="#d97706" />
+        </div>
+        <h3>家长模式身份验证</h3>
+        <p class="gate-tip">初中生专注模式已开启。请输入管理口令进入：</p>
+        
+        <van-field
+          v-model="inputPin"
+          type="password"
+          maxlength="6"
+          placeholder="请输入 6 位管理口令 (默认 888888)"
+          class="pin-field"
+          center
+        />
+
+        <van-button
+          type="primary"
+          block
+          round
+          :loading="verifying"
+          @click="handleVerifyPin"
+          style="margin-top: 1.5rem;"
+        >
+          解锁进入管理视图
+        </van-button>
       </div>
-      <h3>家长模式身份验证</h3>
-      <p class="gate-tip">初中生专注模式已开启。请输入管理口令进入：</p>
-      
-      <van-field
-        v-model="inputPin"
-        type="password"
-        maxlength="6"
-        placeholder="请输入 6 位管理口令 (默认 888888)"
-        class="pin-field"
-        center
-      />
 
-      <van-button
-        type="primary"
-        block
-        round
-        :loading="verifying"
-        @click="handleVerifyPin"
-        style="margin-top: 1.5rem;"
-      >
-        解锁进入管理视图
-      </van-button>
-    </div>
+      <!-- 解锁后的家长管理功能 -->
+      <div class="unlocked-content" v-else>
+        <van-notice-bar
+          left-icon="info-o"
+          text="已进入家长管理空间，可设置推送提醒、管理学科与备份。"
+          class="settings-top-notice"
+        />
 
-    <!-- 解锁后的家长管理功能 -->
-    <div class="unlocked-content" v-else>
-      <van-notice-bar left-icon="info-o" text="已进入家长管理空间，可设置推送提醒、管理学科与备份。" />
-
-      <!-- 每日提醒与通知渠道配置 -->
-      <van-cell-group inset title="每日提醒与多渠道推送设置" style="margin-top: 1rem;">
-        <!-- 时段说明 -->
-        <van-cell title="提醒策略" label="20:10 / 21:10 中途催办 (100%完成自动跳过免打扰) ｜ 21:50 晚间汇总日报 (满卡送达喜报)" />
-
-        <!-- 渠道选择 -->
-        <van-cell title="启用渠道">
-          <template #value>
-            <van-checkbox-group v-model="notifConfig.enabled_channels" direction="horizontal">
-              <van-checkbox name="pushplus" shape="square" style="margin-right: 12px;">微信(PushPlus)</van-checkbox>
-              <van-checkbox name="serverchan" shape="square" style="margin-right: 12px;">Server酱</van-checkbox>
-              <van-checkbox name="bark" shape="square" style="margin-right: 12px;">iOS Bark</van-checkbox>
-              <van-checkbox name="webhook" shape="square">群机器人</van-checkbox>
-            </van-checkbox-group>
-          </template>
-        </van-cell>
-
-        <!-- PushPlus 微信推送配置 -->
-        <div class="channel-config-box">
-          <div class="channel-header">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span class="st-icon-badge st-icon-badge--success">
-                <van-icon name="chat-o" />
-              </span>
-              <span class="channel-title">微信公众号推送 (PushPlus 首选推荐)</span>
-            </div>
-            <span class="channel-badge free">实名免费 200条/天</span>
+        <!-- 每日提醒与通知渠道配置 -->
+        <div class="st-card">
+          <div class="st-section-header">
+            <span class="st-icon-badge st-icon-badge--primary">
+              <van-icon name="bell-o" />
+            </span>
+            <span>每日提醒与多渠道推送设置</span>
           </div>
-          <van-field
-            v-model="notifConfig.pushplus_token"
-            label="Token"
-            placeholder="微信扫码关注 pushplus 获取的 token"
-          >
-            <template #button>
-              <van-button
-                size="small"
-                type="primary"
-                plain
-                :loading="testingChannel === 'pushplus'"
-                @click="handleTestChannel('pushplus', notifConfig.pushplus_token)"
-              >
-                测试
-              </van-button>
+
+          <!-- 时段说明 -->
+          <van-cell title="提醒策略" label="20:10 / 21:10 中途催办 (100%完成自动跳过免打扰) ｜ 21:50 晚间汇总日报 (满卡送达喜报)" />
+
+          <!-- 渠道选择 -->
+          <van-cell title="启用渠道">
+            <template #value>
+              <van-checkbox-group v-model="notifConfig.enabled_channels" direction="horizontal">
+                <van-checkbox name="pushplus" shape="square" style="margin-right: 12px;">微信(PushPlus)</van-checkbox>
+                <van-checkbox name="serverchan" shape="square" style="margin-right: 12px;">Server酱</van-checkbox>
+                <van-checkbox name="bark" shape="square" style="margin-right: 12px;">iOS Bark</van-checkbox>
+                <van-checkbox name="webhook" shape="square">群机器人</van-checkbox>
+              </van-checkbox-group>
             </template>
-          </van-field>
-          <div class="channel-hint" style="padding-left: 0; margin-top: 6px;">
+          </van-cell>
+
+          <!-- PushPlus 微信推送配置 -->
+          <div class="channel-config-box">
+            <div class="channel-header">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="st-icon-badge st-icon-badge--success">
+                  <van-icon name="chat-o" />
+                </span>
+                <span class="channel-title">微信公众号推送 (PushPlus 首选推荐)</span>
+              </div>
+              <span class="st-status-tag st-status-tag--success">实名免费 200条/天</span>
+            </div>
+            <van-field
+              v-model="notifConfig.pushplus_token"
+              label="Token"
+              placeholder="微信扫码关注 pushplus 获取的 token"
+            >
+              <template #button>
+                <van-button
+                  size="small"
+                  type="primary"
+                  plain
+                  :loading="testingChannel === 'pushplus'"
+                  @click="handleTestChannel('pushplus', notifConfig.pushplus_token)"
+                >
+                  测试
+                </van-button>
+              </template>
+            </van-field>
+            <div class="channel-hint" style="padding-left: 0; margin-top: 6px;">
+              <van-notice-bar
+                left-icon="info-o"
+                :scrollable="false"
+                wrapable
+                text="提示：微信关注“PushPlus推送加”公众号，必须完成手机号实名认证方可享有 200 条/天免费额度；未实名接口将返回 905。"
+              />
+            </div>
+          </div>
+
+          <!-- Server酱 配置 -->
+          <div class="channel-config-box">
+            <div class="channel-header">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="st-icon-badge st-icon-badge--warning">
+                  <van-icon name="bell-o" />
+                </span>
+                <span class="channel-title">Server酱 (Turbo版 备选)</span>
+              </div>
+              <span class="st-status-tag st-status-tag--warning">免费限 5条/天</span>
+            </div>
+            <van-field
+              v-model="notifConfig.serverchan_key"
+              label="SendKey"
+              placeholder="Server酱的 SCT SendKey"
+            >
+              <template #button>
+                <van-button
+                  size="small"
+                  type="default"
+                  :loading="testingChannel === 'serverchan'"
+                  @click="handleTestChannel('serverchan', notifConfig.serverchan_key)"
+                >
+                  测试
+                </van-button>
+              </template>
+            </van-field>
+          </div>
+
+          <!-- iOS Bark 配置 -->
+          <div class="channel-config-box">
+            <div class="channel-header">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="st-icon-badge st-icon-badge--purple">
+                  <van-icon name="phone-o" />
+                </span>
+                <span class="channel-title">iOS Bark 推送 (全家 iPhone 首选)</span>
+              </div>
+              <span class="st-status-tag st-status-tag--purple">无需 HTTPS 免账号</span>
+            </div>
+            <van-field
+              v-model="notifConfig.bark_key"
+              label="Bark Key"
+              placeholder="Bark App 中的设备 Key 或完整 URL"
+            >
+              <template #button>
+                <van-button
+                  size="small"
+                  type="default"
+                  :loading="testingChannel === 'bark'"
+                  @click="handleTestChannel('bark', notifConfig.bark_key)"
+                >
+                  测试
+                </van-button>
+              </template>
+            </van-field>
+          </div>
+
+          <!-- 群机器人 Webhook -->
+          <div class="channel-config-box">
+            <div class="channel-header">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="st-icon-badge st-icon-badge--neutral">
+                  <van-icon name="cluster-o" />
+                </span>
+                <span class="channel-title">群机器人 Webhook (企微 / 钉钉 / 飞书)</span>
+              </div>
+              <span class="st-status-tag st-status-tag--neutral">100% 免费零门槛</span>
+            </div>
+            <van-field
+              v-model="notifConfig.webhook_url"
+              label="Webhook"
+              placeholder="群机器人的完整 Webhook 链接"
+            >
+              <template #button>
+                <van-button
+                  size="small"
+                  type="default"
+                  :loading="testingChannel === 'webhook'"
+                  @click="handleTestChannel('webhook', notifConfig.webhook_url)"
+                >
+                  测试
+                </van-button>
+              </template>
+            </van-field>
+          </div>
+
+          <!-- 操作按钮行 -->
+          <div class="notif-action-row">
+            <van-button
+              type="primary"
+              round
+              block
+              :loading="savingConfig"
+              @click="handleSaveConfig"
+            >
+              保存通知设置
+            </van-button>
+            <van-button
+              type="warning"
+              plain
+              round
+              block
+              icon="guide-o"
+              style="margin-top: 10px;"
+              :loading="sendingSummary"
+              @click="handleSendSummaryNow"
+            >
+              立即生成并发送今日汇总 (即时推送快照)
+            </van-button>
+          </div>
+        </div>
+
+        <!-- 成绩管理与月度学情看板（家长专属深度分析） -->
+        <div class="st-card">
+          <div class="st-section-header">
+            <span class="st-icon-badge st-icon-badge--info">
+              <van-icon name="chart-trending-o" />
+            </span>
+            <span>成绩管理与月度学情看板 (家长专属)</span>
+          </div>
+
+          <van-cell
+            title="成绩管理与录入"
+            is-link
+            icon="records-o"
+            label="录入历次大考小测成绩、查看单科与全科雷达学情"
+            @click="$router.push('/scores')"
+          />
+
+          <div class="monthly-analytics-box">
+            <div class="monthly-header">
+              <div class="monthly-title-box">
+                <span class="st-icon-badge st-icon-badge--primary" style="width: 26px; height: 26px; font-size: 13px;">
+                  <van-icon name="calendar-o" />
+                </span>
+                <span class="monthly-title">月度作业打卡深度透视</span>
+              </div>
+              <div class="month-stepper">
+                <van-button size="mini" icon="arrow-left" @click="changeMonth(-1)" />
+                <span class="current-month-text">{{ currentYear }} 年 {{ currentMonth }} 月</span>
+                <van-button size="mini" icon="arrow" @click="changeMonth(1)" />
+              </div>
+            </div>
+
+            <!-- 月度核心指标网格 -->
+            <div class="monthly-stats-grid">
+              <div class="monthly-stat-item">
+                <span class="m-stat-val text-primary">{{ monthlyData?.average_completion_rate ?? '--' }}%</span>
+                <span class="m-stat-label">月均打卡率</span>
+              </div>
+              <div class="monthly-stat-item">
+                <span class="m-stat-val">{{ monthlyData?.recorded_days ?? 0 }} / {{ monthlyData?.total_days ?? 0 }}</span>
+                <span class="m-stat-label">有效打卡天数</span>
+              </div>
+              <div class="monthly-stat-item">
+                <span class="m-stat-val text-succ">{{ monthlyData?.perfect_days ?? 0 }} 天</span>
+                <span class="m-stat-label">全满卡天数</span>
+              </div>
+            </div>
+
+            <!-- 整月每日打卡率走势折线图 -->
+            <div class="monthly-chart-title">
+              <van-icon name="ascending" color="#2563eb" style="margin-right: 4px;" />
+              每日作业打卡率走势 (1~{{ monthlyData?.total_days || 30 }}日)
+            </div>
+            <div ref="monthlyTrendChartRef" class="monthly-echarts-container"></div>
+
+            <!-- 各科目未完成频次分布柱状图 -->
+            <div class="monthly-chart-title" style="margin-top: 14px;">
+              <van-icon name="bar-chart-o" color="#f59e0b" style="margin-right: 4px;" />
+              各科目未完成频次分布
+            </div>
+            <div v-show="monthlyData?.subject_missing_distribution?.length > 0" ref="monthlyMissingChartRef" class="monthly-echarts-container bar-height"></div>
+            <div v-if="!monthlyData?.subject_missing_distribution?.length" class="monthly-perfect-tip">
+              <van-icon name="passed" color="#10b981" style="margin-right: 4px;" />
+              本月暂无科目未完成记录，各项作业皆如期完成！
+            </div>
+          </div>
+        </div>
+
+        <!-- A4 周末重练卷与组卷记录（家长空间入口与历史） -->
+        <div class="st-card">
+          <div class="st-section-header">
+            <span class="st-icon-badge st-icon-badge--warning">
+              <van-icon name="notes-o" />
+            </span>
+            <span>A4 周末重练卷 (家长专属管理)</span>
+          </div>
+
+          <van-cell
+            title="前往组卷中心"
+            is-link
+            icon="records-o"
+            label="定制错题排版、选择留白尺寸、生成专属 A4 练习卷"
+            @click="$router.push('/paper')"
+          />
+          <van-cell
+            title="最近组卷历史记录"
+            :value="paperHistoryLoading ? '加载中...' : `${paperHistory.length} 份`"
+            :label="paperHistory.length ? '点击试卷卡片可直接预览、重新打印或批量打卡' : '尚未生成过重练卷'"
+          />
+
+          <div v-if="paperHistory.length > 0" class="history-list-box">
+            <div
+              v-for="item in paperHistory"
+              :key="item.id"
+              class="history-card"
+              @click="$router.push(`/paper/print?id=${item.id}`)"
+            >
+              <div class="history-card-header">
+                <span class="history-card-title">{{ item.title || '初一错题周末重练卷' }}</span>
+                <span v-if="item.status === 'reviewed'" class="st-status-tag st-status-tag--success">已打卡完成</span>
+                <span v-else-if="item.status === 'printed'" class="st-status-tag st-status-tag--warning">已打印·待打卡</span>
+                <span v-else class="st-status-tag st-status-tag--primary">未打印·草稿</span>
+              </div>
+              <div class="history-card-desc">
+                <span>共 {{ item.total_questions }} 题</span>
+                <span class="dot">·</span>
+                <span>预估 {{ item.estimated_pages }} 页</span>
+                <span class="dot">·</span>
+                <span>学生: {{ item.student_name }}</span>
+              </div>
+              <div class="history-card-footer">
+                <span class="history-time">{{ formatTime(item.created_at) }}</span>
+                <div class="history-btns">
+                  <van-button
+                    size="mini"
+                    type="primary"
+                    plain
+                    @click.stop="$router.push(`/paper/print?id=${item.id}`)"
+                  >
+                    查看试卷
+                  </van-button>
+                  <van-button
+                    v-if="item.status !== 'reviewed'"
+                    size="mini"
+                    type="warning"
+                    plain
+                    style="margin-left: 6px;"
+                    @click.stop="$router.push(`/paper/print?id=${item.id}&action=review`)"
+                  >
+                    去打卡
+                  </van-button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else-if="!paperHistoryLoading" class="history-empty-box">
+            <van-empty description="暂无历史组卷记录，去组一张吧" image-size="60">
+              <van-button round size="small" type="primary" @click="$router.push('/paper')">立即组卷</van-button>
+            </van-empty>
+          </div>
+        </div>
+
+        <!-- 数据安全与备份 -->
+        <div class="st-card">
+          <div class="st-section-header">
+            <span class="st-icon-badge st-icon-badge--success">
+              <van-icon name="shield-o" />
+            </span>
+            <span>数据安全与一键备份</span>
+          </div>
+          <van-cell title="全站数据导出备份" is-link label="包含 SQLite 数据库与所有错题高清原图" @click="handleExportBackup" />
+          <van-cell title="从备份 Zip 包还原" label="恢复前将自动在本地创建数据快照">
+            <template #right-icon>
+              <van-uploader :after-read="handleImportBackup" accept=".zip">
+                <van-button size="small" type="primary">选择并还原</van-button>
+              </van-uploader>
+            </template>
+          </van-cell>
+          <div style="margin-top: 10px;">
             <van-notice-bar
-              left-icon="info-o"
-              :scrollable="false"
+              left-icon="warning-o"
+              color="#ef4444"
+              background="#fef2f2"
               wrapable
-              text="提示：微信关注“PushPlus推送加”公众号，必须完成手机号实名认证方可享有 200 条/天免费额度；未实名接口将返回 905。"
+              :scrollable="false"
+              style="border-radius: var(--st-radius-sm, 8px);"
+              text="安全须知：导出的备份 Zip 压缩包包含本地 SQLite 数据库（含已配置的通知 Token 与 Key 等敏感凭据），请妥善保存在私密设备中，切勿外传或公开发布。"
             />
           </div>
         </div>
 
-        <!-- Server酱 配置 -->
-        <div class="channel-config-box">
-          <div class="channel-header">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span class="st-icon-badge st-icon-badge--warning">
-                <van-icon name="bell-o" />
-              </span>
-              <span class="channel-title">Server酱 (Turbo版 备选)</span>
-            </div>
-            <span class="channel-badge warning">免费限 5条/天</span>
+        <!-- 学科设置 -->
+        <div class="st-card">
+          <div class="st-section-header">
+            <span class="st-icon-badge st-icon-badge--purple">
+              <van-icon name="apps-o" />
+            </span>
+            <span>预置初一学科管理</span>
           </div>
-          <van-field
-            v-model="notifConfig.serverchan_key"
-            label="SendKey"
-            placeholder="Server酱的 SCT SendKey"
-          >
-            <template #button>
-              <van-button
-                size="small"
-                type="default"
-                :loading="testingChannel === 'serverchan'"
-                @click="handleTestChannel('serverchan', notifConfig.serverchan_key)"
-              >
-                测试
-              </van-button>
-            </template>
-          </van-field>
+          <van-cell
+            v-for="sub in subjects"
+            :key="sub.id"
+            :title="sub.name"
+            :value="`${sub.full_score} 分`"
+          />
+          <van-cell title="新增自定义学科" is-link @click="showAddSubject = true" />
         </div>
 
-        <!-- iOS Bark 配置 -->
-        <div class="channel-config-box">
-          <div class="channel-header">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span class="st-icon-badge st-icon-badge--purple">
-                <van-icon name="phone-o" />
-              </span>
-              <span class="channel-title">iOS Bark 推送 (全家 iPhone 首选)</span>
-            </div>
-            <span class="channel-badge free">无需 HTTPS 免账号</span>
+        <!-- 口令管理与关于系统 -->
+        <div class="st-card">
+          <div class="st-section-header">
+            <span class="st-icon-badge st-icon-badge--neutral">
+              <van-icon name="setting-o" />
+            </span>
+            <span>安全设置与系统关于</span>
           </div>
-          <van-field
-            v-model="notifConfig.bark_key"
-            label="Bark Key"
-            placeholder="Bark App 中的设备 Key 或完整 URL"
-          >
-            <template #button>
-              <van-button
-                size="small"
-                type="default"
-                :loading="testingChannel === 'bark'"
-                @click="handleTestChannel('bark', notifConfig.bark_key)"
-              >
-                测试
-              </van-button>
-            </template>
-          </van-field>
+          <van-cell title="修改管理口令" is-link @click="showChangePin = true" />
+          <van-cell title="关于系统与运行自检" is-link icon="info-o" @click="$router.push('/about')" />
+          <van-cell title="退出管理视图" is-link @click="lockSettings" />
         </div>
-
-        <!-- 群机器人 Webhook -->
-        <div class="channel-config-box">
-          <div class="channel-header">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span class="st-icon-badge st-icon-badge--neutral">
-                <van-icon name="cluster-o" />
-              </span>
-              <span class="channel-title">群机器人 Webhook (企微 / 钉钉 / 飞书)</span>
-            </div>
-            <span class="channel-badge free">100% 免费零门槛</span>
-          </div>
-          <van-field
-            v-model="notifConfig.webhook_url"
-            label="Webhook"
-            placeholder="群机器人的完整 Webhook 链接"
-          >
-            <template #button>
-              <van-button
-                size="small"
-                type="default"
-                :loading="testingChannel === 'webhook'"
-                @click="handleTestChannel('webhook', notifConfig.webhook_url)"
-              >
-                测试
-              </van-button>
-            </template>
-          </van-field>
-        </div>
-
-        <!-- 操作按钮行 -->
-        <div class="notif-action-row">
-          <van-button
-            type="primary"
-            round
-            block
-            :loading="savingConfig"
-            @click="handleSaveConfig"
-          >
-            保存通知设置
-          </van-button>
-          <van-button
-            type="warning"
-            plain
-            round
-            block
-            icon="guide-o"
-            style="margin-top: 10px;"
-            :loading="sendingSummary"
-            @click="handleSendSummaryNow"
-          >
-            立即生成并发送今日汇总 (即时推送快照)
-          </van-button>
-        </div>
-      </van-cell-group>
-
-      <!-- 成绩管理与月度学情看板（家长专属深度分析） -->
-      <van-cell-group inset title="成绩管理与月度学情看板 (家长专属)" style="margin-top: 1.5rem;">
-        <van-cell
-          title="成绩管理与录入"
-          is-link
-          icon="chart-trending-o"
-          label="录入历次大考小测成绩、查看单科与全科雷达学情"
-          @click="$router.push('/scores')"
-        />
-
-        <div class="monthly-analytics-box">
-          <div class="monthly-header">
-            <div class="st-section-header" style="margin-bottom: 0;">
-              <span class="st-icon-badge st-icon-badge--info">
-                <van-icon name="calendar-o" />
-              </span>
-              <span class="monthly-title">月度作业打卡深度透视</span>
-            </div>
-            <div class="month-stepper">
-              <van-button size="mini" icon="arrow-left" @click="changeMonth(-1)" />
-              <span class="current-month-text">{{ currentYear }} 年 {{ currentMonth }} 月</span>
-              <van-button size="mini" icon="arrow" @click="changeMonth(1)" />
-            </div>
-          </div>
-
-          <!-- 月度核心指标网格 -->
-          <div class="monthly-stats-grid">
-            <div class="monthly-stat-item">
-              <span class="m-stat-val text-primary">{{ monthlyData?.average_completion_rate ?? '--' }}%</span>
-              <span class="m-stat-label">月均打卡率</span>
-            </div>
-            <div class="monthly-stat-item">
-              <span class="m-stat-val">{{ monthlyData?.recorded_days ?? 0 }} / {{ monthlyData?.total_days ?? 0 }}</span>
-              <span class="m-stat-label">有效打卡天数</span>
-            </div>
-            <div class="monthly-stat-item">
-              <span class="m-stat-val text-succ">{{ monthlyData?.perfect_days ?? 0 }} 天</span>
-              <span class="m-stat-label">全满卡天数</span>
-            </div>
-          </div>
-
-          <!-- 整月每日打卡率走势折线图 -->
-          <div class="monthly-chart-title">
-            <van-icon name="ascending" color="#2563eb" style="margin-right: 4px;" />
-            每日作业打卡率走势 (1~{{ monthlyData?.total_days || 30 }}日)
-          </div>
-          <div ref="monthlyTrendChartRef" class="monthly-echarts-container"></div>
-
-          <!-- 各科目未完成频次分布柱状图 -->
-          <div class="monthly-chart-title" style="margin-top: 14px;">
-            <van-icon name="bar-chart-o" color="#f59e0b" style="margin-right: 4px;" />
-            各科目未完成频次分布
-          </div>
-          <div v-show="monthlyData?.subject_missing_distribution?.length > 0" ref="monthlyMissingChartRef" class="monthly-echarts-container bar-height"></div>
-          <div v-if="!monthlyData?.subject_missing_distribution?.length" class="monthly-perfect-tip">
-            <van-icon name="passed" color="#10b981" style="margin-right: 4px;" />
-            本月暂无科目未完成记录，各项作业皆如期完成！
-          </div>
-        </div>
-      </van-cell-group>
-
-      <!-- A4 周末重练卷与组卷记录（家长空间入口与历史） -->
-      <van-cell-group inset title="A4 周末重练卷 (家长专属管理)" style="margin-top: 1.5rem;">
-        <van-cell
-          title="前往组卷中心"
-          is-link
-          icon="notes-o"
-          label="定制错题排版、选择留白尺寸、生成专属 A4 练习卷"
-          @click="$router.push('/paper')"
-        />
-        <van-cell
-          title="最近组卷历史记录"
-          :value="paperHistoryLoading ? '加载中...' : `${paperHistory.length} 份`"
-          :label="paperHistory.length ? '点击试卷卡片可直接预览、重新打印或批量打卡' : '尚未生成过重练卷'"
-        />
-
-        <div v-if="paperHistory.length > 0" class="history-list-box">
-          <div
-            v-for="item in paperHistory"
-            :key="item.id"
-            class="history-card"
-            @click="$router.push(`/paper/print?id=${item.id}`)"
-          >
-            <div class="history-card-header">
-              <span class="history-card-title">{{ item.title || '初一错题周末重练卷' }}</span>
-              <van-tag v-if="item.status === 'reviewed'" type="success" size="medium">已打卡完成</van-tag>
-              <van-tag v-else-if="item.status === 'printed'" color="#d97706" plain size="medium">已打印·待打卡</van-tag>
-              <van-tag v-else type="primary" plain size="medium">未打印·草稿</van-tag>
-            </div>
-            <div class="history-card-desc">
-              <span>共 {{ item.total_questions }} 题</span>
-              <span class="dot">·</span>
-              <span>预估 {{ item.estimated_pages }} 页</span>
-              <span class="dot">·</span>
-              <span>学生: {{ item.student_name }}</span>
-            </div>
-            <div class="history-card-footer">
-              <span class="history-time">{{ formatTime(item.created_at) }}</span>
-              <div class="history-btns">
-                <van-button
-                  size="mini"
-                  type="primary"
-                  plain
-                  @click.stop="$router.push(`/paper/print?id=${item.id}`)"
-                >
-                  查看试卷
-                </van-button>
-                <van-button
-                  v-if="item.status !== 'reviewed'"
-                  size="mini"
-                  type="warning"
-                  plain
-                  style="margin-left: 6px;"
-                  @click.stop="$router.push(`/paper/print?id=${item.id}&action=review`)"
-                >
-                  去打卡
-                </van-button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div v-else-if="!paperHistoryLoading" class="history-empty-box">
-          <van-empty description="暂无历史组卷记录，去组一张吧" image-size="60">
-            <van-button round size="small" type="primary" @click="$router.push('/paper')">立即组卷</van-button>
-          </van-empty>
-        </div>
-      </van-cell-group>
-
-      <!-- 数据安全与备份 -->
-      <van-cell-group inset title="数据安全与一键备份" style="margin-top: 1.5rem;">
-        <van-cell title="全站数据导出备份" is-link label="包含 SQLite 数据库与所有错题高清原图" @click="handleExportBackup" />
-        <van-cell title="从备份 Zip 包还原" label="恢复前将自动在本地创建数据快照">
-          <template #right-icon>
-            <van-uploader :after-read="handleImportBackup" accept=".zip">
-              <van-button size="small" type="primary">选择并还原</van-button>
-            </van-uploader>
-          </template>
-        </van-cell>
-      </van-cell-group>
-      <div style="margin: 10px 16px;">
-        <van-notice-bar
-          left-icon="warning-o"
-          color="#ef4444"
-          background="#fef2f2"
-          wrapable
-          :scrollable="false"
-          text="安全须知：导出的备份 Zip 压缩包包含本地 SQLite 数据库（含已配置的通知 Token 与 Key 等敏感凭据），请妥善保存在私密设备中，切勿外传或公开发布。"
-        />
       </div>
-
-      <!-- 学科设置 -->
-      <van-cell-group inset title="预置初一学科管理" style="margin-top: 1rem;">
-        <van-cell
-          v-for="sub in subjects"
-          :key="sub.id"
-          :title="sub.name"
-          :value="`${sub.full_score} 分`"
-        />
-        <van-cell title="新增自定义学科" is-link @click="showAddSubject = true" />
-      </van-cell-group>
-
-      <!-- 口令管理与关于系统 -->
-      <van-cell-group inset title="安全设置与系统关于" style="margin-top: 1rem;">
-        <van-cell title="修改管理口令" is-link @click="showChangePin = true" />
-        <van-cell title="关于系统与运行自检" is-link icon="info-o" @click="$router.push('/about')" />
-        <van-cell title="退出管理视图" is-link @click="lockSettings" />
-      </van-cell-group>
     </div>
 
     <!-- 新增学科弹窗 -->
@@ -803,12 +849,24 @@ onUnmounted(() => {
 <style scoped>
 .settings-view {
   min-height: 100vh;
-  background-color: #f7f8fa;
+  background-color: var(--st-bg-page, #f8fafc);
   padding-bottom: 2rem;
 }
 
+.settings-container {
+  padding: 12px 14px 60px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.settings-top-notice {
+  margin-bottom: 14px;
+  border-radius: var(--st-radius-sm, 8px);
+}
+
 .pin-gate-card {
-  margin: 3rem 1.5rem;
+  margin: 2.5rem auto;
+  max-width: 440px;
   background: var(--st-bg-card, #ffffff);
   border-radius: var(--st-radius-md, 14px);
   padding: 2.5rem 1.5rem;
@@ -830,28 +888,31 @@ onUnmounted(() => {
 
 .pin-gate-card h3 {
   margin: 0 0 0.5rem;
-  color: #1a1a1a;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--st-text-primary, #0f172a);
 }
 
 .gate-tip {
-  font-size: 0.85rem;
-  color: #666;
+  font-size: 13px;
+  color: var(--st-text-secondary, #64748b);
   margin-bottom: 1.5rem;
 }
 
 .pin-field {
-  background: #f7f8fa;
-  border-radius: 8px;
+  background: var(--st-bg-page, #f8fafc);
+  border-radius: var(--st-radius-sm, 8px);
+  border: 1px solid var(--st-border, #e2e8f0);
   font-size: 1.2rem;
   letter-spacing: 4px;
 }
 
 .channel-config-box {
-  background: #f9fafb;
-  margin: 10px 16px;
+  background: #f8fafc;
+  margin: 10px 0;
   padding: 12px;
-  border-radius: 10px;
-  border: 1px solid #f0f0f0;
+  border-radius: var(--st-radius-sm, 8px);
+  border: 1px solid var(--st-border, #e2e8f0);
 }
 
 .channel-header {
@@ -864,56 +925,29 @@ onUnmounted(() => {
 .channel-title {
   font-size: 13px;
   font-weight: 600;
-  color: #1f2937;
-}
-
-.channel-badge {
-  font-size: 10px;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.channel-badge.free {
-  background: #dcfce7;
-  color: #15803d;
-}
-
-.channel-badge.warning {
-  background: #fef3c7;
-  color: #b45309;
+  color: var(--st-text-primary, #0f172a);
 }
 
 .channel-hint {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--st-text-secondary, #64748b);
   line-height: 1.4;
   margin-top: 6px;
   padding-left: 4px;
 }
 
 .notif-action-row {
-  padding: 16px;
-}
-
-.security-warning-card {
-  margin: 10px 16px;
-  background: #fffbeb;
-  border: 1px solid #fef3c7;
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 11px;
-  color: #92400e;
-  line-height: 1.5;
+  padding: 14px 0 0;
 }
 
 .history-list-box {
-  padding: 8px 12px 14px;
+  padding: 8px 0 6px;
 }
 
 .history-card {
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border: 1px solid var(--st-border, #e2e8f0);
+  border-radius: var(--st-radius-sm, 10px);
   padding: 12px 14px;
   margin-bottom: 10px;
   transition: all 0.2s ease;
@@ -938,12 +972,12 @@ onUnmounted(() => {
 .history-card-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--st-text-primary, #0f172a);
 }
 
 .history-card-desc {
   font-size: 12px;
-  color: #64748b;
+  color: var(--st-text-secondary, #64748b);
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -958,13 +992,13 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 6px;
-  border-top: 1px dashed #e2e8f0;
+  padding-top: 8px;
+  border-top: 1px dashed var(--st-border, #e2e8f0);
 }
 
 .history-time {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--st-text-muted, #94a3b8);
 }
 
 .history-empty-box {
@@ -972,7 +1006,7 @@ onUnmounted(() => {
 }
 
 .monthly-analytics-box {
-  padding: 12px 14px;
+  padding: 10px 0 4px;
 }
 
 .monthly-header {
@@ -982,10 +1016,16 @@ onUnmounted(() => {
   margin-bottom: 12px;
 }
 
+.monthly-title-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .monthly-title {
   font-size: 13px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--st-text-primary, #0f172a);
 }
 
 .month-stepper {
@@ -997,7 +1037,7 @@ onUnmounted(() => {
 .current-month-text {
   font-size: 12px;
   font-weight: 600;
-  color: #2563eb;
+  color: var(--st-primary, #2563eb);
 }
 
 .monthly-stats-grid {
@@ -1009,8 +1049,8 @@ onUnmounted(() => {
 
 .monthly-stat-item {
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border: 1px solid var(--st-border, #e2e8f0);
+  border-radius: var(--st-radius-sm, 8px);
   padding: 8px 6px;
   text-align: center;
   display: flex;
@@ -1020,27 +1060,27 @@ onUnmounted(() => {
 .m-stat-val {
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--st-text-primary, #0f172a);
 }
 
 .m-stat-label {
   font-size: 10px;
-  color: #64748b;
+  color: var(--st-text-secondary, #64748b);
   margin-top: 2px;
 }
 
 .text-primary {
-  color: #2563eb !important;
+  color: var(--st-primary, #2563eb) !important;
 }
 
 .text-succ {
-  color: #10b981 !important;
+  color: var(--st-success, #10b981) !important;
 }
 
 .monthly-chart-title {
   font-size: 12px;
   font-weight: 600;
-  color: #475569;
+  color: var(--st-text-secondary, #475569);
   margin-bottom: 4px;
 }
 
@@ -1058,7 +1098,7 @@ onUnmounted(() => {
   color: #166534;
   background: #f0fdf4;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--st-radius-sm, 8px);
   border: 1px solid #bbf7d0;
   text-align: center;
   margin-top: 6px;

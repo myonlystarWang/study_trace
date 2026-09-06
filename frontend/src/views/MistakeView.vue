@@ -19,7 +19,7 @@
 
     <!-- 学科与状态筛选栏 (Chips) -->
     <div class="filter-section">
-      <div class="chips-row">
+      <div class="chips-row st-scroll-x">
         <span
           class="st-chip"
           :class="{ active: selectedSubject === null }"
@@ -69,7 +69,7 @@
                 {{ item.source_reference }}
               </span>
             </div>
-            <span class="hw-status-tag" :class="getStatusClass(item.mastery_status)">
+            <span class="st-status-tag" :class="getMasteryStatusTagClass(item.mastery_status)">
               {{ item.mastery_status }}
             </span>
           </div>
@@ -92,24 +92,26 @@
             </div>
           </div>
 
-          <!-- 艾宾浩斯复习操作区（在今日复习模式或未完全掌握时醒目展示） -->
+          <!-- 艾宾浩斯复习操作区（上下两层分明，大拇指热区充分，彻底消除挤压折行） -->
           <div class="review-action-bar" v-if="activeTab === 'review' || item.mastery_status !== '已掌握'">
-            <div class="review-stat">
-              <span class="st-icon-badge st-icon-badge--purple" style="width: 20px; height: 20px; font-size: 11px;">
-                <van-icon name="replay" />
-              </span>
-              <span>第 <b>{{ item.review_count || 0 }}</b> 轮复习</span>
-              <span v-if="item.next_review_date" class="next-date">
-                (下次: {{ item.next_review_date }})
+            <div class="review-stat-row">
+              <div class="review-round-info">
+                <span class="st-icon-badge st-icon-badge--purple" style="width: 20px; height: 20px; font-size: 11px;">
+                  <van-icon name="replay" />
+                </span>
+                <span>第 <b>{{ item.review_count || 0 }}</b> 轮复习</span>
+              </div>
+              <span v-if="item.next_review_date" class="next-date-tag">
+                下次: {{ item.next_review_date }}
               </span>
             </div>
-            <div class="action-buttons">
+            <div class="review-buttons-row">
               <van-button
                 size="small"
                 plain
                 type="danger"
                 icon="cross"
-                class="rev-btn"
+                class="rev-action-btn"
                 @click="submitReview(item.id, 'forgotten')"
               >
                 又忘了
@@ -118,7 +120,7 @@
                 size="small"
                 type="success"
                 icon="passed"
-                class="rev-btn"
+                class="rev-action-btn"
                 @click="submitReview(item.id, 'remembered')"
               >
                 掌握啦
@@ -314,9 +316,13 @@ const getSubjectTagClass = (name) => {
   }
 };
 
-const getStatusClass = (status) => {
-  if (status === '已掌握') return 'done';
-  return '';
+const getMasteryStatusTagClass = (status) => {
+  switch (status) {
+    case '已掌握': return 'st-status-tag--success';
+    case '待复习': return 'st-status-tag--warning';
+    case '未掌握': return 'st-status-tag--danger';
+    default: return 'st-status-tag--neutral';
+  }
 };
 
 const fetchSubjects = async () => {
@@ -640,33 +646,45 @@ onMounted(async () => {
 /* 艾宾浩斯复习操作区 */
 .review-action-bar {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 6px;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid var(--st-border, #f1f5f9);
 }
 
-.review-stat {
+.review-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 12px;
-  color: var(--st-text-secondary, #64748b);
+}
+
+.review-round-info {
   display: flex;
   align-items: center;
   gap: 6px;
+  color: var(--st-text-secondary, #64748b);
 }
 
-.next-date {
-  color: var(--st-purple, #7c3aed);
+.next-date-tag {
   font-size: 11px;
+  color: var(--st-purple, #7c3aed);
+  background: var(--st-purple-light, #f5f3ff);
+  padding: 2px 6px;
+  border-radius: var(--st-radius-sm, 4px);
+  font-weight: 500;
 }
 
-.action-buttons {
+.review-buttons-row {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
-.rev-btn {
+.rev-action-btn {
+  flex: 1;
   font-weight: 600;
+  white-space: nowrap !important;
 }
 
 .empty-state {

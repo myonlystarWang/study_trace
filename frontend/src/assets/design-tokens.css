@@ -209,7 +209,52 @@
   color: var(--st-neutral);
 }
 
-/* 4. 筛选胶囊标签 (Chips) */
+/* 3.2 专用状态微徽章系统 (Status Tags - 与学科微标签等高 22px、字阶一致，彻底统一卡片信息层级) */
+.st-status-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  height: 22px;
+  border-radius: var(--st-radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.st-status-tag--primary {
+  background-color: var(--st-primary-light);
+  color: var(--st-primary);
+}
+
+.st-status-tag--success {
+  background-color: var(--st-success-light);
+  color: var(--st-success);
+}
+
+.st-status-tag--warning {
+  background-color: var(--st-warning-light);
+  color: var(--st-warning-dark);
+}
+
+.st-status-tag--danger {
+  background-color: var(--st-danger-light);
+  color: var(--st-danger);
+}
+
+.st-status-tag--purple {
+  background-color: var(--st-purple-light);
+  color: var(--st-purple);
+}
+
+.st-status-tag--neutral {
+  background-color: var(--st-neutral-light);
+  color: var(--st-neutral);
+}
+
+/* 4. 筛选胶囊标签 (Chips - 强制单行，水平滑动不换行) */
 .st-chip {
   display: inline-flex;
   align-items: center;
@@ -223,6 +268,8 @@
   color: var(--st-text-regular);
   cursor: pointer;
   user-select: none;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
   transition: all 0.15s ease;
 }
 
@@ -232,6 +279,19 @@
   border-color: var(--st-primary);
   color: #ffffff;
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
+}
+
+/* 通用无滚动条横向滑动容器 */
+.st-scroll-x {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.st-scroll-x::-webkit-scrollbar {
+  display: none;
 }
 
 /* 5. 磨砂悬浮底衬 */

@@ -21,26 +21,36 @@
       </div>
     </div>
 
-    <!-- 顶部 7 日横向胶囊日历条 (Week Strip，手势严格隔离) -->
-    <div 
-      class="week-strip-box"
-      @touchstart="handleTouchStart"
-      @touchend="handleTouchEnd"
-    >
-      <div
-        v-for="day in weekDays"
-        :key="day.dateStr"
-        class="week-day-pill"
-        :class="{ active: day.isSelected, today: day.isToday }"
-        @click="selectDay(day.dateStr)"
+    <!-- 顶部 7 日横向胶囊日历条 (带上周/下周微纽与触屏切周手势) -->
+    <div class="week-strip-container">
+      <button class="week-nav-arrow" @click="changeWeek(-1)" title="上一周">
+        <van-icon name="arrow-left" size="13" />
+      </button>
+
+      <div 
+        class="week-strip-box"
+        @touchstart="handleTouchStart"
+        @touchend="handleTouchEnd"
       >
-        <span class="day-label">{{ day.label }}</span>
-        <span class="day-number">{{ day.dateNumber }}</span>
-        <span 
-          class="day-dot" 
-          :class="{ completed: day.isSelected ? (rate === 100 && totalCount > 0) : false }"
-        ></span>
+        <div
+          v-for="day in weekDays"
+          :key="day.dateStr"
+          class="week-day-pill"
+          :class="{ active: day.isSelected, today: day.isToday }"
+          @click="selectDay(day.dateStr)"
+        >
+          <span class="day-label">{{ day.label }}</span>
+          <span class="day-number">{{ day.dateNumber }}</span>
+          <span 
+            class="day-dot" 
+            :class="{ completed: day.isSelected ? (rate === 100 && totalCount > 0) : false }"
+          ></span>
+        </div>
       </div>
+
+      <button class="week-nav-arrow" @click="changeWeek(1)" title="下一周">
+        <van-icon name="arrow" size="13" />
+      </button>
     </div>
 
     <!-- 今日进度概览卡片 (含 100% 达成微反馈) -->
@@ -77,8 +87,8 @@
       </transition>
     </div>
 
-    <!-- 学科快捷筛选胶囊栏 (Chips) -->
-    <div class="subject-chips-bar" v-if="subjects.length > 0">
+    <!-- 学科快捷筛选胶囊栏 (Chips - 强制单行滑动) -->
+    <div class="subject-chips-bar st-scroll-x" v-if="subjects.length > 0">
       <span
         class="st-chip"
         :class="{ active: selectedSubject === null }"
@@ -172,17 +182,29 @@
       </div>
     </van-pull-refresh>
 
-    <!-- 底部常驻磨砂悬浮录入栏 -->
+    <!-- 底部常驻磨砂悬浮录入栏 (录入新作业 + 专注计时并列排布，彻底消除重叠) -->
     <div class="floating-bottom-bar st-frosted-bar">
       <van-button
         type="primary"
         round
-        block
         icon="plus"
         class="add-hw-btn"
         @click="showAddModal = true"
       >
         录入新作业
+      </van-button>
+      <van-button
+        round
+        plain
+        :type="pomodoroRef?.isRunning ? 'danger' : 'default'"
+        class="pomodoro-entry-btn"
+        :class="{ 'is-running': pomodoroRef?.isRunning }"
+        @click="pomodoroRef?.open()"
+      >
+        <van-icon name="underway-o" :color="pomodoroRef?.isRunning ? '#ef4444' : '#475569'" size="16" />
+        <span class="pomodoro-btn-text">
+          {{ pomodoroRef?.isRunning ? pomodoroRef?.formattedTime : '专注' }}
+        </span>
       </van-button>
     </div>
 
@@ -201,8 +223,8 @@
       @select-date="handleDateSelect"
     />
 
-    <!-- 25分钟专注番茄钟 -->
-    <PomodoroTimer />
+    <!-- 25分钟专注番茄钟 (hideFloatingBall=true，由底部并列入口驱动) -->
+    <PomodoroTimer ref="pomodoroRef" :hide-floating-ball="true" />
   </div>
 </template>
 
@@ -214,6 +236,7 @@ import QuickAddModal from '../components/QuickAddModal.vue';
 import CalendarModal from '../components/CalendarModal.vue';
 import PomodoroTimer from '../components/PomodoroTimer.vue';
 
+const pomodoroRef = ref(null);
 const currentDate = ref(new Date().toISOString().split('T')[0]);
 const streak = ref(0);
 const totalCount = ref(0);
@@ -285,14 +308,15 @@ const selectDay = (dateStr) => {
   fetchHomework();
 };
 
-const changeDate = (days) => {
+const changeWeek = (offset) => {
   const d = new Date(currentDate.value);
-  d.setDate(d.getDate() + days);
+  d.setDate(d.getDate() + offset * 7);
   currentDate.value = d.toISOString().split('T')[0];
   fetchHomework();
+  showToast({ message: `${d.getMonth() + 1}月${d.getDate()}日所在周`, position: 'top', duration: 800 });
 };
 
-// 仅在顶部周历条监听左右滑动手势翻日
+// 仅在顶部周历条监听左右滑动手势翻周
 let touchStartX = 0;
 const handleTouchStart = (e) => {
   touchStartX = e.touches[0].clientX;
@@ -300,12 +324,10 @@ const handleTouchStart = (e) => {
 
 const handleTouchEnd = (e) => {
   const diffX = e.changedTouches[0].clientX - touchStartX;
-  if (diffX > 60) {
-    changeDate(-1); // 右滑：前一天
-    showToast({ message: `切换至 ${currentDate.value}`, position: 'top', duration: 800 });
-  } else if (diffX < -60) {
-    changeDate(1); // 左滑：后一天
-    showToast({ message: `切换至 ${currentDate.value}`, position: 'top', duration: 800 });
+  if (diffX > 50) {
+    changeWeek(-1); // 右滑：上一周
+  } else if (diffX < -50) {
+    changeWeek(1); // 左滑：下一周
   }
 };
 
@@ -713,6 +735,46 @@ onMounted(async () => {
   padding: 30px 0;
 }
 
+/* 顶部周历条容器 */
+.week-strip-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.week-nav-arrow {
+  width: 24px;
+  height: 50px;
+  border: none;
+  background: transparent;
+  color: var(--st-text-muted, #94a3b8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: var(--st-radius-sm, 6px);
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.week-nav-arrow:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--st-primary, #2563eb);
+}
+
+.week-nav-arrow:active {
+  transform: scale(0.92);
+}
+
+.week-strip-box {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  user-select: none;
+}
+
 /* 底部常驻悬浮栏 */
 .floating-bottom-bar {
   position: fixed;
@@ -722,11 +784,35 @@ onMounted(async () => {
   max-width: 500px;
   margin: 0 auto;
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 10px;
   z-index: 40;
 }
 
 .add-hw-btn {
+  flex: 1;
   font-weight: 600;
+  height: 42px;
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+}
+
+.pomodoro-entry-btn {
+  flex-shrink: 0;
+  padding: 0 14px;
+  height: 42px;
+  font-weight: 600;
+  border-color: var(--st-border-bold, #cbd5e1);
+  background: #ffffff;
+  color: var(--st-text-regular, #334155);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pomodoro-entry-btn.is-running {
+  border-color: var(--st-danger, #ef4444);
+  color: var(--st-danger, #ef4444);
+  background: var(--st-danger-light, #fef2f2);
 }
 </style>

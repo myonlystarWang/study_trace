@@ -55,7 +55,7 @@
             <span class="action-link" @click="clearSelection">清空已选</span>
           </div>
         </div>
-        <div class="subject-chips">
+        <div class="subject-chips st-scroll-x">
           <span
             class="st-chip"
             :class="{ active: selectedSubjectId === null }"
@@ -101,12 +101,12 @@
               <van-checkbox :model-value="selectedIds.includes(item.id)" @change="toggleSelect(item.id)" />
             </div>
             <div class="candidate-info">
-              <div class="candidate-tags">
-                <van-tag type="primary" size="medium">{{ item.subject_name }}</van-tag>
-                <van-tag v-if="item.error_type" type="warning" plain size="medium">{{ item.error_type }}</van-tag>
-                <van-tag v-if="item.is_ebbinghaus" color="#7c3aed" plain size="medium">艾宾浩斯</van-tag>
-                <van-tag v-if="item.is_unmastered" color="#ef4444" plain size="medium">高频未掌握</van-tag>
-                <van-tag v-if="item.is_this_week" color="#10b981" plain size="medium">本周新增</van-tag>
+              <div class="candidate-tags" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span class="st-subject-tag" :class="getSubjectTagClass(item.subject_name)">{{ item.subject_name }}</span>
+                <span v-if="item.error_type" class="st-status-tag st-status-tag--warning">{{ item.error_type }}</span>
+                <span v-if="item.is_ebbinghaus" class="st-status-tag st-status-tag--purple">艾宾浩斯</span>
+                <span v-if="item.is_unmastered" class="st-status-tag st-status-tag--danger">高频未掌握</span>
+                <span v-if="item.is_this_week" class="st-status-tag st-status-tag--success">本周新增</span>
               </div>
               <div class="candidate-text">
                 {{ item.extracted_text || '（图片题目，点击右侧预览）' }}
@@ -311,6 +311,24 @@ const paperConfig = ref({
   style_mode: 'grid',
   show_error_type: false,
 });
+
+// 学科标签颜色映射
+const getSubjectTagClass = (name) => {
+  if (!name) return 'st-subject-tag--neutral';
+  switch (name) {
+    case '数学': return 'st-subject-tag--primary';
+    case '英语': return 'st-subject-tag--purple';
+    case '语文': return 'st-subject-tag--success';
+    case '物理':
+    case '化学': return 'st-subject-tag--info';
+    case '生物':
+    case '地理': return 'st-subject-tag--warning';
+    case '历史':
+    case '道德与法治':
+    case '道法': return 'st-subject-tag--danger';
+    default: return 'st-subject-tag--neutral';
+  }
+};
 
 // 加载学科列表
 const fetchSubjects = async () => {
