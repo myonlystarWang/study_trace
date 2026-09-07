@@ -55,20 +55,76 @@
             label="20:10 / 21:10 中途催办 (100%完成自动跳过免打扰) ｜ 21:50 晚间汇总日报 (满卡送达喜报)"
           />
 
-          <!-- 渠道选择 -->
-          <van-cell title="启用渠道">
-            <template #value>
-              <van-checkbox-group v-model="notifConfig.enabled_channels" direction="horizontal">
-                <van-checkbox name="pushplus" shape="square" style="margin-right: 12px;">微信(PushPlus)</van-checkbox>
-                <van-checkbox name="serverchan" shape="square" style="margin-right: 12px;">Server酱</van-checkbox>
-                <van-checkbox name="bark" shape="square" style="margin-right: 12px;">iOS Bark</van-checkbox>
-                <van-checkbox name="webhook" shape="square">群机器人</van-checkbox>
-              </van-checkbox-group>
-            </template>
-          </van-cell>
+          <!-- 启用渠道选择区 (2列响应式卡片网格，彻底释放水平空间) -->
+          <div class="channel-selector-section">
+            <div class="channel-selector-header">
+              <span class="selector-title">启用推送渠道（多选）</span>
+              <span class="selector-count" v-if="notifConfig.enabled_channels.length > 0">
+                已启用 {{ notifConfig.enabled_channels.length }} 个渠道
+              </span>
+              <span class="selector-count-empty" v-else>
+                未启用任何渠道
+              </span>
+            </div>
+            <van-checkbox-group v-model="notifConfig.enabled_channels" class="channel-grid">
+              <div
+                class="channel-select-card"
+                :class="{ 'is-active': notifConfig.enabled_channels.includes('pushplus') }"
+                @click="toggleChannel('pushplus')"
+              >
+                <van-checkbox name="pushplus" shape="square" @click.stop />
+                <span class="st-icon-badge st-icon-badge--success channel-badge">
+                  <van-icon name="chat-o" />
+                </span>
+                <span class="channel-card-text">微信 (PushPlus)</span>
+              </div>
 
-          <!-- PushPlus 微信推送配置 -->
-          <div class="channel-config-box">
+              <div
+                class="channel-select-card"
+                :class="{ 'is-active': notifConfig.enabled_channels.includes('serverchan') }"
+                @click="toggleChannel('serverchan')"
+              >
+                <van-checkbox name="serverchan" shape="square" @click.stop />
+                <span class="st-icon-badge st-icon-badge--warning channel-badge">
+                  <van-icon name="comment-o" />
+                </span>
+                <span class="channel-card-text">Server酱</span>
+              </div>
+
+              <div
+                class="channel-select-card"
+                :class="{ 'is-active': notifConfig.enabled_channels.includes('bark') }"
+                @click="toggleChannel('bark')"
+              >
+                <van-checkbox name="bark" shape="square" @click.stop />
+                <span class="st-icon-badge st-icon-badge--purple channel-badge">
+                  <van-icon name="phone-o" />
+                </span>
+                <span class="channel-card-text">iOS Bark</span>
+              </div>
+
+              <div
+                class="channel-select-card"
+                :class="{ 'is-active': notifConfig.enabled_channels.includes('webhook') }"
+                @click="toggleChannel('webhook')"
+              >
+                <van-checkbox name="webhook" shape="square" @click.stop />
+                <span class="st-icon-badge st-icon-badge--neutral channel-badge">
+                  <van-icon name="cluster-o" />
+                </span>
+                <span class="channel-card-text">群机器人</span>
+              </div>
+            </van-checkbox-group>
+          </div>
+
+          <!-- 未启用渠道时的友好提示 -->
+          <div class="channel-empty-tip" v-if="notifConfig.enabled_channels.length === 0">
+            <van-icon name="info-o" />
+            <span>请在上方勾选需要启用的渠道，系统将展开对应配置项</span>
+          </div>
+
+          <!-- PushPlus 微信推送配置 (按需展示) -->
+          <div class="channel-config-box" v-if="notifConfig.enabled_channels.includes('pushplus')">
             <div class="channel-header">
               <div class="channel-header-left">
                 <span class="st-icon-badge st-icon-badge--success">
@@ -105,8 +161,8 @@
             </div>
           </div>
 
-          <!-- Server酱 配置 -->
-          <div class="channel-config-box">
+          <!-- Server酱 配置 (按需展示) -->
+          <div class="channel-config-box" v-if="notifConfig.enabled_channels.includes('serverchan')">
             <div class="channel-header">
               <div class="channel-header-left">
                 <span class="st-icon-badge st-icon-badge--warning">
@@ -138,8 +194,8 @@
             </van-field>
           </div>
 
-          <!-- iOS Bark 配置 -->
-          <div class="channel-config-box">
+          <!-- iOS Bark 配置 (按需展示) -->
+          <div class="channel-config-box" v-if="notifConfig.enabled_channels.includes('bark')">
             <div class="channel-header">
               <div class="channel-header-left">
                 <span class="st-icon-badge st-icon-badge--purple">
@@ -171,8 +227,8 @@
             </van-field>
           </div>
 
-          <!-- 群机器人 Webhook -->
-          <div class="channel-config-box">
+          <!-- 群机器人 Webhook (按需展示) -->
+          <div class="channel-config-box" v-if="notifConfig.enabled_channels.includes('webhook')">
             <div class="channel-header">
               <div class="channel-header-left">
                 <span class="st-icon-badge st-icon-badge--neutral">
@@ -204,28 +260,27 @@
             </van-field>
           </div>
 
-          <!-- 操作按钮行 -->
+          <!-- 操作按钮行 (同行并排，紧凑利落) -->
           <div class="notif-action-row">
-            <van-button
-              type="primary"
-              round
-              block
-              :loading="savingConfig"
-              @click="handleSaveConfig"
-            >
-              保存通知设置
-            </van-button>
             <van-button
               type="warning"
               plain
               round
-              block
               icon="guide-o"
-              style="margin-top: 10px;"
+              class="notif-btn notif-btn-secondary"
               :loading="sendingSummary"
               @click="handleSendSummaryNow"
             >
-              立即生成并发送今日汇总
+              立即发送今日汇总
+            </van-button>
+            <van-button
+              type="primary"
+              round
+              class="notif-btn notif-btn-primary"
+              :loading="savingConfig"
+              @click="handleSaveConfig"
+            >
+              保存通知设置
             </van-button>
           </div>
         </div>
@@ -467,6 +522,16 @@ const notifConfig = ref({
 const savingConfig = ref(false);
 const testingChannel = ref('');
 const sendingSummary = ref(false);
+
+const toggleChannel = (key) => {
+  const list = notifConfig.value.enabled_channels;
+  const idx = list.indexOf(key);
+  if (idx > -1) {
+    list.splice(idx, 1);
+  } else {
+    list.push(key);
+  }
+};
 
 // 月度深度看板状态与图表
 const currentYear = ref(new Date().getFullYear());
@@ -1053,8 +1118,115 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
+/* 渠道多选网格选择器 */
+.channel-selector-section {
+  padding: 10px 2px 8px;
+}
+
+.channel-selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.selector-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--st-text-primary, #0f172a);
+}
+
+.selector-count {
+  font-size: 11.5px;
+  color: var(--st-primary, #2563eb);
+  font-weight: 500;
+}
+
+.selector-count-empty {
+  font-size: 11.5px;
+  color: var(--st-text-muted, #94a3b8);
+}
+
+.channel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.channel-select-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  background-color: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: var(--st-radius-md, 10px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.channel-select-card:active {
+  transform: scale(0.98);
+}
+
+.channel-select-card.is-active {
+  background-color: #eff6ff;
+  border-color: var(--st-primary, #2563eb);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+}
+
+.channel-badge {
+  width: 24px;
+  height: 24px;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.channel-card-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--st-text-primary, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.channel-empty-tip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 12px;
+  margin: 10px 0;
+  background-color: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: var(--st-radius-md, 10px);
+  color: var(--st-text-secondary, #64748b);
+  font-size: 12.5px;
+}
+
+/* 底部操作按钮：同行并排双按钮 */
 .notif-action-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 14px 0 0;
+}
+
+.notif-btn {
+  height: 40px;
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.notif-btn-secondary {
+  flex: 1.05;
+}
+
+.notif-btn-primary {
+  flex: 1;
 }
 
 /* 学科管理卡片样式 */
