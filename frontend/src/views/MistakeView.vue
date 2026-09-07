@@ -3,7 +3,7 @@
     <!-- 顶部导航栏 (支持常规与批量管理双模切换) -->
     <van-nav-bar
       :title="isBatchMode ? `批量管理 (${selectedIds.length}/${mistakes.length})` : '错题复习本'"
-      :left-text="isBatchMode ? '退出' : (mistakes.length > 0 ? '批量管理' : '')"
+      :left-text="isBatchMode ? '退出' : '批量管理'"
       :right-text="isBatchMode ? (selectedIds.length === mistakes.length && mistakes.length > 0 ? '取消全选' : '全选') : '周末组卷'"
       @click-left="toggleBatchMode"
       @click-right="onNavRightClick"
@@ -344,7 +344,11 @@ const batchDeleting = ref(false);
 
 const toggleBatchMode = () => {
   if (!isBatchMode.value && mistakes.value.length === 0) {
-    showToast('当前列表暂无错题可管理');
+    if (activeTab.value === 'review') {
+      showToast('今日复习暂无错题，可切换到「错题总库」管理全部错题');
+    } else {
+      showToast('当前列表暂无错题可管理');
+    }
     return;
   }
   isBatchMode.value = !isBatchMode.value;
