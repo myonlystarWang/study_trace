@@ -30,6 +30,7 @@ export const mistakeApi = {
   create: (data) => api.post('/mistakes', data),
   update: (id, data) => api.put(`/mistakes/${id}`, data),
   delete: (id) => api.delete(`/mistakes/${id}`),
+  batchDelete: (ids) => api.post('/mistakes/batch-delete', { ids }),
   review: (id, result) => api.post(`/mistakes/${id}/review`, { mistake_id: id, result }),
   submitReview: (id, result) => api.post(`/mistakes/${id}/review`, { mistake_id: id, result }),
   uploadImage: (formData) => api.post('/mistakes/upload', formData, {

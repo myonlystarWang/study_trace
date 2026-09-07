@@ -104,6 +104,10 @@ class MistakeRecordOut(MistakeRecordBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class MistakeBatchDeleteIn(BaseModel):
+    ids: List[int]
+
+
 # 错题复习流水契约（为 M1 预置）
 class MistakeReviewCreate(BaseModel):
     mistake_id: int

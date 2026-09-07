@@ -6,7 +6,7 @@ from sqlalchemy import or_
 from backend.app.database import get_db
 from backend.app.models import MistakeRecord, MistakeReview, Subject
 from backend.app.schemas import (
-    MistakeRecordCreate, MistakeRecordOut, MistakeReviewCreate, MistakeReviewOut
+    MistakeRecordCreate, MistakeRecordOut, MistakeReviewCreate, MistakeReviewOut, MistakeBatchDeleteIn
 )
 from backend.app.utils.image_handler import save_image_bytes
 
@@ -177,6 +177,18 @@ def delete_mistake(mistake_id: int, db: Session = Depends(get_db)):
     db.delete(r)
     db.commit()
     return {"status": "ok", "message": "错题已删除"}
+
+
+@router.post("/batch-delete")
+def batch_delete_mistakes(payload: MistakeBatchDeleteIn, db: Session = Depends(get_db)):
+    if not payload.ids:
+        return {"status": "ok", "deleted_count": 0}
+    # 先清理关联的复习流水
+    db.query(MistakeReview).filter(MistakeReview.mistake_id.in_(payload.ids)).delete(synchronize_session=False)
+    # 批量清理错题记录
+    count = db.query(MistakeRecord).filter(MistakeRecord.id.in_(payload.ids)).delete(synchronize_session=False)
+    db.commit()
+    return {"status": "ok", "deleted_count": count}
 
 
 @router.post("/{mistake_id}/review", response_model=MistakeRecordOut)
