@@ -162,24 +162,14 @@
       <div class="modal-btns">
         <van-button block round @click="close">取消</van-button>
         <van-button
-          v-if="isSmartMode"
           type="primary"
           block
           round
           :loading="saving"
-          @click="submitSmartBatch"
+          @mousedown.prevent
+          @click="handleSubmit"
         >
-          一键录入全部作业（{{ totalSmartCount }} 项）
-        </van-button>
-        <van-button
-          v-else
-          type="primary"
-          block
-          round
-          :loading="saving"
-          @click="submitBatch"
-        >
-          {{ lines.length <= 1 ? '添加作业' : `批量添加（${lines.length}）` }}
+          {{ isSmartMode ? `一键录入（${totalSmartCount} 项）` : (lines.length <= 1 ? '添加作业' : `批量添加（${lines.length}）`) }}
         </van-button>
       </div>
     </div>
@@ -620,6 +610,14 @@ const submitBatch = async () => {
     showToast('添加失败');
   } finally {
     saving.value = false;
+  }
+};
+
+const handleSubmit = () => {
+  if (isSmartMode.value) {
+    submitSmartBatch();
+  } else {
+    submitBatch();
   }
 };
 </script>
