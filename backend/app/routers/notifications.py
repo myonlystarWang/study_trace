@@ -33,7 +33,7 @@ DEFAULT_CONFIG = {
     "wechat_app_id": getattr(settings, "WECHAT_APP_ID", "") or "XXXXXXXXXXXXXXXXXX",
     "wechat_app_secret": getattr(settings, "WECHAT_APP_SECRET", "") or "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
     "wechat_template_id": getattr(settings, "WECHAT_TEMPLATE_ID", "") or "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-    "wechat_open_ids": getattr(settings, "WECHAT_OPEN_IDS", "") or "XXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "wechat_open_ids": getattr(settings, "WECHAT_OPEN_IDS", "") or "XXXXXXXXXXXXXXXXXXXXXXXXXXXX,XXXXXXXXXXXXXXXXXXXXXXXXXXXX",
     "wxpusher_app_token": getattr(settings, "WXPUSHER_APP_TOKEN", "") or "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
     "wxpusher_topic_id": getattr(settings, "WXPUSHER_TOPIC_ID", "") or "46425",
     "pushplus_token": "",
