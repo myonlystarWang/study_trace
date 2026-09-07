@@ -58,9 +58,11 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "study-trace-secure-local-key-2026"
     DEFAULT_PIN: str = "888888"
 
-    # 微信推送 (WxPusher)
-    WXPUSHER_APP_TOKEN: str = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-    WXPUSHER_TOPIC_ID: str = "46425"
+    # 微信公众平台接口测试号 (Sandbox 官方直推通道)
+    WECHAT_APP_ID: str = "XXXXXXXXXXXXXXXXXX"
+    WECHAT_APP_SECRET: str = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    WECHAT_TEMPLATE_ID: str = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    WECHAT_OPEN_IDS: str = "XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
     # CORS 域名白名单（收紧生产暴露面）
     ALLOWED_ORIGINS: list[str] = [

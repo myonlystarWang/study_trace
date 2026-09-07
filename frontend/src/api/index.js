@@ -68,7 +68,10 @@ export const ocrApi = {
 export const notificationApi = {
   getConfig: () => api.get('/notifications/config'),
   updateConfig: (data) => api.put('/notifications/config', data),
-  testChannel: (channel, target, topic_id) => api.post(`/notifications/test/${channel}`, { target, topic_id }),
+  testChannel: (channel, payload) => {
+    const data = typeof payload === 'string' ? { target: payload } : (payload || {});
+    return api.post(`/notifications/test/${channel}`, data);
+  },
   sendSummaryNow: (channels) => api.post('/notifications/send-summary-now', { channels })
 };
 

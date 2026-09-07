@@ -18,6 +18,128 @@ def generate_dedup_id() -> str:
     now = datetime.now(SHANGHAI_TZ)
     return f"{now.strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
 
+_wechat_token_cache: Dict[str, Tuple[str, float]] = {}
+
+
+async def get_wechat_access_token(app_id: str, app_secret: str) -> Optional[str]:
+    """获取微信测试号 access_token (2小时有效期，提前 5 分钟自动换新)"""
+    import time
+    now = time.time()
+    cached = _wechat_token_cache.get(app_id)
+    if cached and cached[1] > now + 300:
+        return cached[0]
+
+    url = "https://api.weixin.qq.com/cgi-bin/token"
+    params = {
+        "grant_type": "client_credential",
+        "appid": app_id.strip(),
+        "secret": app_secret.strip()
+    }
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            resp = await client.get(url, params=params)
+            data = resp.json()
+            token = data.get("access_token")
+            expires_in = data.get("expires_in", 7200)
+            if token:
+                _wechat_token_cache[app_id] = (token, now + expires_in)
+                return token
+            else:
+                logger.error(f"WeChat get token error: {data}")
+                return None
+    except Exception as e:
+        logger.error(f"WeChat token request failed: {e}")
+        return None
+
+
+async def send_wechat_sandbox(
+    app_id: str,
+    app_secret: str,
+    template_id: str,
+    open_ids: str,
+    title: str,
+    content: str,
+    url: str = "https://study.raddishlab.tech"
+) -> Tuple[bool, str]:
+    """
+    微信公众平台接口测试号 (Sandbox 官方直推通道)
+    - 0 元免费、直连腾讯微信、无第三方抽佣
+    - 官方模板消息原生弹窗 + 声音，单日 10 万次额度
+    - 支持全家多 OpenID 广播 (逗号/换行分隔)
+    """
+    if not app_id or not app_secret or not template_id:
+        return False, "微信测试号 AppID, AppSecret 或 TemplateID 不能为空"
+
+    ids = [i.strip() for i in re.split(r"[,;\n\s]+", open_ids) if i.strip()]
+    if not ids:
+        return False, "请至少指定一个微信用户的 OpenID"
+
+    access_token = await get_wechat_access_token(app_id, app_secret)
+    if not access_token:
+        return False, "获取微信 AccessToken 失败，请检查 AppID 与 AppSecret"
+
+    send_url = f"https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={access_token}"
+
+    lines = [l.strip() for l in content.split("\n") if l.strip() and not l.strip().startswith(">")]
+    summary_text = "；".join(lines[:3]) if lines else "今日作业打卡提醒"
+    if len(summary_text) > 80:
+        summary_text = summary_text[:77] + "..."
+
+    async def _send_to_user(openid: str) -> Tuple[bool, str]:
+        payload = {
+            "touser": openid,
+            "template_id": template_id.strip(),
+            "url": url,
+            "data": {
+                "first": {
+                    "value": title,
+                    "color": "#173177"
+                },
+                "keyword1": {
+                    "value": summary_text,
+                    "color": "#333333"
+                },
+                "keyword2": {
+                    "value": "打卡进行中 / 提醒",
+                    "color": "#ff9900" if "催办" in title else "#07c160"
+                },
+                "remark": {
+                    "value": "点击进入学迹系统查看详情或完成打卡",
+                    "color": "#666666"
+                }
+            }
+        }
+        try:
+            async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+                resp = await client.post(send_url, json=payload)
+                data = resp.json()
+                errcode = data.get("errcode", -1)
+                errmsg = data.get("errmsg", "")
+                if errcode == 0:
+                    return True, "成功"
+                elif errcode == 40001:
+                    _wechat_token_cache.pop(app_id, None)
+                    return False, f"Token 已失效: {errmsg}"
+                else:
+                    return False, f"微信返回错误 [{errcode}]: {errmsg}"
+        except Exception as e:
+            return False, f"网络请求失败: {str(e)}"
+
+    tasks = [_send_to_user(oid) for oid in ids]
+    results = await asyncio.gather(*tasks)
+
+    success_cnt = sum(1 for r in results if r[0])
+    total_cnt = len(ids)
+
+    if success_cnt == total_cnt:
+        return True, f"微信测试号发送成功 (已广播 {total_cnt} 位家庭成员)"
+    elif success_cnt > 0:
+        return True, f"微信测试号部分成功 ({success_cnt}/{total_cnt} 送达)"
+    else:
+        err_detail = "; ".join([r[1] for r in results])
+        return False, f"微信测试号发送失败: {err_detail}"
+
+
 async def send_wxpusher(
     app_token: str,
     topic_id: str,
@@ -68,6 +190,17 @@ async def send_wxpusher(
             success = data.get("success", False)
 
             if code == 1000 and success:
+                # 检查 data 数组明细中是否有未订阅应用或发送失败等具体原因
+                data_list = data.get("data") or []
+                errors = []
+                for item in data_list:
+                    item_code = item.get("code")
+                    if item_code is not None and item_code != 1000:
+                        status_msg = item.get("status") or f"错误码 {item_code}"
+                        errors.append(status_msg)
+
+                if errors:
+                    return False, f"WxPusher 未能送达微信: {'; '.join(errors)}"
                 return True, f"发送成功 (WxPusher: {msg})"
             else:
                 return False, f"WxPusher 错误 [{code}]: {msg}"
@@ -145,39 +278,48 @@ async def send_serverchan(key: str, title: str, content: str) -> Tuple[bool, str
 
 
 async def send_bark(key: str, title: str, content: str) -> Tuple[bool, str]:
-    """iOS Bark 推送"""
+    """iOS Bark 推送 (支持逗号、换行分隔多个 Key 进行全家群发)"""
     if not key or not key.strip():
         return False, "Bark Key 不能为空"
 
-    clean_key = key.strip().rstrip("/")
-    # 支持用户填入完整的 URL 或纯 Key
-    if clean_key.startswith("http://") or clean_key.startswith("https://"):
-        base_url = clean_key
+    raw_keys = [k.strip() for k in re.split(r"[,;\n\s]+", key) if k.strip()]
+    if not raw_keys:
+        return False, "未解析到有效的 Bark Key"
+
+    async def _send_one(clean_k: str) -> Tuple[bool, str]:
+        clean_key = clean_k.rstrip("/")
+        if clean_key.startswith("http://") or clean_key.startswith("https://"):
+            base_url = clean_key
+        else:
+            base_url = f"https://api.day.app/{clean_key}"
+
+        payload = {
+            "title": title,
+            "body": content,
+            "group": "学迹",
+            "icon": "https://cdn-icons-png.flaticon.com/512/2997/2997295.png"
+        }
+        try:
+            async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+                resp = await client.post(base_url, json=payload)
+                data = resp.json()
+                code = data.get("code")
+                if resp.status_code == 200 and (code is None or code == 200):
+                    return True, "成功"
+                else:
+                    return False, data.get("message") or resp.text
+        except Exception as e:
+            return False, str(e)
+
+    tasks = [_send_one(k) for k in raw_keys]
+    results = await asyncio.gather(*tasks)
+    success_cnt = sum(1 for r in results if r[0])
+    if success_cnt == len(raw_keys):
+        return True, f"Bark 推送成功 (已送达 {success_cnt} 台设备)"
+    elif success_cnt > 0:
+        return True, f"Bark 部分成功 ({success_cnt}/{len(raw_keys)})"
     else:
-        base_url = f"https://api.day.app/{clean_key}"
-
-    payload = {
-        "title": title,
-        "body": content,
-        "group": "学迹",
-        "icon": "https://cdn-icons-png.flaticon.com/512/2997/2997295.png"
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-            resp = await client.post(base_url, json=payload)
-            data = resp.json()
-            code = data.get("code")
-            if resp.status_code == 200 and (code is None or code == 200):
-                return True, "Bark 推送成功"
-            else:
-                errmsg = data.get("message") or resp.text
-                return False, f"Bark 错误 [{code}]: {errmsg}"
-    except httpx.TimeoutException:
-        return False, "Bark 请求超时 (5s)"
-    except Exception as e:
-        logger.error(f"Bark send error: {e}")
-        return False, f"网络请求失败: {str(e)}"
+        return False, f"Bark 发送失败: {results[0][1]}"
 
 
 async def send_webhook(url: str, title: str, content: str) -> Tuple[bool, str]:
@@ -271,11 +413,17 @@ async def dispatch_notification(
     if config is None:
         config = {}
 
-    target_channels = channels or config.get("enabled_channels", ["wxpusher"])
+    target_channels = channels or config.get("enabled_channels", ["wechat_sandbox"])
 
     async def _send_single(ch: str) -> Tuple[str, dict]:
         try:
-            if ch == "wxpusher":
+            if ch == "wechat_sandbox":
+                app_id = config.get("wechat_app_id", "")
+                app_secret = config.get("wechat_app_secret", "")
+                template_id = config.get("wechat_template_id", "")
+                open_ids = config.get("wechat_open_ids", "")
+                success, msg = await send_wechat_sandbox(app_id, app_secret, template_id, open_ids, title, content)
+            elif ch == "wxpusher":
                 app_token = config.get("wxpusher_app_token", "")
                 topic_id = config.get("wxpusher_topic_id", "")
                 success, msg = await send_wxpusher(app_token, topic_id, title, content)

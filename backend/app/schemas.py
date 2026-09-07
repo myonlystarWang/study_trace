@@ -156,7 +156,11 @@ class OcrEnginesOut(BaseModel):
 
 # M3 提醒与通知契约
 class NotificationConfig(BaseModel):
-    enabled_channels: List[str] = ["wxpusher"]
+    enabled_channels: List[str] = ["wechat_sandbox"]
+    wechat_app_id: Optional[str] = ""
+    wechat_app_secret: Optional[str] = ""
+    wechat_template_id: Optional[str] = ""
+    wechat_open_ids: Optional[str] = ""
     wxpusher_app_token: Optional[str] = ""
     wxpusher_topic_id: Optional[str] = ""
     pushplus_token: Optional[str] = ""
@@ -167,9 +171,9 @@ class NotificationConfig(BaseModel):
 
 
 class NotificationTestIn(BaseModel):
-    channel: str  # wxpusher, pushplus, serverchan, bark, webhook
-    target: Optional[str] = None  # 临时测试用的 Token / Key / URL，若未传则用持久化的配置
-    topic_id: Optional[str] = None  # WxPusher 主题 ID
+    channel: str  # wechat_sandbox, wxpusher, pushplus, serverchan, bark, webhook
+    target: Optional[str] = None
+    extra: Optional[dict] = None
 
 
 class NotificationResultOut(BaseModel):
