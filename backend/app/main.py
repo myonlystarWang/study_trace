@@ -24,10 +24,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS 配置
+# CORS 配置（收紧为生产域名白名单与本地调试环回）
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

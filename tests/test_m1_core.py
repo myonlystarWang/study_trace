@@ -10,7 +10,7 @@ from backend.app.database import SessionLocal, engine, Base
 from backend.app.models import Student, Subject, HomeworkItem, MistakeRecord, MistakeReview
 from backend.app.routers.homework import calculate_streak
 from backend.app.utils.image_handler import save_image_bytes
-from backend.app.config import DATA_DIR, UPLOADS_DIR
+from backend.app.config import DATA_DIR, UPLOADS_DIR, settings
 
 client = TestClient(app)
 
@@ -154,8 +154,8 @@ def test_image_compression_and_deduplication():
 
 def test_backup_export_and_import():
     """测试全站备份与恢复：导出 zip -> 包含 manifest.json 与校验码 -> 恢复前创建快照"""
-    # 导出备份
-    export_res = client.get("/api/backup/export")
+    # 导出备份（携带家长 PIN）
+    export_res = client.get("/api/backup/export", headers={"X-Parent-PIN": settings.DEFAULT_PIN})
     assert export_res.status_code == 200
     zip_bytes = export_res.content
 
@@ -165,10 +165,11 @@ def test_backup_export_and_import():
         assert "study_trace.db" in names
         assert "manifest.json" in names
 
-    # 导入恢复
+    # 导入恢复（携带家长 PIN）
     import_res = client.post(
         "/api/backup/import",
-        files={"file": ("test_backup.zip", zip_bytes, "application/zip")}
+        files={"file": ("test_backup.zip", zip_bytes, "application/zip")},
+        headers={"X-Parent-PIN": settings.DEFAULT_PIN}
     )
     assert import_res.status_code == 200
     assert import_res.json()["status"] == "ok"
@@ -225,7 +226,7 @@ def test_backup_manifest_sha256_exact_match():
     """测试备份文件内部清单：每个被打包文件的 sha256 均与 manifest.json 记录 100% 严格一致"""
     import hashlib
     import json
-    export_res = client.get("/api/backup/export")
+    export_res = client.get("/api/backup/export", headers={"X-Parent-PIN": settings.DEFAULT_PIN})
     assert export_res.status_code == 200
 
     with zipfile.ZipFile(io.BytesIO(export_res.content)) as z:

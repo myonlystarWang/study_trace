@@ -12,7 +12,7 @@ config = context.config
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 import sys
 from pathlib import Path
@@ -24,7 +24,10 @@ from backend.app.config import settings
 from backend.app.database import Base
 from backend.app import models
 
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+db_url = config.get_main_option("sqlalchemy.url")
+if not db_url or "driver://user:pass" in db_url:
+    db_url = settings.DATABASE_URL
+config.set_main_option("sqlalchemy.url", db_url)
 target_metadata = Base.metadata
 
 

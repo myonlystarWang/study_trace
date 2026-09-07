@@ -1,7 +1,7 @@
 from typing import Optional
 from datetime import datetime, timedelta
 import bcrypt
-from fastapi import HTTPException, status, Header, Depends
+from fastapi import HTTPException, status, Header, Query, Depends
 from sqlalchemy.orm import Session
 from backend.app.models import Setting
 from backend.app.config import settings
@@ -12,6 +12,14 @@ _auth_state = {
     "failed_attempts": 0,
     "locked_until": None
 }
+
+
+def check_is_default_pin(db: Session) -> bool:
+    """检查当前系统是否仍处于初始默认 PIN (888888)"""
+    pin_setting = db.query(Setting).filter(Setting.key == "parent_pin_hash").first()
+    if not pin_setting:
+        return True
+    return bcrypt.checkpw(settings.DEFAULT_PIN.encode("utf-8"), pin_setting.value.encode("utf-8"))
 
 
 def verify_pin(pin: str, db: Session) -> bool:
@@ -79,12 +87,15 @@ def change_pin(old_pin: str, new_pin: str, db: Session) -> bool:
 
 def require_parent_pin(
     x_parent_pin: Optional[str] = Header(None, alias="X-Parent-PIN"),
+    pin: Optional[str] = Query(None, description="通过 Query 参数传入家长 PIN"),
     db: Session = Depends(get_db)
 ) -> bool:
-    """家长端安全门禁：拦截未授权请求，杜绝未经验证读取凭据或外发推送"""
-    if not x_parent_pin:
+    """家长端安全门禁：拦截未授权请求，杜绝未经验证读取凭据、下载备份或外发推送"""
+    target_pin = x_parent_pin or pin
+    if not target_pin:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="需要家长管理口令 (请在请求头提供 X-Parent-PIN)"
+            detail="需要家长管理口令 (请在请求头提供 X-Parent-PIN 或在参数中提供 pin)"
         )
-    return verify_pin(x_parent_pin, db)
+    return verify_pin(target_pin, db)
+

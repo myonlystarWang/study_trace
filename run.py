@@ -66,39 +66,60 @@ def get_lan_ips():
     return ips
 
 
+def ensure_database_migrated():
+    """确保数据库迁移已升级至最新 head 版本（杜绝依赖手动执行或未迁移崩溃）"""
+    print("[StudyTrace] 检查并自动执行数据库迁移 (Alembic upgrade head)...")
+    from alembic.config import Config
+    from alembic import command
+    alembic_cfg = Config(str(BASE_DIR / "alembic.ini"))
+    command.upgrade(alembic_cfg, "head")
+
+
 def run_prod():
-    """生产模式：单端口一体化托管（8000 端口）"""
-    print("[StudyTrace] 正在启动生产服务（单端口 8000 模式）...")
+    """生产模式：单端口一体化托管（28000 端口）"""
+    from backend.app.config import settings
+    print(f"[StudyTrace] 正在启动生产服务（单端口 {settings.PORT} 模式）...")
+    ensure_database_migrated()
     if not FRONTEND_DIST.exists():
-        print("[StudyTrace] 检测到前端构建产物不存在，正在自动执行一次 npm run build...")
+        print("[StudyTrace] 检测到前端构建产物不存在，正在自动执行前端构建...")
         check_node_version()
+        if not (FRONTEND_DIR / "node_modules").exists():
+            print("[StudyTrace] 检测到前端依赖未安装，正在自动执行 npm install...")
+            subprocess.run(["npm", "install"], cwd=str(FRONTEND_DIR), check=True, shell=True)
         subprocess.run(["npm", "run", "build"], cwd=str(FRONTEND_DIR), check=True, shell=True)
 
     import uvicorn
     print("[StudyTrace] 服务已就绪！")
-    print("  本地电脑访问: http://127.0.0.1:8000")
+    print(f"  本地电脑访问: http://127.0.0.1:{settings.PORT}")
     lan_ips = get_lan_ips()
     for ip in lan_ips:
-        print(f"  家庭内网访问: http://{ip}:8000")
+        print(f"  家庭内网访问: http://{ip}:{settings.PORT}")
     print("  退出请按 Ctrl + C")
-    uvicorn.run("backend.app.main:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("backend.app.main:app", host="0.0.0.0", port=settings.PORT, reload=False)
 
 
 def run_dev():
-    """开发模式：Vite 5173 前端热更新 + FastAPI 8000 后端 reload"""
+    """开发模式：Vite 5173 前端热更新 + FastAPI 28001 后端 reload"""
+    from backend.app.config import settings
     check_node_version()
+    ensure_database_migrated()
+    if not (FRONTEND_DIR / "node_modules").exists():
+        print("[StudyTrace] 检测到前端依赖未安装，正在自动执行 npm install...")
+        subprocess.run(["npm", "install"], cwd=str(FRONTEND_DIR), check=True, shell=True)
     print("[StudyTrace] 正在启动开发调试模式...")
     print("  前端 Vite HMR 运行在: http://127.0.0.1:5173")
-    print("  后端 API 运行在: http://127.0.0.1:8000 (支持 --reload)")
+    print(f"  后端 API 运行在: http://127.0.0.1:{settings.DEV_PORT} (支持 --reload)")
 
     import subprocess
     import signal
 
-    vite_proc = subprocess.Popen(["npm", "run", "dev"], cwd=str(FRONTEND_DIR), shell=True)
+    dev_env = os.environ.copy()
+    dev_env["VITE_BACKEND_PORT"] = str(settings.DEV_PORT)
+    vite_proc = subprocess.Popen(["npm", "run", "dev"], cwd=str(FRONTEND_DIR), shell=True, env=dev_env)
 
     try:
         import uvicorn
-        uvicorn.run("backend.app.main:app", host="0.0.0.0", port=8000, reload=True)
+        uvicorn.run("backend.app.main:app", host="0.0.0.0", port=settings.DEV_PORT, reload=True)
     finally:
         print("\n[StudyTrace] 正在停止开发服务器...")
         vite_proc.terminate()

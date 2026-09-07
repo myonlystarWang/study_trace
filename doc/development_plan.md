@@ -305,36 +305,45 @@ BaseOCREngine.recognize(image_path) -> OcrResult(lines[], text, confidence, engi
 
 ## 九、M6 — 部署上线
 
-**目标**：公司笔记本常开，家里 iPhone 通过固定域名随时访问。
+**目标**：公司笔记本常开（当前机实施，未来入驻公司常开），家里 iPhone 通过固定域名随时访问。执行完全按照 [`doc/m6_deployment.md`](m6_deployment.md) 执行手册分阶段推进。
 
 ### 任务
 
-1. **Cloudflare named tunnel**（问题 #14）：
+1. **安全加固与暴露前防线（阶段 0，必做且先于隧道）**：
+   - 敏感运维门禁：`/api/backup/export` 与 `/api/backup/import` 接入家长 PIN 门禁（`require_parent_pin`），防公网拖库与覆盖
+   - 孩子端免密：作业打卡、错题录入保持免密无感输入体验
+   - 首次启动强制改密：默认 PIN（888888）在首次进入家长端时强制弹窗修改
+   - 密钥与跨域：`SECRET_KEY` 随机生成并持久化写入 `data/.env`（不入 Git）；生产环境 CORS 收紧为实际域名 `https://study.raddishlab.tech` 及本地环回
+   - 端口隔离：生产端口定为 `28000`，开发后端端口定为 `28001`（Vite 5173 proxy 转发至 28001），两者互不干扰
 
-- 前置条件：**一个 NS 托管到 Cloudflare 的域名**（需用户提供或新注册）
-- `cloudflared tunnel create study-trace` + `config.yml` 映射 → `127.0.0.1:8000`
-- 固定域名 `study.<你的域名>`
+2. **Cloudflare named tunnel（阶段 1）**：
+   - 托管域名：`raddishlab.tech`，固定二级域名 `study.raddishlab.tech`
+   - `cloudflared tunnel create study-trace` + `config.yml` 映射 → `127.0.0.1:28000`
+   - 绑定 DNS 路由并安装为 Windows 系统服务（`cloudflared service install`），断网自动重连
 
-2. **公司笔记本常开配置**（用户已确认可保障，需落地）：
+3. **公司笔记本常开与守护（阶段 2）**：
+   - 电源策略：接通电源永不休眠、合盖不休眠（`powercfg` 固化）
+   - 开机静默自启：Windows 任务计划程序挂载 `start-silent.vbs` 后台静默拉起，杜绝黑框被误关
+   - 外部存活告警：接入 `/api/health` 外部存活监控（如 UptimeRobot / Cloudflare Health Check）
+   - 单实例原则：确认老机器实例停止运行，避免 SQLite 数据分叉
 
-- 电源：接通电源永不休眠、合盖不休眠
-- 开机自启：任务计划程序 / `shell:startup` 放 `start.bat` 快捷方式
-- `cloudflared` 以服务方式常驻 + 断网自动重连
-
-3. **HTTPS + PWA**：隧道自带 TLS，验证 Web Push 在正式域名下工作
-4. **安全**：门禁口令已启用；`data/` 不对外暴露；API 无未授权访问
-5. **文档**：`README.md`（部署 / 隧道配置 / 备份恢复 / 常见问题）
+4. **HTTPS + PWA 与真机闭环（阶段 3）**：隧道自带 TLS，验证 Web Push / 移动端推送在正式域名下工作，真机完成打卡、拍照、OCR、组卷全闭环
+5. **文档与实施记录（阶段 4）**：回填 `doc/m6_deployment.md` 实施记录（版本、Tunnel UUID、配置），更新 `README.md` 与 `change_log.md`（v1.7.0）
 6. **推 GitHub**：通过 SSH 协议持续推送（`git@github.com:myonlystarWang/study_trace.git`，已于 M0/M1 跑通）
 
 ### 验收标准（DoD）
 
-- [ ] 公司机重启后，无需人工干预，5 分钟内服务与隧道自动恢复
-- [ ] 家里 iPhone（**断开 WiFi 用蜂窝网络**）打开固定域名，2s 内加载完成
-- [ ] HTTPS 证书有效，浏览器无警告；PWA 推送在正式域名下可送达锁屏
-- [ ] 公司机模拟断网 5 分钟 → 恢复网络 → 隧道自动重连，无需重启
-- [ ] 未带口令直接访问 `/api/mistakes` 返回 401
+- [ ] 阶段 0 安全门禁生效：未带口令直接访问敏感运维接口 `/api/backup/export` 返回 401（附带自动化测试用例验证通过）
+- [ ] 端口隔离生效：生产端口 28000 与开发端口 28001 可独立启动且配置正确
+- [ ] 首次进入家长管理空间时，若 PIN 为默认 888888 强制弹窗要求修改
+- [ ] 公司机（本机）重启后，无需人工干预，5 分钟内服务与隧道自动静默恢复
+- [ ] 家里 iPhone（**断开 WiFi 用蜂窝网络**）打开 `https://study.raddishlab.tech`，2s 内加载完成
+- [ ] HTTPS 证书有效，浏览器无警告；PWA 可添加至桌面独立全屏运行
+- [ ] 模拟断网 5 分钟 → 恢复网络 → 隧道自动重连，无需重启
+- [ ] 外部存活探测接入 `/api/health` 并验证可用
 - [x] `git push` 成功，`https://github.com/myonlystarWang/study_trace` 可见完整源码与 tags（已于 M1 全量同步至 master 及 m0-done/m1-done）
-- [ ] `README.md` 覆盖：从零部署、备份恢复、OCR 引擎切换、常见问题排查
+- [ ] `README.md` 覆盖：从零部署、隧道配置、备份恢复、常见问题排查
+
 
 ---
 

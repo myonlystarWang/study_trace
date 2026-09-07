@@ -43,11 +43,13 @@ export const settingsApi = {
   updateSubject: (id, data) => api.put(`/settings/subjects/${id}`, data),
   deleteSubject: (id) => api.delete(`/settings/subjects/${id}`),
   verifyPin: (pin) => api.post('/settings/verify-pin', { pin }),
-  changePin: (oldPin, newPin) => api.put('/settings/pin', { old_pin: oldPin, new_pin: newPin })
+  changePin: (oldPin, newPin) => api.put('/settings/pin', { old_pin: oldPin, new_pin: newPin }),
+  getPinStatus: () => api.get('/settings/pin-status')
 };
 
 export const backupApi = {
   exportUrl: '/api/backup/export',
+  exportBackup: () => api.get('/backup/export', { responseType: 'blob' }),
   importBackup: (formData) => api.post('/backup/import', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   })

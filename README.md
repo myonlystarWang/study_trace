@@ -178,24 +178,51 @@ uv run python -m backend.app.seed
 ### 4. 启动服务
 
 **方法 A：统一生产/演示模式（推荐）**
-直接运行根目录下的 `run.py`，FastAPI 将直接托管前端已构建好的静态资源，单端口运行：
+直接运行根目录下的 `run.py`，FastAPI 将直接托管前端已构建好的静态资源，单端口（28000）运行：
 ```bash
 uv run python run.py
 ```
 或在 Windows 下双击 `start.bat`。  
-打开浏览器访问：`http://localhost:8000`
+打开浏览器访问：`http://localhost:28000`
 
 **方法 B：前后端分离联调开发模式**
-- 终端 1（后端 API）：
+- 运行一键开发环境：
   ```bash
-  uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+  uv run python run.py --dev
   ```
-- 终端 2（前端 Vite Dev）：
-  ```bash
-  cd frontend
-  npm run dev
-  ```
-  访问开发调试地址：`http://localhost:5173`（自动代理 `/api` 请求至 8000 端口）
+  自动拉起 Vite 前端（`http://localhost:5173`）并自动代理 `/api` 至后端调试端口 `28001`（支持前后端热重载）。
+
+---
+
+## 🌐 外网访问与生产部署（Cloudflare Tunnel）
+
+StudyTrace 推荐以一台常开电脑作为宿主节点，通过 **Cloudflare Named Tunnel** 实现无需公网 IP、无端口暴露、自带 TLS 加密的固定域名访问。
+
+详细技术实施方案与迁移手册见：👉 [`doc/m6_deployment.md`](doc/m6_deployment.md)
+
+### 快速部署与守护
+1. **安装 cloudflared**：通过 `winget install --id Cloudflare.cloudflared` 安装。
+2. **授权登录并绑定域名**：
+   ```bash
+   cloudflared tunnel login
+   cloudflared tunnel create study-trace
+   cloudflared tunnel route dns study-trace study.<你的域名>
+   ```
+3. **映射配置**（`%USERPROFILE%\.cloudflared\config.yml`）：
+   ```yaml
+   tunnel: <Tunnel-UUID>
+   credentials-file: C:\Users\<用户名>\.cloudflared\<Tunnel-UUID>.json
+   ingress:
+     - hostname: study.<你的域名>
+       service: http://127.0.0.1:28000
+     - service: http_status:404
+   ```
+4. **后台静默常驻与自启**：
+   - 启动：双击 `start-silent.vbs`（后台静默拉起 StudyTrace 与 Tunnel，无黑框弹窗）
+   - 停止：双击 `stop.bat`（一键停止端口 28000 服务与隧道进程）
+   - 开机自启：将 `start-silent.vbs` 的快捷方式置于 `shell:startup` 目录即可
+5. **手机端访问与 PWA**：
+   - 用手机 Safari/Chrome 打开 `https://study.<你的域名>`，点击“添加到主屏幕”，即可作为独立全屏 App 使用。
 
 ---
 

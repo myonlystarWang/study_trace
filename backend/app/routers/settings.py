@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from backend.app.database import get_db
 from backend.app.models import Subject
 from backend.app.schemas import SubjectOut, SubjectCreate, SubjectUpdate
-from backend.app.auth import verify_pin, change_pin
+from backend.app.auth import verify_pin, change_pin, check_is_default_pin
 
 router = APIRouter(prefix="/api/settings", tags=["系统设置与门禁"])
 
@@ -78,11 +78,21 @@ def delete_subject(subject_id: int, db: Session = Depends(get_db)):
     return {"status": "ok", "message": "学科已删除"}
 
 
+@router.get("/pin-status")
+def api_pin_status(db: Session = Depends(get_db)):
+    """获取当前 PIN 是否为系统初始默认口令 (888888)"""
+    return {"is_default_pin": check_is_default_pin(db)}
+
+
 @router.post("/verify-pin")
 def api_verify_pin(body: PinVerifyIn, db: Session = Depends(get_db)):
-    """校验家长端进入 PIN 口令"""
+    """校验家长端进入 PIN 口令，并返回是否为默认口令"""
     verify_pin(body.pin, db)
-    return {"status": "ok", "message": "口令校验成功"}
+    return {
+        "status": "ok",
+        "message": "口令校验成功",
+        "is_default_pin": check_is_default_pin(db)
+    }
 
 
 @router.put("/pin")
@@ -90,3 +100,4 @@ def api_change_pin(body: PinChangeIn, db: Session = Depends(get_db)):
     """修改家长端进入 PIN 口令"""
     change_pin(body.old_pin, body.new_pin, db)
     return {"status": "ok", "message": "口令已成功修改"}
+

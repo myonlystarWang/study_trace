@@ -484,7 +484,7 @@ const handleVerifyPin = async () => {
   }
   verifying.value = true;
   try {
-    await settingsApi.verifyPin(inputPin.value);
+    const res = await settingsApi.verifyPin(inputPin.value);
     isUnlocked.value = true;
     sessionStorage.setItem('parent_unlocked', 'true');
     sessionStorage.setItem('parent_pin', inputPin.value);
@@ -492,6 +492,21 @@ const handleVerifyPin = async () => {
     fetchSubjects();
     fetchNotificationConfig();
     fetchMonthlyAnalytics();
+
+    if (res.data?.is_default_pin) {
+      showDialog({
+        title: '⚠️ 安全加固提醒',
+        message: '系统当前正在使用初始默认口令 (888888)。为了防止公网未授权访问与数据泄露，强烈建议立即修改管理口令！',
+        confirmButtonText: '立即修改',
+        confirmButtonColor: '#e11d48',
+        showCancelButton: true,
+        cancelButtonText: '稍后再说'
+      }).then(() => {
+        pinForm.value.oldPin = inputPin.value;
+        pinForm.value.newPin = '';
+        showChangePin.value = true;
+      }).catch(() => {});
+    }
   } catch (e) {
     const msg = e.response?.data?.detail || '口令错误';
     showToast({ message: msg, icon: 'cross' });
@@ -690,9 +705,25 @@ const handleExportBackup = () => {
     confirmButtonText: '确认导出',
     cancelButtonText: '取消',
     confirmButtonColor: '#2563eb'
-  }).then(() => {
-    window.open(backupApi.exportUrl, '_blank');
-    showToast({ message: '已启动备份下载', icon: 'passed' });
+  }).then(async () => {
+    showToast({ message: '正在生成备份压缩包...', duration: 2000 });
+    try {
+      const res = await backupApi.exportBackup();
+      const blob = new Blob([res.data], { type: 'application/zip' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      const now = new Date();
+      const timeStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+      link.setAttribute('download', `study_trace_backup_${timeStr}.zip`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+      showToast({ message: '已完成备份下载', icon: 'passed' });
+    } catch (e) {
+      showToast(e.response?.data?.detail || '导出失败，请检查口令权限');
+    }
   }).catch(() => {});
 };
 

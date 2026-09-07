@@ -5,9 +5,10 @@ import io
 import shutil
 from datetime import datetime
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
 from fastapi.responses import FileResponse
 from backend.app.config import DATA_DIR, UPLOADS_DIR, BACKUPS_DIR
+from backend.app.auth import require_parent_pin
 
 router = APIRouter(prefix="/api/backup", tags=["数据备份与恢复"])
 
@@ -58,8 +59,8 @@ def create_backup_archive() -> Path:
 
 
 @router.get("/export")
-def export_backup():
-    """导出全站数据 Zip 包（包含 SQLite 与上传原图/缩略图）"""
+def export_backup(_auth: bool = Depends(require_parent_pin)):
+    """导出全站数据 Zip 包（必须具备家长管理口令权限）"""
     zip_path = create_backup_archive()
     return FileResponse(
         zip_path,
@@ -69,8 +70,8 @@ def export_backup():
 
 
 @router.post("/import")
-async def import_backup(file: UploadFile = File(...)):
-    """从备份 Zip 包还原数据（还原前自动创建恢复前快照）"""
+async def import_backup(file: UploadFile = File(...), _auth: bool = Depends(require_parent_pin)):
+    """从备份 Zip 包还原数据（必须具备家长管理口令权限，还原前自动创建快照）"""
     if not file.filename.endswith(".zip"):
         raise HTTPException(status_code=400, detail="仅支持导入 .zip 格式的备份包")
 
@@ -108,3 +109,4 @@ async def import_backup(file: UploadFile = File(...)):
         "message": "数据已成功导入并还原",
         "pre_restore_snapshot": snapshot_path.name
     }
+

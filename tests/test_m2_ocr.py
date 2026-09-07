@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from backend.app.main import app
+from backend.app.config import settings
 from backend.app.utils.ocr_service import RapidOCREngine, get_ocr_engine
 from tests.samples.generate_test_samples import make_samples
 
@@ -202,10 +203,10 @@ def test_ocr_storage_key_reuse_and_temp_cleanup(samples):
     temp_files = list(OCR_TEMP_DIR.glob("*"))
     assert len(temp_files) == 0, f"临时文件未被清理: {temp_files}"
 
-    # 4. 验证备份导出 Zip 中 100% 不包含 ocr_in 或 temp 临时目录
+    # 4. 验证备份导出 Zip 中 100% 不包含 ocr_in 或 temp 临时目录（携带家长 PIN）
     import zipfile
     import io
-    bk_res = client.get("/api/backup/export")
+    bk_res = client.get("/api/backup/export", headers={"X-Parent-PIN": settings.DEFAULT_PIN})
     assert bk_res.status_code == 200
     with zipfile.ZipFile(io.BytesIO(bk_res.content), "r") as zf:
         all_names = zf.namelist()

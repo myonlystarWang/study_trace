@@ -34,9 +34,16 @@ test_engine = create_engine(
 )
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
-# 显式加载所有模型并立即在顶层完成建表，确保后续模块级 seed_database() 安全执行
+# ------------------------------------------------------------------------------
+# 通过 Alembic 执行迁移构建测试库结构，严禁 create_all 捷径，确保与生产环境 100% 一致
+# ------------------------------------------------------------------------------
 import backend.app.models  # noqa: F401
-Base.metadata.create_all(bind=test_engine)
+from alembic.config import Config
+from alembic import command
+
+alembic_cfg = Config("alembic.ini")
+alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+command.upgrade(alembic_cfg, "head")
 
 
 @pytest.fixture(scope="session", autouse=True)
