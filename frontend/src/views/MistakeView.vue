@@ -890,7 +890,7 @@ onMounted(async () => {
 }
 
 .action-btn-primary {
-  flex: 1.35;
+  flex: 1.5;
   height: 42px;
   font-size: 14px;
   font-weight: 600;
@@ -918,6 +918,8 @@ onMounted(async () => {
 }
 
 .action-btn-paper {
+  flex: 0.72;
+  padding: 0 8px;
   color: #2563eb;
   background-color: #eff6ff;
   border-color: rgba(37, 99, 235, 0.3);
@@ -928,6 +930,7 @@ onMounted(async () => {
 }
 
 .action-btn-danger {
+  flex: 1.35;
   background-color: var(--st-danger, #ef4444) !important;
   border-color: var(--st-danger, #ef4444) !important;
   color: #ffffff !important;
