@@ -90,19 +90,9 @@
                       {{ item.source_reference }}
                     </span>
                   </div>
-                  <div class="header-right">
-                    <span class="st-status-tag" :class="getMasteryStatusTagClass(item.mastery_status)">
-                      {{ item.mastery_status }}
-                    </span>
-                    <button
-                      v-if="!isBatchMode"
-                      class="card-del-btn"
-                      title="删除错题"
-                      @click.stop="handleSingleDelete(item)"
-                    >
-                      <van-icon name="delete-o" />
-                    </button>
-                  </div>
+                  <span class="st-status-tag" :class="getMasteryStatusTagClass(item.mastery_status)">
+                    {{ item.mastery_status }}
+                  </span>
                 </div>
 
                 <!-- 缩略图展示 (点击可放大原图预览) -->
