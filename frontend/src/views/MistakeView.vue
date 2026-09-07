@@ -1,12 +1,8 @@
 <template>
   <div class="mistake-view">
-    <!-- 顶部导航栏 (支持常规与批量管理双模切换) -->
+    <!-- 顶部导航栏 (常规与批量双模切换，纯净无冗余文字) -->
     <van-nav-bar
-      :title="isBatchMode ? `批量管理 (${selectedIds.length}/${mistakes.length})` : '错题复习本'"
-      :left-text="isBatchMode ? '退出管理' : ''"
-      :right-text="isBatchMode ? (selectedIds.length === mistakes.length && mistakes.length > 0 ? '取消全选' : '全选') : ''"
-      @click-left="isBatchMode ? toggleBatchMode() : null"
-      @click-right="isBatchMode ? toggleSelectAll() : null"
+      :title="isBatchMode ? `批量管理 (已选 ${selectedIds.length}/${mistakes.length} 项)` : '错题复习本'"
     />
 
     <div class="mistake-content">
@@ -171,28 +167,32 @@
     </van-pull-refresh>
     </div>
 
-    <!-- 批量操作常驻磨砂悬浮栏 -->
-    <div class="floating-bottom-bar st-frosted-bar batch-bottom-bar" v-if="isBatchMode">
-      <div class="batch-left-info">
-        已选 <b>{{ selectedIds.length }}</b> / {{ mistakes.length }} 项
-      </div>
-      <div class="batch-right-actions">
+    <!-- 批量管理模式：底部三合一操作栏 [退出管理] [全选/取消全选] [批量删除 (X)] -->
+    <div class="floating-bottom-bar st-frosted-bar" v-if="isBatchMode">
+      <div class="mistake-bottom-actions">
         <van-button
-          size="small"
           round
-          plain
+          icon="cross"
+          class="action-btn-secondary st-action-btn st-action-btn--secondary"
+          @click="toggleBatchMode"
+        >
+          退出管理
+        </van-button>
+        <van-button
+          round
+          :icon="selectedIds.length === mistakes.length && mistakes.length > 0 ? 'passed' : 'circle'"
+          class="action-btn-secondary st-action-btn st-action-btn--secondary"
           @click="toggleSelectAll"
         >
           {{ selectedIds.length === mistakes.length && mistakes.length > 0 ? '取消全选' : '全选全部' }}
         </van-button>
         <van-button
           type="danger"
-          size="small"
           round
           icon="delete-o"
           :disabled="selectedIds.length === 0"
           :loading="batchDeleting"
-          class="batch-del-btn"
+          class="action-btn-primary action-btn-danger st-action-btn st-action-btn--danger"
           @click="handleBatchDelete"
         >
           批量删除 ({{ selectedIds.length }})
@@ -207,7 +207,7 @@
           type="primary"
           round
           icon="plus"
-          class="action-btn-primary"
+          class="action-btn-primary st-action-btn st-action-btn--primary"
           @click="showAddModal = true"
         >
           录入新错题
@@ -215,7 +215,7 @@
         <van-button
           round
           icon="apps-o"
-          class="action-btn-secondary"
+          class="action-btn-secondary st-action-btn st-action-btn--secondary"
           @click="toggleBatchMode"
         >
           批量管理
@@ -223,7 +223,7 @@
         <van-button
           round
           icon="notes-o"
-          class="action-btn-secondary action-btn-paper"
+          class="action-btn-secondary action-btn-paper st-action-btn st-action-btn--accent"
           @click="router.push('/paper')"
         >
           周末组卷
@@ -894,6 +894,7 @@ onMounted(async () => {
   height: 42px;
   font-size: 14px;
   font-weight: 600;
+  border-radius: var(--st-radius-full, 9999px);
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
   white-space: nowrap;
 }
@@ -901,11 +902,12 @@ onMounted(async () => {
 .action-btn-secondary {
   flex: 0.95;
   height: 42px;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 13.5px;
+  font-weight: 600;
   color: #334155;
   background-color: #ffffff;
   border: 1px solid #cbd5e1;
+  border-radius: var(--st-radius-full, 9999px);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
   white-space: nowrap;
   padding: 0 6px;
@@ -923,6 +925,26 @@ onMounted(async () => {
 
 .action-btn-paper:active {
   background-color: #dbeafe;
+}
+
+.action-btn-danger {
+  background-color: var(--st-danger, #ef4444) !important;
+  border-color: var(--st-danger, #ef4444) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25) !important;
+}
+
+.action-btn-danger:active {
+  background-color: var(--st-danger-dark, #dc2626) !important;
+}
+
+.action-btn-danger:disabled,
+.action-btn-danger.van-button--disabled {
+  background-color: #fca5a5 !important;
+  border-color: #fca5a5 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+  opacity: 0.65 !important;
 }
 
 .add-mistake-btn {

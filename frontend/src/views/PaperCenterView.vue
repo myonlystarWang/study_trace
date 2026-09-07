@@ -718,9 +718,12 @@ onMounted(async () => {
   right: 0;
   max-width: 500px;
   margin: 0 auto;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid #e2e8f0;
-  padding: 10px 14px;
+  padding: 8px 16px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -755,11 +758,12 @@ onMounted(async () => {
 }
 
 .compose-submit-btn {
-  height: 44px;
-  font-size: 15px;
+  height: 42px;
+  font-size: 14px;
   font-weight: 600;
   background: var(--st-primary, #2563eb);
   border: none;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
 }
 
 /* 历史记录抽屉样式 */

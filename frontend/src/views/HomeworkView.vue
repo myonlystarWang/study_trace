@@ -1126,6 +1126,8 @@ onMounted(async () => {
   flex: 1;
   font-weight: 600;
   height: 42px;
+  font-size: 14px;
+  border-radius: var(--st-radius-full, 9999px);
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
 }
 
@@ -1133,13 +1135,16 @@ onMounted(async () => {
   flex-shrink: 0;
   padding: 0 14px;
   height: 42px;
+  font-size: 14px;
   font-weight: 600;
-  border-color: var(--st-border-bold, #cbd5e1);
+  border-radius: var(--st-radius-full, 9999px);
+  border: 1px solid var(--st-border-bold, #cbd5e1);
   background: #ffffff;
   color: var(--st-text-regular, #334155);
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
 .pomodoro-entry-btn.is-running {

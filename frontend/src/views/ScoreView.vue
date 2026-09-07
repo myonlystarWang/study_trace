@@ -1645,6 +1645,8 @@ const handleDeleteExam = (exam) => {
 .add-score-btn {
   font-weight: 600;
   height: 42px;
+  font-size: 14px;
+  border-radius: var(--st-radius-full, 9999px);
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
 }
 </style>

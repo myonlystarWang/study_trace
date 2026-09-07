@@ -325,3 +325,91 @@
   box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.15) !important;
 }
 
+/* 8. 大厂移动端规范：底部常驻悬浮栏与统一按钮胶囊系统 (Unified Action System) */
+.floating-bottom-bar,
+.st-floating-bar {
+  position: fixed;
+  bottom: calc(50px + env(safe-area-inset-bottom, 0px));
+  left: 0;
+  right: 0;
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 8px 16px;
+  background: linear-gradient(to top, rgba(248, 250, 252, 0.96) 80%, rgba(248, 250, 252, 0));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 40;
+  box-sizing: border-box;
+}
+
+/* 统一移动端操作胶囊按钮规范 (42px 高度, 9999px 药丸圆角, 13.5~14px 字号) */
+.st-action-btn {
+  height: 42px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  border-radius: var(--st-radius-full, 9999px) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+  padding: 0 12px !important;
+  box-sizing: border-box !important;
+  transition: all 0.15s ease !important;
+}
+
+/* 主操作：品牌蓝主胶囊 */
+.st-action-btn--primary {
+  background-color: var(--st-primary, #2563eb) !important;
+  border-color: var(--st-primary, #2563eb) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25) !important;
+}
+.st-action-btn--primary:active {
+  background-color: var(--st-primary-dark, #1d4ed8) !important;
+}
+
+/* 次操作：精细白底药丸 */
+.st-action-btn--secondary {
+  background-color: #ffffff !important;
+  border: 1px solid var(--st-border-bold, #cbd5e1) !important;
+  color: var(--st-text-regular, #334155) !important;
+  font-size: 13.5px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+}
+.st-action-btn--secondary:active {
+  background-color: #f1f5f9 !important;
+}
+
+/* 辅助高光：浅蓝微底药丸 */
+.st-action-btn--accent {
+  background-color: var(--st-primary-light, #eff6ff) !important;
+  border: 1px solid rgba(37, 99, 235, 0.25) !important;
+  color: var(--st-primary, #2563eb) !important;
+  font-size: 13.5px !important;
+}
+.st-action-btn--accent:active {
+  background-color: #dbeafe !important;
+}
+
+/* 警示破坏操作：红底胶囊 */
+.st-action-btn--danger {
+  background-color: var(--st-danger, #ef4444) !important;
+  border-color: var(--st-danger, #ef4444) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25) !important;
+}
+.st-action-btn--danger:active {
+  background-color: var(--st-danger-dark, #dc2626) !important;
+}
+.st-action-btn--danger:disabled,
+.st-action-btn--danger.van-button--disabled {
+  background-color: #fca5a5 !important;
+  border-color: #fca5a5 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+  opacity: 0.65 !important;
+}
+
