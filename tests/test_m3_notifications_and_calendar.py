@@ -484,3 +484,57 @@ async def test_webpush_decoupled_graceful_handling():
     success, msg = await notifier.send_webpush({}, "测试", "内容")
     assert success is False
     assert "M6" in msg
+
+
+# ==============================================================================
+# WxPusher 微信服务号专用测试
+# ==============================================================================
+@pytest.mark.anyio
+async def test_wxpusher_notification_validation():
+    """验证 WxPusher 参数校验与分发"""
+    # 1. 空 token 校验
+    ok, msg = await notifier.send_wxpusher("", "46425", "标题", "内容")
+    assert ok is False
+    assert "AppToken 不能为空" in msg
+
+    # 2. 空 topicId 和空 uids 校验
+    ok, msg = await notifier.send_wxpusher("AT_test", "", "标题", "内容")
+    assert ok is False
+    assert "指定 TopicId 或 UID" in msg
+
+    # 3. 模拟正常发送
+    mock_resp = MagicMock()
+    mock_resp.json.return_value = {"code": 1000, "msg": "处理成功", "success": True}
+
+    with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+        mock_post.return_value = mock_resp
+        ok, msg = await notifier.send_wxpusher("AT_test", "46425", "标题", "内容")
+        assert ok is True
+        assert "成功" in msg
+
+        # 验证分发器支持 wxpusher
+        results = await notifier.dispatch_notification(
+            title="测试",
+            content="内容",
+            channels=["wxpusher"],
+            config={"wxpusher_app_token": "AT_test", "wxpusher_topic_id": "46425"}
+        )
+        assert results["wxpusher"]["success"] is True
+
+
+def test_wxpusher_endpoint_with_parent_pin():
+    """验证通过 /api/notifications/test/wxpusher 接口测试 WxPusher"""
+    mock_resp = MagicMock()
+    mock_resp.json.return_value = {"code": 1000, "msg": "处理成功", "success": True}
+
+    with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+        mock_post.return_value = mock_resp
+        resp = client.post(
+            "/api/notifications/test/wxpusher",
+            headers=PARENT_PIN_HEADER,
+            json={"target": "AT_test", "topic_id": "46425"}
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["channel"] == "wxpusher"
+        assert data["success"] is True

@@ -18,6 +18,65 @@ def generate_dedup_id() -> str:
     now = datetime.now(SHANGHAI_TZ)
     return f"{now.strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
 
+async def send_wxpusher(
+    app_token: str,
+    topic_id: str,
+    title: str,
+    content: str,
+    uids: Optional[List[str]] = None
+) -> Tuple[bool, str]:
+    """
+    WxPusher 微信服务号消息推送 (推荐首选)
+    - 完全免费 (每天 1000 条免费额度，0 认证费，全家可关注主题)
+    - contentType: 3 (Markdown 渲染)
+    """
+    if not app_token or not app_token.strip():
+        return False, "WxPusher AppToken 不能为空"
+
+    url = "https://wxpusher.zjiecode.com/api/send/message"
+
+    # 解析 topicIds
+    topic_ids = []
+    if topic_id:
+        for tid in str(topic_id).replace("，", ",").split(","):
+            tid_s = tid.strip()
+            if tid_s.isdigit():
+                topic_ids.append(int(tid_s))
+
+    target_uids = uids or []
+    if not topic_ids and not target_uids:
+        return False, "WxPusher 必须指定 TopicId 或 UID 至少一项"
+
+    summary = title[:90] if title else "学迹通知"
+    full_content = f"## {title}\n\n{content}"
+
+    payload = {
+        "appToken": app_token.strip(),
+        "content": full_content,
+        "summary": summary,
+        "contentType": 3,
+        "topicIds": topic_ids,
+        "uids": target_uids
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            resp = await client.post(url, json=payload)
+            data = resp.json()
+            code = data.get("code")
+            msg = data.get("msg", "")
+            success = data.get("success", False)
+
+            if code == 1000 and success:
+                return True, f"发送成功 (WxPusher: {msg})"
+            else:
+                return False, f"WxPusher 错误 [{code}]: {msg}"
+    except httpx.TimeoutException:
+        return False, "WxPusher 请求超时 (5s)"
+    except Exception as e:
+        logger.error(f"WxPusher send error: {e}")
+        return False, f"网络请求失败: {str(e)}"
+
 
 async def send_pushplus(token: str, title: str, content: str) -> Tuple[bool, str]:
     """
@@ -212,11 +271,15 @@ async def dispatch_notification(
     if config is None:
         config = {}
 
-    target_channels = channels or config.get("enabled_channels", ["pushplus"])
+    target_channels = channels or config.get("enabled_channels", ["wxpusher"])
 
     async def _send_single(ch: str) -> Tuple[str, dict]:
         try:
-            if ch == "pushplus":
+            if ch == "wxpusher":
+                app_token = config.get("wxpusher_app_token", "")
+                topic_id = config.get("wxpusher_topic_id", "")
+                success, msg = await send_wxpusher(app_token, topic_id, title, content)
+            elif ch == "pushplus":
                 token = config.get("pushplus_token", "")
                 success, msg = await send_pushplus(token, title, content)
             elif ch == "serverchan":

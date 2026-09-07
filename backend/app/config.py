@@ -58,6 +58,10 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "study-trace-secure-local-key-2026"
     DEFAULT_PIN: str = "888888"
 
+    # 微信推送 (WxPusher)
+    WXPUSHER_APP_TOKEN: str = "AT_1FbRplPKgMYqeZtM8GEN4kkCE3LMGYqQ"
+    WXPUSHER_TOPIC_ID: str = "46425"
+
     # CORS 域名白名单（收紧生产暴露面）
     ALLOWED_ORIGINS: list[str] = [
         "https://study.raddishlab.tech",

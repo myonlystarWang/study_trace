@@ -156,7 +156,9 @@ class OcrEnginesOut(BaseModel):
 
 # M3 提醒与通知契约
 class NotificationConfig(BaseModel):
-    enabled_channels: List[str] = ["pushplus"]
+    enabled_channels: List[str] = ["wxpusher"]
+    wxpusher_app_token: Optional[str] = ""
+    wxpusher_topic_id: Optional[str] = ""
     pushplus_token: Optional[str] = ""
     serverchan_key: Optional[str] = ""
     bark_key: Optional[str] = ""
@@ -165,8 +167,9 @@ class NotificationConfig(BaseModel):
 
 
 class NotificationTestIn(BaseModel):
-    channel: str  # pushplus, serverchan, bark, webhook
+    channel: str  # wxpusher, pushplus, serverchan, bark, webhook
     target: Optional[str] = None  # 临时测试用的 Token / Key / URL，若未传则用持久化的配置
+    topic_id: Optional[str] = None  # WxPusher 主题 ID
 
 
 class NotificationResultOut(BaseModel):

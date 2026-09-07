@@ -6,13 +6,14 @@ from typing import Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 
+from backend.app.config import settings
 from backend.app.database import get_db
 from backend.app.models import Setting, HomeworkItem, MistakeRecord, NotificationLog
 from backend.app.schemas import (
     NotificationConfig, NotificationResultOut, NotificationSendOut
 )
 from backend.app.utils.notifier import (
-    send_pushplus, send_serverchan, send_bark, send_webhook, send_webpush,
+    send_wxpusher, send_pushplus, send_serverchan, send_bark, send_webhook, send_webpush,
     dispatch_notification, build_summary_message
 )
 from backend.app.routers.homework import calculate_streak
@@ -28,7 +29,9 @@ router = APIRouter(
 SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
 
 DEFAULT_CONFIG = {
-    "enabled_channels": ["pushplus"],
+    "enabled_channels": ["wxpusher"],
+    "wxpusher_app_token": getattr(settings, "WXPUSHER_APP_TOKEN", "") or "AT_1FbRplPKgMYqeZtM8GEN4kkCE3LMGYqQ",
+    "wxpusher_topic_id": getattr(settings, "WXPUSHER_TOPIC_ID", "") or "46425",
     "pushplus_token": "",
     "serverchan_key": "",
     "bark_key": "",
@@ -46,6 +49,11 @@ def load_notification_config(db: Session) -> dict:
         data = json.loads(setting.value)
         merged = DEFAULT_CONFIG.copy()
         merged.update(data)
+        # 若历史配置中未填充 wxpusher，自动赋予默认配置
+        if not merged.get("wxpusher_app_token") and DEFAULT_CONFIG.get("wxpusher_app_token"):
+            merged["wxpusher_app_token"] = DEFAULT_CONFIG["wxpusher_app_token"]
+        if not merged.get("wxpusher_topic_id") and DEFAULT_CONFIG.get("wxpusher_topic_id"):
+            merged["wxpusher_topic_id"] = DEFAULT_CONFIG["wxpusher_topic_id"]
         return merged
     except Exception as e:
         logger.error(f"Failed to parse notification_config: {e}")
@@ -82,20 +90,30 @@ def update_config(config_in: NotificationConfig, db: Session = Depends(get_db)):
 @router.post("/test/{channel}", response_model=NotificationResultOut)
 async def test_notification_channel(
     channel: str,
-    target: Optional[str] = Body(None, embed=True),
+    payload: Optional[dict] = Body(default=None),
     db: Session = Depends(get_db)
 ):
     """
     单渠道联通性测试接口：
-    可传入临时 target（Token/Key/URL）进行即时验证，若未传则使用已保存配置。
+    可传入临时 target（Token/Key/URL）及可选 topic_id 进行即时验证，若未传则使用已保存配置。
     """
     cfg = load_notification_config(db)
-    title = "🔔【学迹】通道连通性测试"
-    content = "恭喜！学迹通知服务通道配置成功，这是一条测试消息。\n\n- 服务名称：学迹 StudyTrace\n- 当前状态：联通正常"
+    title = "🔔【学迹】微信推送通道测试"
+    content = "恭喜！学迹通知服务 WxPusher 微信通道连通成功！\n\n- 服务名称：学迹 StudyTrace\n- 运行状态：服务连接正常\n- 推送渠道：WxPusher 家庭主题群\n- 每日作业提醒与晚间复习汇总将准时送达。"
+
+    target = None
+    topic_id = None
+    if isinstance(payload, dict):
+        target = payload.get("target")
+        topic_id = payload.get("topic_id")
 
     ch = channel.lower().strip()
 
-    if ch == "pushplus":
+    if ch == "wxpusher":
+        app_token = target if (target and target.strip()) else cfg.get("wxpusher_app_token", "")
+        top_id = topic_id if (topic_id and str(topic_id).strip()) else cfg.get("wxpusher_topic_id", "")
+        success, msg = await send_wxpusher(app_token, str(top_id), title, content)
+    elif ch == "pushplus":
         token = target if (target and target.strip()) else cfg.get("pushplus_token", "")
         success, msg = await send_pushplus(token, title, content)
     elif ch == "serverchan":
