@@ -3,8 +3,6 @@
     <!-- 顶部导航栏 -->
     <van-nav-bar
       title="学情成绩分析"
-      right-text="录入成绩"
-      @click-right="handleRequestCreate"
     />
 
     <div class="score-content">
@@ -160,117 +158,99 @@
       <!-- 历史考试台账 -->
       <div class="ledger-section">
         <div class="ledger-section-header">
-          <div class="card-title-group">
-            <span class="st-icon-badge st-icon-badge--neutral">
-              <van-icon name="orders-o" />
+          <div class="title-left">
+            <span class="st-icon-badge st-icon-badge--info">
+              <van-icon name="records" />
             </span>
             <span class="card-title">考试历史台账</span>
             <span class="ledger-count">({{ examList.length }} 场)</span>
           </div>
-          <van-button
-            size="mini"
-            type="primary"
-            plain
-            round
-            icon="plus"
-            style="padding: 0 10px; height: 26px; font-weight: 600;"
-            @click="handleRequestCreate"
-          >
-            录入考试
-          </van-button>
         </div>
 
         <div v-if="examList.length > 0" class="ledger-list">
-          <div
+          <van-swipe-cell
             v-for="exam in examList"
             :key="exam.id"
-            class="st-card exam-card"
+            class="exam-swipe-cell"
           >
-            <div class="exam-card-top">
-              <div class="exam-meta">
-                <span class="exam-type-badge">{{ exam.exam_type }}</span>
-                <span class="exam-title">{{ exam.title }}</span>
+            <div class="st-card exam-card">
+              <div class="exam-card-top">
+                <div class="exam-meta">
+                  <span class="exam-type-badge">{{ exam.exam_type }}</span>
+                  <span class="exam-title">{{ exam.title }}</span>
+                </div>
               </div>
-              <div class="exam-card-actions">
-                <van-button
-                  size="mini"
-                  icon="edit"
-                  type="primary"
-                  plain
-                  round
-                  @click="handleRequestEdit(exam)"
+
+              <div class="exam-date-row">
+                <span><van-icon name="calendar-o" /> {{ exam.exam_date }}</span>
+                <span v-if="exam.class_rank" class="rank-tag">班排 {{ exam.class_rank }}</span>
+                <span v-if="exam.grade_rank" class="rank-tag">校排 {{ exam.grade_rank }}</span>
+              </div>
+
+              <!-- 分数总览条 -->
+              <div class="exam-score-banner">
+                <div class="banner-left">
+                  <span class="total-label">实考总分：</span>
+                  <span class="total-num">{{ exam.total_score !== null ? exam.total_score : '无实考' }}</span>
+                  <span class="total-full">/ {{ exam.total_full_score || '--' }}</span>
+                </div>
+                <div class="banner-right">
+                  <van-tag
+                    :type="exam.rate >= 85 ? 'success' : exam.rate >= 60 ? 'primary' : 'danger'"
+                    size="medium"
+                    round
+                  >
+                    满分率 {{ exam.rate !== null ? `${exam.rate}%` : '--' }}
+                  </van-tag>
+                  <van-tag
+                    v-if="exam.absent_count > 0"
+                    color="#f59e0b"
+                    plain
+                    round
+                    size="medium"
+                    style="margin-left: 6px;"
+                  >
+                    {{ exam.absent_count }} 科缺考
+                  </van-tag>
+                </div>
+              </div>
+
+              <!-- 科目明细展开/收起 -->
+              <div class="subject-chips-grid">
+                <div
+                  v-for="s in exam.scores"
+                  :key="s.id"
+                  class="sub-score-chip"
+                  :class="{ 'chip-absent': s.is_absent }"
                 >
-                  编辑
-                </van-button>
-                <van-button
-                  size="mini"
-                  icon="delete-o"
-                  type="danger"
-                  plain
-                  round
-                  style="margin-left: 6px;"
-                  @click="handleDeleteExam(exam)"
-                >
-                  删除
-                </van-button>
+                  <span class="chip-name">{{ s.subject_name }}</span>
+                  <span v-if="s.is_absent" class="chip-score absent-text">缺考</span>
+                  <span v-else class="chip-score">
+                    <b>{{ s.score }}</b>
+                    <small>/{{ s.full_score }}</small>
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div class="exam-date-row">
-              <span><van-icon name="calendar-o" /> {{ exam.exam_date }}</span>
-              <span v-if="exam.class_rank" class="rank-tag">班排 {{ exam.class_rank }}</span>
-              <span v-if="exam.grade_rank" class="rank-tag">校排 {{ exam.grade_rank }}</span>
-            </div>
-
-            <!-- 分数总览条 -->
-            <div class="exam-score-banner">
-              <div class="banner-left">
-                <span class="total-label">实考总分：</span>
-                <span class="total-num">{{ exam.total_score !== null ? exam.total_score : '无实考' }}</span>
-                <span class="total-full">/ {{ exam.total_full_score || '--' }}</span>
+            <!-- 左滑呼出编辑与删除操作抽屉 -->
+            <template #right>
+              <div class="swipe-actions-box">
+                <button class="swipe-action-btn btn-edit" @click.stop="handleRequestEdit(exam)">
+                  <van-icon name="edit" size="16" />
+                  <span>编辑</span>
+                </button>
+                <button class="swipe-action-btn btn-delete" @click.stop="handleDeleteExam(exam)">
+                  <van-icon name="delete-o" size="16" />
+                  <span>删除</span>
+                </button>
               </div>
-              <div class="banner-right">
-                <van-tag
-                  :type="exam.rate >= 85 ? 'success' : exam.rate >= 60 ? 'primary' : 'danger'"
-                  size="medium"
-                  round
-                >
-                  满分率 {{ exam.rate !== null ? `${exam.rate}%` : '--' }}
-                </van-tag>
-                <van-tag
-                  v-if="exam.absent_count > 0"
-                  color="#f59e0b"
-                  plain
-                  round
-                  size="medium"
-                  style="margin-left: 6px;"
-                >
-                  {{ exam.absent_count }} 科缺考
-                </van-tag>
-              </div>
-            </div>
-
-            <!-- 科目明细展开/收起 -->
-            <div class="subject-chips-grid">
-              <div
-                v-for="s in exam.scores"
-                :key="s.id"
-                class="sub-score-chip"
-                :class="{ 'chip-absent': s.is_absent }"
-              >
-                <span class="chip-name">{{ s.subject_name }}</span>
-                <span v-if="s.is_absent" class="chip-score absent-text">缺考</span>
-                <span v-else class="chip-score">
-                  <b>{{ s.score }}</b>
-                  <small>/{{ s.full_score }}</small>
-                </span>
-              </div>
-            </div>
-          </div>
+            </template>
+          </van-swipe-cell>
         </div>
 
         <div v-else class="empty-ledger-box">
-          <van-empty description="暂无考试记录，点击右上角录入第一场考试吧" />
+          <van-empty description="暂无考试记录，点击下方录入第一场考试吧" />
         </div>
       </div>
     </div>
@@ -428,6 +408,20 @@
         </div>
       </div>
     </van-popup>
+
+    <!-- 底部常驻磨砂悬浮录入栏 -->
+    <div class="floating-bottom-bar st-frosted-bar">
+      <van-button
+        type="primary"
+        round
+        block
+        icon="plus"
+        class="add-score-btn"
+        @click="handleRequestCreate"
+      >
+        录入新考试成绩
+      </van-button>
+    </div>
   </div>
 </template>
 
@@ -995,7 +989,7 @@ const handleDeleteExam = (exam) => {
 .score-view {
   flex: 1;
   background-color: #f8fafc;
-  padding-bottom: 16px;
+  padding-bottom: 100px;
 }
 
 .score-content {
@@ -1590,5 +1584,67 @@ const handleDeleteExam = (exam) => {
 
 .popup-bottom-actions {
   padding: 16px;
+}
+
+/* 左滑操作与底部常驻悬浮栏 */
+.exam-swipe-cell {
+  border-radius: var(--st-radius-md, 14px);
+  overflow: hidden;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.exam-swipe-cell .exam-card {
+  border-radius: 0;
+  box-shadow: none;
+  margin-bottom: 0;
+}
+
+.swipe-actions-box {
+  display: flex;
+  height: 100%;
+}
+
+.swipe-action-btn {
+  border: none;
+  height: 100%;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.swipe-action-btn.btn-edit {
+  background-color: var(--st-warning, #f59e0b);
+}
+
+.swipe-action-btn.btn-delete {
+  background-color: var(--st-danger, #ef4444);
+}
+
+.floating-bottom-bar {
+  position: fixed;
+  bottom: calc(50px + env(safe-area-inset-bottom, 0px));
+  left: 0;
+  right: 0;
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 8px 16px;
+  background: linear-gradient(to top, rgba(248, 250, 252, 0.96) 80%, rgba(248, 250, 252, 0));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 40;
+}
+
+.add-score-btn {
+  font-weight: 600;
+  height: 42px;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
 }
 </style>

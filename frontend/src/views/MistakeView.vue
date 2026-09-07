@@ -3,10 +3,10 @@
     <!-- 顶部导航栏 (支持常规与批量管理双模切换) -->
     <van-nav-bar
       :title="isBatchMode ? `批量管理 (${selectedIds.length}/${mistakes.length})` : '错题复习本'"
-      :left-text="isBatchMode ? '退出' : '批量管理'"
-      :right-text="isBatchMode ? (selectedIds.length === mistakes.length && mistakes.length > 0 ? '取消全选' : '全选') : '周末组卷'"
-      @click-left="toggleBatchMode"
-      @click-right="onNavRightClick"
+      :left-text="isBatchMode ? '退出管理' : ''"
+      :right-text="isBatchMode ? (selectedIds.length === mistakes.length && mistakes.length > 0 ? '取消全选' : '全选') : ''"
+      @click-left="isBatchMode ? toggleBatchMode() : null"
+      @click-right="isBatchMode ? toggleSelectAll() : null"
     />
 
     <div class="mistake-content">
@@ -200,18 +200,35 @@
       </div>
     </div>
 
-    <!-- 常规录入常驻磨砂悬浮栏 -->
+    <!-- 常规模式：底部三合一操作栏 [+ 录入新错题] [批量管理] [周末组卷] -->
     <div class="floating-bottom-bar st-frosted-bar" v-else>
-      <van-button
-        type="primary"
-        round
-        block
-        icon="plus"
-        class="add-mistake-btn"
-        @click="showAddModal = true"
-      >
-        录入新错题
-      </van-button>
+      <div class="mistake-bottom-actions">
+        <van-button
+          type="primary"
+          round
+          icon="plus"
+          class="action-btn-primary"
+          @click="showAddModal = true"
+        >
+          录入新错题
+        </van-button>
+        <van-button
+          round
+          icon="apps-o"
+          class="action-btn-secondary"
+          @click="toggleBatchMode"
+        >
+          批量管理
+        </van-button>
+        <van-button
+          round
+          icon="notes-o"
+          class="action-btn-secondary action-btn-paper"
+          @click="router.push('/paper')"
+        >
+          周末组卷
+        </van-button>
+      </div>
     </div>
 
     <!-- 录入错题底部半屏抽屉 (Bottom Sheet) -->
@@ -863,6 +880,49 @@ onMounted(async () => {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 40;
+}
+
+.mistake-bottom-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.action-btn-primary {
+  flex: 1.35;
+  height: 42px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+  white-space: nowrap;
+}
+
+.action-btn-secondary {
+  flex: 0.95;
+  height: 42px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  white-space: nowrap;
+  padding: 0 6px;
+}
+
+.action-btn-secondary:active {
+  background-color: #f1f5f9;
+}
+
+.action-btn-paper {
+  color: #2563eb;
+  background-color: #eff6ff;
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+.action-btn-paper:active {
+  background-color: #dbeafe;
 }
 
 .add-mistake-btn {
