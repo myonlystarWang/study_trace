@@ -52,6 +52,54 @@ async def get_wechat_access_token(app_id: str, app_secret: str) -> Optional[str]
         return None
 
 
+def parse_wechat_open_ids(raw: str) -> List[Tuple[str, str]]:
+    """
+    智能解析微信接收人 OpenID 列表：
+    支持以下多种格式：
+    1. JSON 数组: [{"name": "爸爸", "openid": "oz1n..."}, ...]
+    2. 带备注的文本: 爸爸:oz1n..., 妈妈:oz1n...
+    3. 纯 OpenID 文本: oz1n..., oz1n... (以逗号/分号/换行分隔)
+    """
+    import json
+    if not raw or not str(raw).strip():
+        return []
+
+    raw_str = str(raw).strip()
+
+    # 1. 尝试 JSON 格式
+    if raw_str.startswith("[") and raw_str.endswith("]"):
+        try:
+            arr = json.loads(raw_str)
+            res = []
+            for item in arr:
+                if isinstance(item, dict):
+                    oid = item.get("openid", "").strip()
+                    name = item.get("name", "").strip() or "家庭成员"
+                    if oid:
+                        res.append((name, oid))
+                elif isinstance(item, str) and item.strip():
+                    res.append(("家庭成员", item.strip()))
+            if res:
+                return res
+        except Exception:
+            pass
+
+    # 2. 尝试带备注或逗号/换行分隔
+    res = []
+    tokens = [t.strip() for t in re.split(r"[,;\n]+", raw_str) if t.strip()]
+    for idx, tok in enumerate(tokens, 1):
+        if ":" in tok or "：" in tok:
+            parts = re.split(r"[:：]", tok, maxsplit=1)
+            name = parts[0].strip() or f"成员{idx}"
+            oid = parts[1].strip()
+        else:
+            name = f"成员{idx}"
+            oid = tok
+        if oid:
+            res.append((name, oid))
+    return res
+
+
 async def send_wechat_sandbox(
     app_id: str,
     app_secret: str,
@@ -65,13 +113,13 @@ async def send_wechat_sandbox(
     微信公众平台接口测试号 (Sandbox 官方直推通道)
     - 0 元免费、直连腾讯微信、无第三方抽佣
     - 官方模板消息原生弹窗 + 声音，单日 10 万次额度
-    - 支持全家多 OpenID 广播 (逗号/换行分隔)
+    - 支持全家多 OpenID 广播，并显示家庭成员备注 (如 爸爸、妈妈)
     """
     if not app_id or not app_secret or not template_id:
         return False, "微信测试号 AppID, AppSecret 或 TemplateID 不能为空"
 
-    ids = [i.strip() for i in re.split(r"[,;\n\s]+", open_ids) if i.strip()]
-    if not ids:
+    members = parse_wechat_open_ids(open_ids)
+    if not members:
         return False, "请至少指定一个微信用户的 OpenID"
 
     access_token = await get_wechat_access_token(app_id, app_secret)
@@ -85,14 +133,19 @@ async def send_wechat_sandbox(
     if len(summary_text) > 80:
         summary_text = summary_text[:77] + "..."
 
-    async def _send_to_user(openid: str) -> Tuple[bool, str]:
+    async def _send_to_user(name: str, openid: str) -> Tuple[bool, str]:
+        # 若单人推送且有姓名，标题展示定制称谓
+        display_title = title
+        if name and name not in ("家庭成员", f"成员1", f"成员2") and len(members) == 1:
+            display_title = f"{title} · 致{name}"
+
         payload = {
             "touser": openid,
             "template_id": template_id.strip(),
             "url": url,
             "data": {
                 "first": {
-                    "value": title,
+                    "value": display_title,
                     "color": "#173177"
                 },
                 "keyword1": {
@@ -125,14 +178,15 @@ async def send_wechat_sandbox(
         except Exception as e:
             return False, f"网络请求失败: {str(e)}"
 
-    tasks = [_send_to_user(oid) for oid in ids]
+    tasks = [_send_to_user(name, oid) for name, oid in members]
     results = await asyncio.gather(*tasks)
 
     success_cnt = sum(1 for r in results if r[0])
-    total_cnt = len(ids)
+    total_cnt = len(members)
+    member_names = ", ".join([name for name, _ in members if name])
 
     if success_cnt == total_cnt:
-        return True, f"微信测试号发送成功 (已广播 {total_cnt} 位家庭成员)"
+        return True, f"微信测试号发送成功 (已广播 {member_names} 共 {total_cnt} 位家庭成员)"
     elif success_cnt > 0:
         return True, f"微信测试号部分成功 ({success_cnt}/{total_cnt} 送达)"
     else:

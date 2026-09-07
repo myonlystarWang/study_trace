@@ -76,7 +76,7 @@
                 <span class="st-icon-badge st-icon-badge--success channel-badge">
                   <van-icon name="chat-o" />
                 </span>
-                <span class="channel-card-text">微信 (官方测试号)</span>
+                <span class="channel-card-text">微信测试号</span>
               </div>
 
               <div
@@ -130,9 +130,9 @@
                 <span class="st-icon-badge st-icon-badge--success">
                   <van-icon name="chat-o" />
                 </span>
-                <span class="channel-title">微信测试号 (官方直推)</span>
+                <span class="channel-title">微信测试号</span>
               </div>
-              <span class="st-status-tag st-status-tag--success">免费 10万次/天 · 官方弹窗</span>
+              <span class="st-status-tag st-status-tag--success">免费10万次/天</span>
             </div>
             <van-field
               v-model="notifConfig.wechat_app_id"
@@ -159,38 +159,84 @@
               class="channel-field"
               placeholder="消息模板 ID"
             />
-            <van-field
-              v-model="notifConfig.wechat_open_ids"
-              label="接收OpenID"
-              label-width="85px"
-              type="textarea"
-              rows="1"
-              autosize
-              center
-              class="channel-field"
-              placeholder="接收人微信号 OpenID，多个用逗号隔开"
-            >
-              <template #button>
+            <!-- 结构化家庭成员接收人列表 -->
+            <div class="wechat-members-section">
+              <div class="wechat-members-header">
+                <span class="wechat-members-title">
+                  <van-icon name="friends-o" />
+                  家庭成员接收列表 ({{ wechatMemberList.length }}人)
+                </span>
                 <van-button
-                  size="small"
+                  size="mini"
                   type="primary"
                   plain
                   class="channel-test-btn"
                   :loading="testingChannel === 'wechat_sandbox'"
                   @click="handleTestChannel('wechat_sandbox', {
-                    target: notifConfig.wechat_open_ids,
+                    target: serializeWechatMembers(),
                     app_id: notifConfig.wechat_app_id,
                     app_secret: notifConfig.wechat_app_secret,
                     template_id: notifConfig.wechat_template_id
                   })"
                 >
-                  测试推送
+                  全员广播测试
                 </van-button>
-              </template>
-            </van-field>
+              </div>
+
+              <div class="wechat-member-card" v-for="(m, idx) in wechatMemberList" :key="idx">
+                <div class="wechat-member-row-top">
+                  <div class="wechat-member-identity">
+                    <span class="member-index-badge">#{{ idx + 1 }}</span>
+                    <input
+                      v-model="m.name"
+                      class="member-name-input"
+                      placeholder="称谓 (如 爸爸/妈妈)"
+                    />
+                  </div>
+                  <div class="wechat-member-actions">
+                    <van-button
+                      size="mini"
+                      type="default"
+                      class="member-single-test-btn"
+                      :loading="testingChannel === `wechat_single_${idx}`"
+                      @click="testSingleMember(m, idx)"
+                    >
+                      单人测试
+                    </van-button>
+                    <van-icon
+                      name="delete-o"
+                      class="member-del-btn"
+                      v-if="wechatMemberList.length > 1"
+                      @click="removeWechatMember(idx)"
+                    />
+                  </div>
+                </div>
+                <div class="wechat-member-openid-box">
+                  <input
+                    v-model="m.openid"
+                    class="member-openid-input"
+                    placeholder="请输入微信 OpenID (以 oz1n... 开头)"
+                  />
+                </div>
+              </div>
+
+              <div class="wechat-add-member-wrapper">
+                <van-button
+                  size="small"
+                  type="primary"
+                  plain
+                  icon="plus"
+                  block
+                  class="wechat-add-btn"
+                  @click="addWechatMember"
+                >
+                  添加家庭成员 OpenID
+                </van-button>
+              </div>
+            </div>
             <div class="channel-caption">
               <van-icon name="info-o" class="caption-icon" />
-              <span>直连微信官方服务器，无任何第三方抽佣收费；家人微信扫测试号二维码关注后，将 OpenID 填入上方（逗号隔开）即可全家同步弹窗接收。</span>
+              <span>直连微信官方服务器；扫测试号二维码关注后，将 OpenID 填入上方并备注，即可同步弹窗接收。</span>
             </div>
           </div>
 
@@ -308,7 +354,7 @@
               :loading="sendingSummary"
               @click="handleSendSummaryNow"
             >
-              立即发送今日汇总
+              发送今日汇总
             </van-button>
             <van-button
               type="primary"
@@ -553,7 +599,7 @@ const notifConfig = ref({
   wechat_app_id: 'wx631c06dc9c8a1819',
   wechat_app_secret: '088fa6a0c2d1bc5fdefd152bba06d66d',
   wechat_template_id: '6LSmd6HG59OXRqCoHbzG5pVHPDpi7KcgsHQuFcU3t_E',
-  wechat_open_ids: 'oz1nN3D7D2MKPBE0ah2CmroanhVc',
+  wechat_open_ids: '',
   wxpusher_app_token: 'AT_1FbRplPKgMYqeZtM8GEN4kkCE3LMGYqQ',
   wxpusher_topic_id: '46425',
   pushplus_token: '',
@@ -562,6 +608,90 @@ const notifConfig = ref({
   webhook_url: '',
   reminder_slots: ['20:10', '21:10', '21:50']
 });
+
+// 结构化家庭成员 OpenID 列表
+const wechatMemberList = ref([
+  { name: '爸爸', openid: 'oz1nN3D7D2MKPBE0ah2CmroanhVc' },
+  { name: '妈妈', openid: 'oz1nN3CuVUQ4S8yJ4PWU6wY2jsmo' }
+]);
+
+const parseWechatMembersFromConfig = (raw) => {
+  if (!raw || !String(raw).trim()) {
+    return [{ name: '爸爸', openid: '' }];
+  }
+  const rawStr = String(raw).trim();
+  if (rawStr.startsWith('[') && rawStr.endsWith(']')) {
+    try {
+      const arr = JSON.parse(rawStr);
+      if (Array.isArray(arr) && arr.length > 0) {
+        return arr.map((item, idx) => ({
+          name: item.name || `成员${idx + 1}`,
+          openid: item.openid || ''
+        }));
+      }
+    } catch (e) {}
+  }
+  const tokens = rawStr.split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
+  if (tokens.length === 0) return [{ name: '爸爸', openid: '' }];
+  return tokens.map((tok, idx) => {
+    if (tok.includes(':') || tok.includes('：')) {
+      const parts = tok.split(/[:：]/);
+      return { name: parts[0].trim() || `成员${idx + 1}`, openid: parts[1]?.trim() || '' };
+    }
+    const defaultName = idx === 0 ? '爸爸' : (idx === 1 ? '妈妈' : `成员${idx + 1}`);
+    return { name: defaultName, openid: tok };
+  });
+};
+
+const serializeWechatMembers = () => {
+  const valid = wechatMemberList.value.filter(m => m.openid && m.openid.trim());
+  return JSON.stringify(valid);
+};
+
+const addWechatMember = () => {
+  const count = wechatMemberList.value.length;
+  const nextName = count === 0 ? '爸爸' : (count === 1 ? '妈妈' : `家庭成员${count + 1}`);
+  wechatMemberList.value.push({ name: nextName, openid: '' });
+};
+
+const removeWechatMember = (idx) => {
+  wechatMemberList.value.splice(idx, 1);
+  notifConfig.value.wechat_open_ids = serializeWechatMembers();
+};
+
+const testSingleMember = async (m, idx) => {
+  if (!m.openid || !m.openid.trim()) {
+    showToast(`请先输入【${m.name || '成员'}】的微信 OpenID`);
+    return;
+  }
+  testingChannel.value = `wechat_single_${idx}`;
+  try {
+    const singlePayload = JSON.stringify([{ name: m.name || '家人', openid: m.openid.trim() }]);
+    const res = await notificationApi.testChannel('wechat_sandbox', {
+      target: singlePayload,
+      app_id: notifConfig.value.wechat_app_id,
+      app_secret: notifConfig.value.wechat_app_secret,
+      template_id: notifConfig.value.wechat_template_id
+    });
+    if (res.data.success) {
+      showDialog({
+        title: '测试发送成功',
+        message: `已向【${m.name}】的微信发送测试卡片，请查看手机微信！`,
+        confirmButtonText: '好'
+      });
+    } else {
+      showDialog({
+        title: '测试未成功',
+        message: res.data.message || '请检查 OpenID 是否正确',
+        confirmButtonText: '知道了'
+      });
+    }
+  } catch (e) {
+    showToast(e.response?.data?.detail || e.message || '测试失败');
+  } finally {
+    testingChannel.value = '';
+  }
+};
 const savingConfig = ref(false);
 const testingChannel = ref('');
 const sendingSummary = ref(false);
@@ -724,6 +854,9 @@ const fetchNotificationConfig = async () => {
   try {
     const res = await notificationApi.getConfig();
     notifConfig.value = res.data;
+    if (res.data.wechat_open_ids) {
+      wechatMemberList.value = parseWechatMembersFromConfig(res.data.wechat_open_ids);
+    }
   } catch (e) {
     console.error('Failed to load notification config:', e);
   }
@@ -732,6 +865,7 @@ const fetchNotificationConfig = async () => {
 const handleSaveConfig = async () => {
   savingConfig.value = true;
   try {
+    notifConfig.value.wechat_open_ids = serializeWechatMembers();
     await notificationApi.updateConfig(notifConfig.value);
     showToast({ message: '通知设置已保存', icon: 'success' });
   } catch (e) {
@@ -777,7 +911,7 @@ const handleTestChannel = async (channel, payload) => {
 
 const handleSendSummaryNow = async () => {
   showConfirmDialog({
-    title: '确认立即发送今日汇总',
+    title: '确认发送今日汇总',
     message: '系统将立即聚合今日所有作业状态、连续打卡天数与艾宾浩斯复习情况，向所有已启用渠道推送一份最新日报快照。确定发送吗？'
   }).then(async () => {
     sendingSummary.value = true;
@@ -1141,6 +1275,141 @@ onUnmounted(() => {
   height: 28px;
   min-width: 52px;
   padding: 0 10px;
+  font-size: 12px;
+  border-radius: var(--st-radius-sm, 6px);
+}
+
+/* 微信家庭成员结构化管理列表样式 */
+.wechat-members-section {
+  margin: 10px 0 6px;
+  background: var(--st-bg-surface, #ffffff);
+  border: 1px solid var(--st-border-light, #e2e8f0);
+  border-radius: var(--st-radius-md, 10px);
+  padding: 10px 12px;
+}
+
+.wechat-members-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.wechat-members-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--st-text-primary, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.wechat-member-card {
+  background: var(--st-bg-elevated, #f8fafc);
+  border: 1px solid var(--st-border-light, #edf2f7);
+  border-radius: var(--st-radius-sm, 8px);
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+}
+
+.wechat-member-card:hover {
+  border-color: var(--st-primary-light, #bfdbfe);
+}
+
+.wechat-member-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.wechat-member-identity {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.member-index-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--st-primary, #2563eb);
+  background: var(--st-primary-light, #eff6ff);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.member-name-input {
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--st-text-primary, #0f172a);
+  padding: 2px 6px;
+  border-radius: 4px;
+  max-width: 130px;
+  outline: none;
+}
+
+.member-name-input:focus {
+  background: #ffffff;
+  border-color: var(--st-primary, #2563eb);
+}
+
+.wechat-member-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.member-single-test-btn {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+  border-radius: 4px;
+}
+
+.member-del-btn {
+  font-size: 16px;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.member-del-btn:hover {
+  opacity: 0.8;
+}
+
+.wechat-member-openid-box {
+  width: 100%;
+}
+
+.member-openid-input {
+  width: 100%;
+  border: 1px solid var(--st-border-light, #cbd5e1);
+  background: #ffffff;
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--st-text-primary, #1e293b);
+  padding: 6px 8px;
+  border-radius: 6px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.member-openid-input:focus {
+  border-color: var(--st-primary, #2563eb);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.wechat-add-member-wrapper {
+  margin-top: 4px;
+}
+
+.wechat-add-btn {
+  border-style: dashed;
+  height: 32px;
   font-size: 12px;
   border-radius: var(--st-radius-sm, 6px);
 }
