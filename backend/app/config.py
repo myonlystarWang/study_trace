@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     WECHAT_APP_ID: str = "wx631c06dc9c8a1819"
     WECHAT_APP_SECRET: str = "088fa6a0c2d1bc5fdefd152bba06d66d"
     WECHAT_TEMPLATE_ID: str = "6LSmd6HG59OXRqCoHbzG5pVHPDpi7KcgsHQuFcU3t_E"
-    WECHAT_OPEN_IDS: str = "oz1nN3D7D2MKPBE0ah2CmroanhVc"
+    WECHAT_OPEN_IDS: str = "oz1nN3D7D2MKPBE0ah2CmroanhVc,oz1nN3CuVUQ4S8yJ4PWU6wY2jsmo"
 
     # CORS 域名白名单（收紧生产暴露面）
     ALLOWED_ORIGINS: list[str] = [

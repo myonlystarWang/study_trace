@@ -33,7 +33,7 @@ DEFAULT_CONFIG = {
     "wechat_app_id": getattr(settings, "WECHAT_APP_ID", "") or "wx631c06dc9c8a1819",
     "wechat_app_secret": getattr(settings, "WECHAT_APP_SECRET", "") or "088fa6a0c2d1bc5fdefd152bba06d66d",
     "wechat_template_id": getattr(settings, "WECHAT_TEMPLATE_ID", "") or "6LSmd6HG59OXRqCoHbzG5pVHPDpi7KcgsHQuFcU3t_E",
-    "wechat_open_ids": getattr(settings, "WECHAT_OPEN_IDS", "") or "oz1nN3D7D2MKPBE0ah2CmroanhVc",
+    "wechat_open_ids": getattr(settings, "WECHAT_OPEN_IDS", "") or "oz1nN3D7D2MKPBE0ah2CmroanhVc,oz1nN3CuVUQ4S8yJ4PWU6wY2jsmo",
     "wxpusher_app_token": getattr(settings, "WXPUSHER_APP_TOKEN", "") or "AT_1FbRplPKgMYqeZtM8GEN4kkCE3LMGYqQ",
     "wxpusher_topic_id": getattr(settings, "WXPUSHER_TOPIC_ID", "") or "46425",
     "pushplus_token": "",

@@ -283,7 +283,7 @@ async def test_evening_summary_dispatches_when_completed(db_session: Session):
 
 
 # ==============================================================================
-# DoD 6: 立即发送今日汇总 (force_summary=True) 与频控验证 (P1-4)
+# DoD 6: 发送今日汇总 (force_summary=True) 与频控验证 (P1-4)
 # ==============================================================================
 def test_force_summary_dispatch_and_rate_limit(db_session: Session):
     """测试 POST /api/notifications/send-summary-now 即时推送快照与 30 秒防刷频控"""
