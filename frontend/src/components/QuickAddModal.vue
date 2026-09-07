@@ -57,7 +57,7 @@
         <div class="chips-label">选择作业所属学科：</div>
         <div class="sheet-subject-chips">
           <span
-            v-for="sub in subjects"
+            v-for="sub in availableSubjects"
             :key="sub.id"
             class="st-chip"
             :class="{ active: selectedSubject === sub.id }"
@@ -129,7 +129,7 @@
               <div class="assign-dropdown-wrap">
                 <span class="assign-label">归入：</span>
                 <select v-model="unassignedTargetSubjectId" class="assign-select">
-                  <option v-for="sub in subjects" :key="sub.id" :value="sub.id">{{ sub.name }}</option>
+                  <option v-for="sub in availableSubjects" :key="sub.id" :value="sub.id">{{ sub.name }}</option>
                 </select>
               </div>
             </div>
@@ -187,9 +187,9 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { showToast } from 'vant';
-import { homeworkApi, ocrApi } from '../api';
+import { homeworkApi, ocrApi, settingsApi } from '../api';
 import { compressImage } from '../utils/imageCompress';
 
 const props = defineProps({
@@ -199,13 +199,50 @@ const props = defineProps({
 });
 const emit = defineEmits(['update:show', 'added']);
 
+// 预置核心学科安全兜底（防止任何网络延迟或父组件空传导致解析与界面停摆）
+const DEFAULT_FALLBACK_SUBJECTS = [
+  { id: 2, name: '语文', is_default: true },
+  { id: 1, name: '数学', is_default: true },
+  { id: 3, name: '英语', is_default: true },
+  { id: 4, name: '道法', is_default: true },
+  { id: 5, name: '历史', is_default: true },
+  { id: 6, name: '地理', is_default: true },
+  { id: 7, name: '生物', is_default: true },
+  { id: 8, name: '物理', is_default: true },
+  { id: 9, name: '化学', is_default: true }
+];
+
 const mode = ref('manual');
 const inputText = ref('');
 const selectedSubject = ref(null);
 const saving = ref(false);
 const ocrLoading = ref(false);
 const cameraFileList = ref([]);
+const internalSubjects = ref([]);
 let pollTimer = null;
+
+// 自主向后端拉取学科（双重保障）
+const fetchInternalSubjects = async () => {
+  try {
+    const res = await settingsApi.getSubjects();
+    if (res.data && res.data.length > 0) {
+      internalSubjects.value = res.data;
+    }
+  } catch (err) {
+    console.error('QuickAddModal load subjects fallback:', err);
+  }
+};
+
+// 统一可信学科数据源：优先外部 props，次选自身拉取，底线使用系统预置标准学科
+const availableSubjects = computed(() => {
+  if (props.subjects && props.subjects.length > 0) {
+    return props.subjects;
+  }
+  if (internalSubjects.value && internalSubjects.value.length > 0) {
+    return internalSubjects.value;
+  }
+  return DEFAULT_FALLBACK_SUBJECTS;
+});
 
 // 智能多学科解析出的响应式组与未分配列表
 const activeParsedGroups = ref([]);
@@ -213,7 +250,7 @@ const activeUnassigned = ref([]);
 const unassignedTargetSubjectId = ref(null);
 
 const currentSubjectName = computed(() => {
-  const found = props.subjects.find((s) => s.id === selectedSubject.value);
+  const found = availableSubjects.value.find((s) => s.id === selectedSubject.value);
   return found ? found.name : '当前学科';
 });
 
@@ -321,23 +358,27 @@ const cleanTaskContent = (content) => {
   return cleaned;
 };
 
-// 是否是无意义杂质行（如 "9月4日 (周五)", "今日作业", "作业布置"）
+// 是否是无意义杂质行（如 "9月4日 (周五)", "今日作业", "作业布置", "作业是："）
 const isNoiseLine = (line) => {
   const trimmed = line.trim();
   if (!trimmed) return true;
   if (/^\d{1,2}月\d{1,2}日.*$/.test(trimmed)) return true; // 日期行
-  if (/^(今日作业|作业布置|家庭作业|各科作业|作业清单)[:：\s]*$/.test(trimmed)) return true;
+  if (/^(今日作业|作业布置|家庭作业|各科作业|作业清单|作业是|作业如下|今日任务|作业)[:：\s]*$/.test(trimmed)) return true;
   if (/^(大家好|收到请回复|家长您好|温馨提示).*$/.test(trimmed)) return true;
   return false;
 };
 
 // 核心智能解析执行
 const parseHomeworkText = (text, subjectsList) => {
-  const rawLines = (text || '').split('\n').map((l) => l.trim()).filter(Boolean);
+  const cleanInput = (text || '')
+    .replace(/[\u00a0\u3000]/g, ' ') // 替换不间断空格和全角空格
+    .replace(/\r\n/g, '\n');
+  const rawLines = cleanInput.split('\n').map((l) => l.trim()).filter(Boolean);
   if (rawLines.length === 0) {
     return { groups: [], unassigned: [] };
   }
 
+  const list = (subjectsList && subjectsList.length > 0) ? subjectsList : DEFAULT_FALLBACK_SUBJECTS;
   const groupsMap = new Map();
   const unassigned = [];
   let currentSubject = null;
@@ -346,7 +387,7 @@ const parseHomeworkText = (text, subjectsList) => {
   for (const line of rawLines) {
     if (isNoiseLine(line)) continue;
 
-    const matched = matchSubjectHeader(line, subjectsList);
+    const matched = matchSubjectHeader(line, list);
     if (matched) {
       currentSubject = matched.subject;
       if (!groupsMap.has(currentSubject.id)) {
@@ -393,29 +434,48 @@ watch(
       activeUnassigned.value = [];
       return;
     }
-    const result = parseHomeworkText(val, props.subjects);
+    const result = parseHomeworkText(val, availableSubjects.value);
     activeParsedGroups.value = result.groups;
     activeUnassigned.value = result.unassigned;
-    if (result.unassigned.length > 0 && !unassignedTargetSubjectId.value && props.subjects.length > 0) {
-      unassignedTargetSubjectId.value = props.subjects[0].id;
+    if (result.unassigned.length > 0 && !unassignedTargetSubjectId.value && availableSubjects.value.length > 0) {
+      unassignedTargetSubjectId.value = availableSubjects.value[0].id;
     }
   }
 );
 
 watch(
-  () => props.subjects,
+  availableSubjects,
   (subs) => {
     if (subs && subs.length > 0) {
-      if (!selectedSubject.value) {
+      if (!selectedSubject.value || !subs.some(s => s.id === selectedSubject.value)) {
         selectedSubject.value = subs[0].id;
       }
-      if (!unassignedTargetSubjectId.value) {
+      if (!unassignedTargetSubjectId.value || !subs.some(s => s.id === unassignedTargetSubjectId.value)) {
         unassignedTargetSubjectId.value = subs[0].id;
       }
     }
   },
   { immediate: true }
 );
+
+watch(
+  () => props.show,
+  (val) => {
+    if (val) {
+      fetchInternalSubjects();
+      if (inputText.value && inputText.value.trim()) {
+        const result = parseHomeworkText(inputText.value, availableSubjects.value);
+        activeParsedGroups.value = result.groups;
+        activeUnassigned.value = result.unassigned;
+      }
+    }
+  },
+  { immediate: true }
+);
+
+onMounted(() => {
+  fetchInternalSubjects();
+});
 
 const removeItem = (gIdx, iIdx) => {
   activeParsedGroups.value[gIdx].items.splice(iIdx, 1);
