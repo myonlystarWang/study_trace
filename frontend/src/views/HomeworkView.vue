@@ -441,15 +441,45 @@ const fetchWeekStatus = async () => {
   }
 };
 
+// 学科展示优先级权重（语文 -> 数学 -> 英语 -> 道法 -> 历史 -> 地理 -> 生物 -> 物理 -> 化学）
+const getSubjectSortOrder = (subjectId, subjectName) => {
+  if (subjects.value && subjects.value.length > 0) {
+    const found = subjects.value.find((s) => s.id === subjectId || s.name === subjectName);
+    if (found && found.sort_order !== undefined) {
+      return found.sort_order;
+    }
+  }
+  const defaultOrder = ['语文', '数学', '英语', '道德与法治', '道法', '政治', '历史', '地理', '生物', '物理', '化学'];
+  const idx = defaultOrder.indexOf(subjectName);
+  return idx !== -1 ? idx : 999;
+};
+
+// 排序函数：优先按学科归类排序，学科内部按创建录入先后 (id) 正序排列
+const sortHomeworkItems = (itemList) => {
+  if (!itemList || itemList.length === 0) return [];
+  return [...itemList].sort((a, b) => {
+    const orderA = getSubjectSortOrder(a.subject_id, a.subject_name);
+    const orderB = getSubjectSortOrder(b.subject_id, b.subject_name);
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+    return a.id - b.id;
+  });
+};
+
 const filteredItems = computed(() => {
-  if (!selectedSubject.value) return items.value;
-  return items.value.filter((i) => i.subject_id === selectedSubject.value);
+  const base = !selectedSubject.value 
+    ? items.value 
+    : items.value.filter((i) => i.subject_id === selectedSubject.value);
+  return sortHomeworkItems(base);
 });
 
 const filteredRolloverItems = computed(() => {
   if (!weekendRollover.value || !weekendRollover.value.items) return [];
-  if (!selectedSubject.value) return weekendRollover.value.items;
-  return weekendRollover.value.items.filter((i) => i.subject_id === selectedSubject.value);
+  const base = !selectedSubject.value 
+    ? weekendRollover.value.items 
+    : weekendRollover.value.items.filter((i) => i.subject_id === selectedSubject.value);
+  return sortHomeworkItems(base);
 });
 
 // 学科标签颜色映射

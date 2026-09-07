@@ -95,10 +95,15 @@ def get_homework_list(
     db: Session = Depends(get_db)
 ):
     query_date = target_date or date.today()
-    items = db.query(HomeworkItem).filter(
+    items = db.query(HomeworkItem).outerjoin(
+        Subject, HomeworkItem.subject_id == Subject.id
+    ).filter(
         HomeworkItem.student_id == student_id,
         HomeworkItem.date == query_date
-    ).order_by(HomeworkItem.id.asc()).all()
+    ).order_by(
+        Subject.sort_order.asc(),
+        HomeworkItem.id.asc()
+    ).all()
 
     total = len(items)
     completed = sum(1 for item in items if item.is_completed)
@@ -128,10 +133,15 @@ def get_homework_list(
     if query_date.weekday() in [5, 6]:
         days_to_fri = 1 if query_date.weekday() == 5 else 2
         friday_date = query_date - timedelta(days=days_to_fri)
-        friday_items = db.query(HomeworkItem).filter(
+        friday_items = db.query(HomeworkItem).outerjoin(
+            Subject, HomeworkItem.subject_id == Subject.id
+        ).filter(
             HomeworkItem.student_id == student_id,
             HomeworkItem.date == friday_date
-        ).order_by(HomeworkItem.id.asc()).all()
+        ).order_by(
+            Subject.sort_order.asc(),
+            HomeworkItem.id.asc()
+        ).all()
 
         if friday_items:
             fri_completed = sum(1 for it in friday_items if it.is_completed)
