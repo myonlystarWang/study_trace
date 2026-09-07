@@ -13,7 +13,7 @@ from backend.app.schemas import (
     NotificationConfig, NotificationResultOut, NotificationSendOut
 )
 from backend.app.utils.notifier import (
-    send_wxpusher, send_pushplus, send_serverchan, send_bark, send_webhook, send_webpush,
+    send_wechat_sandbox, send_wxpusher, send_pushplus, send_serverchan, send_bark, send_webhook, send_webpush,
     dispatch_notification, build_summary_message
 )
 from backend.app.routers.homework import calculate_streak
@@ -29,7 +29,11 @@ router = APIRouter(
 SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
 
 DEFAULT_CONFIG = {
-    "enabled_channels": ["wxpusher"],
+    "enabled_channels": ["wechat_sandbox"],
+    "wechat_app_id": getattr(settings, "WECHAT_APP_ID", "") or "wx631c06dc9c8a1819",
+    "wechat_app_secret": getattr(settings, "WECHAT_APP_SECRET", "") or "088fa6a0c2d1bc5fdefd152bba06d66d",
+    "wechat_template_id": getattr(settings, "WECHAT_TEMPLATE_ID", "") or "6LSmd6HG59OXRqCoHbzG5pVHPDpi7KcgsHQuFcU3t_E",
+    "wechat_open_ids": getattr(settings, "WECHAT_OPEN_IDS", "") or "oz1nN3D7D2MKPBE0ah2CmroanhVc",
     "wxpusher_app_token": getattr(settings, "WXPUSHER_APP_TOKEN", "") or "AT_1FbRplPKgMYqeZtM8GEN4kkCE3LMGYqQ",
     "wxpusher_topic_id": getattr(settings, "WXPUSHER_TOPIC_ID", "") or "46425",
     "pushplus_token": "",
@@ -49,11 +53,10 @@ def load_notification_config(db: Session) -> dict:
         data = json.loads(setting.value)
         merged = DEFAULT_CONFIG.copy()
         merged.update(data)
-        # 若历史配置中未填充 wxpusher，自动赋予默认配置
-        if not merged.get("wxpusher_app_token") and DEFAULT_CONFIG.get("wxpusher_app_token"):
-            merged["wxpusher_app_token"] = DEFAULT_CONFIG["wxpusher_app_token"]
-        if not merged.get("wxpusher_topic_id") and DEFAULT_CONFIG.get("wxpusher_topic_id"):
-            merged["wxpusher_topic_id"] = DEFAULT_CONFIG["wxpusher_topic_id"]
+        # 自动补全默认的官方测试号凭据
+        for k in ["wechat_app_id", "wechat_app_secret", "wechat_template_id", "wechat_open_ids"]:
+            if not merged.get(k) and DEFAULT_CONFIG.get(k):
+                merged[k] = DEFAULT_CONFIG[k]
         return merged
     except Exception as e:
         logger.error(f"Failed to parse notification_config: {e}")
@@ -109,7 +112,13 @@ async def test_notification_channel(
 
     ch = channel.lower().strip()
 
-    if ch == "wxpusher":
+    if ch == "wechat_sandbox":
+        app_id = payload.get("app_id") if isinstance(payload, dict) and payload.get("app_id") else cfg.get("wechat_app_id", "")
+        app_secret = payload.get("app_secret") if isinstance(payload, dict) and payload.get("app_secret") else cfg.get("wechat_app_secret", "")
+        template_id = payload.get("template_id") if isinstance(payload, dict) and payload.get("template_id") else cfg.get("wechat_template_id", "")
+        open_ids = target if (target and target.strip()) else cfg.get("wechat_open_ids", "")
+        success, msg = await send_wechat_sandbox(app_id, app_secret, template_id, open_ids, title, content)
+    elif ch == "wxpusher":
         app_token = target if (target and target.strip()) else cfg.get("wxpusher_app_token", "")
         top_id = topic_id if (topic_id and str(topic_id).strip()) else cfg.get("wxpusher_topic_id", "")
         success, msg = await send_wxpusher(app_token, str(top_id), title, content)

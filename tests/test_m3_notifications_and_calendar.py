@@ -538,3 +538,78 @@ def test_wxpusher_endpoint_with_parent_pin():
         data = resp.json()
         assert data["channel"] == "wxpusher"
         assert data["success"] is True
+
+
+# ==============================================================================
+# 微信测试号 (Sandbox) 官方直推专用测试
+# ==============================================================================
+@pytest.mark.anyio
+async def test_wechat_sandbox_notification_validation():
+    """验证微信测试号参数校验、Token换取与分发"""
+    # 1. 必填参数校验
+    ok, msg = await notifier.send_wechat_sandbox("", "sec", "tpl", "oid", "标题", "内容")
+    assert ok is False
+    assert "不能为空" in msg
+
+    ok, msg = await notifier.send_wechat_sandbox("appid", "sec", "tpl", "", "标题", "内容")
+    assert ok is False
+    assert "OpenID" in msg
+
+    # 2. 模拟 Token 获取与消息发送成功
+    token_resp = MagicMock()
+    token_resp.json.return_value = {"access_token": "mock_token_123", "expires_in": 7200}
+    send_resp = MagicMock()
+    send_resp.json.return_value = {"errcode": 0, "errmsg": "ok"}
+
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get, \
+         patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+        mock_get.return_value = token_resp
+        mock_post.return_value = send_resp
+
+        ok, msg = await notifier.send_wechat_sandbox(
+            "wx_mock_appid", "mock_sec", "mock_tpl", "oid_father, oid_mother", "作业提醒", "第一行\n第二行"
+        )
+        assert ok is True
+        assert "2" in msg  # 验证广播 2 位家庭成员
+
+        # 验证分发器
+        results = await notifier.dispatch_notification(
+            title="测试",
+            content="内容",
+            channels=["wechat_sandbox"],
+            config={
+                "wechat_app_id": "wx_mock",
+                "wechat_app_secret": "mock_sec",
+                "wechat_template_id": "tpl_mock",
+                "wechat_open_ids": "oid_father"
+            }
+        )
+        assert results["wechat_sandbox"]["success"] is True
+
+
+def test_wechat_sandbox_endpoint_with_parent_pin():
+    """验证通过 /api/notifications/test/wechat_sandbox 接口测试微信沙箱"""
+    token_resp = MagicMock()
+    token_resp.json.return_value = {"access_token": "mock_token_123", "expires_in": 7200}
+    send_resp = MagicMock()
+    send_resp.json.return_value = {"errcode": 0, "errmsg": "ok"}
+
+    with patch("httpx.AsyncClient.get", new_callable=AsyncMock) as mock_get, \
+         patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+        mock_get.return_value = token_resp
+        mock_post.return_value = send_resp
+
+        resp = client.post(
+            "/api/notifications/test/wechat_sandbox",
+            headers=PARENT_PIN_HEADER,
+            json={
+                "target": "oz1nN3D7D2MKPBE0ah2CmroanhVc",
+                "app_id": "wx631c06dc9c8a1819",
+                "app_secret": "088fa6a0c2d1bc5fdefd152bba06d66d",
+                "template_id": "6LSmd6HG59OXRqCoHbzG5pVHPDpi7KcgsHQuFcU3t_E"
+            }
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["channel"] == "wechat_sandbox"
+        assert data["success"] is True

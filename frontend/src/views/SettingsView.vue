@@ -69,14 +69,14 @@
             <van-checkbox-group v-model="notifConfig.enabled_channels" class="channel-grid">
               <div
                 class="channel-select-card"
-                :class="{ 'is-active': notifConfig.enabled_channels.includes('wxpusher') }"
-                @click="toggleChannel('wxpusher')"
+                :class="{ 'is-active': notifConfig.enabled_channels.includes('wechat_sandbox') }"
+                @click="toggleChannel('wechat_sandbox')"
               >
-                <van-checkbox name="wxpusher" shape="square" @click.stop />
+                <van-checkbox name="wechat_sandbox" shape="square" @click.stop />
                 <span class="st-icon-badge st-icon-badge--success channel-badge">
                   <van-icon name="chat-o" />
                 </span>
-                <span class="channel-card-text">微信 (WxPusher)</span>
+                <span class="channel-card-text">微信 (官方测试号)</span>
               </div>
 
               <div
@@ -123,32 +123,52 @@
             <span>请在上方勾选需要启用的渠道，系统将展开对应配置项</span>
           </div>
 
-          <!-- WxPusher 微信推送配置 (按需展示) -->
-          <div class="channel-config-box" v-if="notifConfig.enabled_channels.includes('wxpusher')">
+          <!-- 微信官方测试号配置 (Sandbox) -->
+          <div class="channel-config-box" v-if="notifConfig.enabled_channels.includes('wechat_sandbox')">
             <div class="channel-header">
               <div class="channel-header-left">
                 <span class="st-icon-badge st-icon-badge--success">
                   <van-icon name="chat-o" />
                 </span>
-                <span class="channel-title">微信推送 (WxPusher)</span>
+                <span class="channel-title">微信测试号 (官方直推)</span>
               </div>
-              <span class="st-status-tag st-status-tag--success">免费 1000条/天 · 0认证费</span>
+              <span class="st-status-tag st-status-tag--success">免费 10万次/天 · 官方弹窗</span>
             </div>
             <van-field
-              v-model="notifConfig.wxpusher_app_token"
-              label="AppToken"
+              v-model="notifConfig.wechat_app_id"
+              label="AppID"
               label-width="85px"
               center
               class="channel-field"
-              placeholder="WxPusher 应用 AppToken (AT_xxx)"
+              placeholder="测试号 AppID (wx...)"
             />
             <van-field
-              v-model="notifConfig.wxpusher_topic_id"
-              label="TopicId"
+              v-model="notifConfig.wechat_app_secret"
+              label="Secret"
+              label-width="85px"
+              type="password"
+              center
+              class="channel-field"
+              placeholder="测试号 AppSecret"
+            />
+            <van-field
+              v-model="notifConfig.wechat_template_id"
+              label="模板ID"
               label-width="85px"
               center
               class="channel-field"
-              placeholder="家庭主题 TopicId (如 46425)"
+              placeholder="消息模板 ID"
+            />
+            <van-field
+              v-model="notifConfig.wechat_open_ids"
+              label="接收OpenID"
+              label-width="85px"
+              type="textarea"
+              rows="1"
+              autosize
+              center
+              class="channel-field"
+              placeholder="接收人微信号 OpenID，多个用逗号隔开"
             >
               <template #button>
                 <van-button
@@ -156,8 +176,13 @@
                   type="primary"
                   plain
                   class="channel-test-btn"
-                  :loading="testingChannel === 'wxpusher'"
-                  @click="handleTestChannel('wxpusher', notifConfig.wxpusher_app_token, notifConfig.wxpusher_topic_id)"
+                  :loading="testingChannel === 'wechat_sandbox'"
+                  @click="handleTestChannel('wechat_sandbox', {
+                    target: notifConfig.wechat_open_ids,
+                    app_id: notifConfig.wechat_app_id,
+                    app_secret: notifConfig.wechat_app_secret,
+                    template_id: notifConfig.wechat_template_id
+                  })"
                 >
                   测试推送
                 </van-button>
@@ -165,7 +190,7 @@
             </van-field>
             <div class="channel-caption">
               <van-icon name="info-o" class="caption-icon" />
-              <span>微信扫码关注 WxPusher 服务号并订阅该 Topic 主题即可接收作业提醒与晚报（已默认填入家庭主题）</span>
+              <span>直连微信官方服务器，无任何第三方抽佣收费；家人微信扫测试号二维码关注后，将 OpenID 填入上方（逗号隔开）即可全家同步弹窗接收。</span>
             </div>
           </div>
 
@@ -233,6 +258,10 @@
                 </van-button>
               </template>
             </van-field>
+            <div class="channel-caption">
+              <van-icon name="info-o" class="caption-icon" />
+              <span>支持多台 iPhone：在不同手机安装 Bark 后，将多个 Key 用逗号隔开，全家手机即可同时秒级收到锁屏通知。</span>
+            </div>
           </div>
 
           <!-- 群机器人 Webhook (按需展示) -->
@@ -520,7 +549,11 @@ const pinForm = ref({ oldPin: '', newPin: '' });
 
 // 通知配置状态
 const notifConfig = ref({
-  enabled_channels: ['wxpusher'],
+  enabled_channels: ['wechat_sandbox'],
+  wechat_app_id: 'wx631c06dc9c8a1819',
+  wechat_app_secret: '088fa6a0c2d1bc5fdefd152bba06d66d',
+  wechat_template_id: '6LSmd6HG59OXRqCoHbzG5pVHPDpi7KcgsHQuFcU3t_E',
+  wechat_open_ids: 'oz1nN3D7D2MKPBE0ah2CmroanhVc',
   wxpusher_app_token: 'AT_1FbRplPKgMYqeZtM8GEN4kkCE3LMGYqQ',
   wxpusher_topic_id: '46425',
   pushplus_token: '',
@@ -708,22 +741,19 @@ const handleSaveConfig = async () => {
   }
 };
 
-const handleTestChannel = async (channel, target, topicId) => {
-  if (!target || !target.trim()) {
-    showToast('请先输入要测试的 Token/Key 或链接');
-    return;
-  }
-  if (channel === 'wxpusher' && (!topicId || !String(topicId).trim())) {
-    showToast('请输入 WxPusher 主题 ID (如 46425)');
+const handleTestChannel = async (channel, payload) => {
+  const targetVal = typeof payload === 'string' ? payload : (payload?.target || '');
+  if (!targetVal || !targetVal.trim()) {
+    showToast('请先输入要测试的配置或接收人 OpenID/Key');
     return;
   }
   testingChannel.value = channel;
   try {
-    const res = await notificationApi.testChannel(channel, target, topicId);
+    const res = await notificationApi.testChannel(channel, payload);
     if (res.data.success) {
       showDialog({
         title: '测试发送成功',
-        message: res.data.message || '请查看手机个人微信服务号收到的推送卡片！',
+        message: res.data.message || '请查看手机个人微信收到的推送卡片！',
         confirmButtonText: '好'
       });
     } else {
