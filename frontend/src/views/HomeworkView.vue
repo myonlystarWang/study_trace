@@ -130,7 +130,10 @@
         <div class="rollover-section" v-if="filteredRolloverItems.length > 0">
           <div class="list-section-header rollover-header">
             <div class="rollover-title-box">
-              <span class="list-title">周末顺延大作业 ({{ filteredRolloverItems.length }} 项)</span>
+              <span class="st-icon-badge st-icon-badge--warning">
+                <van-icon name="clock-o" />
+              </span>
+              <span class="section-title">周末顺延大作业 ({{ filteredRolloverItems.length }} 项)</span>
               <span class="rollover-badge-tag">
                 <van-icon name="underway-o" /> 来自周五 · 截止周日晚
               </span>
@@ -207,9 +210,14 @@
         <!-- 分区2：今日独立任务/当日作业 -->
         <div class="today-section" v-if="filteredItems.length > 0">
           <div class="list-section-header" :class="{ 'with-top-margin': filteredRolloverItems.length > 0 }">
-            <span class="list-title">
-              {{ filteredRolloverItems.length > 0 ? '今日独立任务' : '待办作业' }} ({{ filteredItems.length }} 项)
-            </span>
+            <div class="list-title-box">
+              <span class="st-icon-badge st-icon-badge--primary">
+                <van-icon name="todo-list-o" />
+              </span>
+              <span class="section-title">
+                {{ filteredRolloverItems.length > 0 ? '今日独立任务' : '待办作业' }} ({{ filteredItems.length }} 项)
+              </span>
+            </div>
             <span class="swipe-hint" v-if="filteredRolloverItems.length === 0">
               <van-icon name="exchange" /> 左滑卡片呼出操作
             </span>
@@ -873,8 +881,14 @@ onMounted(async () => {
   padding: 0 4px;
 }
 
+.list-title-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .list-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--st-text-primary, #0f172a);
 }

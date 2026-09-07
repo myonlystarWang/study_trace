@@ -85,7 +85,7 @@
             <span class="st-icon-badge st-icon-badge--primary">
               <van-icon name="chart-trending-o" />
             </span>
-            <span class="card-title">成绩走势分析</span>
+            <span class="section-title">成绩走势分析</span>
           </div>
           <span class="card-sub">{{ selectedSubjectName }} 满分率变动</span>
         </div>
@@ -127,7 +127,7 @@
             <span class="st-icon-badge st-icon-badge--info">
               <van-icon name="aim" />
             </span>
-            <span class="card-title">均衡学力雷达</span>
+            <span class="section-title">均衡学力雷达</span>
           </div>
           <div class="radar-exam-selector">
             <select v-model="selectedRadarExamId" @change="fetchRadarData" class="custom-select">
@@ -162,7 +162,7 @@
             <span class="st-icon-badge st-icon-badge--info">
               <van-icon name="records" />
             </span>
-            <span class="card-title">考试历史台账</span>
+            <span class="section-title">考试历史台账</span>
             <span class="ledger-count">({{ examList.length }} 场)</span>
           </div>
         </div>

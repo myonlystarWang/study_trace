@@ -46,7 +46,7 @@
             <span class="st-icon-badge st-icon-badge--primary">
               <van-icon name="volume-o" />
             </span>
-            <span>推送提醒设置</span>
+            <span class="section-title">推送提醒设置</span>
           </div>
 
           <!-- 时段说明 -->
@@ -236,7 +236,7 @@
             <span class="st-icon-badge st-icon-badge--purple">
               <van-icon name="apps-o" />
             </span>
-            <span>学科与满分管理</span>
+            <span class="section-title">学科与满分管理</span>
           </div>
 
           <div class="card-hint-text">
@@ -276,7 +276,7 @@
             <span class="st-icon-badge st-icon-badge--info">
               <van-icon name="chart-trending-o" />
             </span>
-            <span>月度打卡透视</span>
+            <span class="section-title">月度打卡透视</span>
           </div>
 
           <div class="monthly-analytics-box">
@@ -336,7 +336,7 @@
             <span class="st-icon-badge st-icon-badge--success">
               <van-icon name="shield-o" />
             </span>
-            <span>数据备份恢复</span>
+            <span class="section-title">数据备份恢复</span>
           </div>
           <van-cell title="全站数据导出备份" is-link label="包含 SQLite 数据库与所有错题高清原图" @click="handleExportBackup" />
           <van-cell title="从备份 Zip 包还原" label="恢复前将自动在本地创建数据快照">
@@ -355,7 +355,7 @@
             <span class="st-icon-badge st-icon-badge--neutral">
               <van-icon name="setting-o" />
             </span>
-            <span>安全口令与关于</span>
+            <span class="section-title">安全口令与关于</span>
           </div>
           <van-cell title="修改管理口令" is-link icon="lock" @click="showChangePin = true" />
           <van-cell title="系统关于与运行自检" is-link icon="info-o" @click="$router.push('/about')" />

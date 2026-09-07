@@ -23,7 +23,7 @@
           <span class="st-icon-badge st-icon-badge--success">
             <van-icon name="passed" />
           </span>
-          <span>核心运行架构与服务自检</span>
+          <span class="section-title">核心运行架构与服务自检</span>
         </div>
         <van-cell-group :border="false">
           <van-cell title="后端架构" label="Python 3.11 + FastAPI + Alembic">

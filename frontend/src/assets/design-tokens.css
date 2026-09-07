@@ -98,10 +98,19 @@
 }
 
 .st-section-header h3,
-.st-section-header .section-title {
+.st-section-header .section-title,
+.st-section-header > span:not(.st-icon-badge):not(.header-action) {
   font-size: 15px;
   font-weight: 600;
-  color: var(--st-text-primary);
+  color: var(--st-text-primary, #0f172a);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--st-text-primary, #0f172a);
   margin: 0;
   line-height: 1.4;
 }

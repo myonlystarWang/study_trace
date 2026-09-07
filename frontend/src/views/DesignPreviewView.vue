@@ -95,7 +95,12 @@
       <!-- 作业列表提示与卡片区 (已彻底隔离滑动手势，保证卡片侧滑操作绝不误触上方日期) -->
       <div class="homework-list-wrapper">
         <div class="list-section-header">
-          <span class="list-title">待办作业 ({{ homeworkList.length }} 项)</span>
+          <div class="list-title-box">
+            <span class="st-icon-badge st-icon-badge--primary">
+              <van-icon name="todo-list-o" />
+            </span>
+            <span class="section-title">待办作业 ({{ homeworkList.length }} 项)</span>
+          </div>
           <span class="swipe-hint">
             <van-icon name="exchange" /> 左滑卡片呼出操作
           </span>
@@ -910,6 +915,12 @@ const getSubjectBadgeClass = getSubjectTagClass;
   justify-content: space-between;
   margin-bottom: 10px;
   padding: 0 4px;
+}
+
+.list-title-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .list-title {
