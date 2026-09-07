@@ -167,7 +167,7 @@
     </van-pull-refresh>
     </div>
 
-    <!-- 批量管理模式：底部三合一操作栏 [退出管理] [全选/取消全选] [批量删除 (X)] -->
+    <!-- 批量管理模式：底部三合一操作栏 [退出] [全选/取消全选] [批量删除 (X)] -->
     <div class="floating-bottom-bar st-frosted-bar" v-if="isBatchMode">
       <div class="mistake-bottom-actions">
         <van-button
@@ -176,7 +176,7 @@
           class="action-btn-secondary st-action-btn st-action-btn--secondary"
           @click="toggleBatchMode"
         >
-          退出管理
+          退出
         </van-button>
         <van-button
           round
@@ -184,7 +184,7 @@
           class="action-btn-secondary st-action-btn st-action-btn--secondary"
           @click="toggleSelectAll"
         >
-          {{ selectedIds.length === mistakes.length && mistakes.length > 0 ? '取消全选' : '全选全部' }}
+          {{ selectedIds.length === mistakes.length && mistakes.length > 0 ? '取消全选' : '全选' }}
         </van-button>
         <van-button
           type="danger"
@@ -226,7 +226,7 @@
           class="action-btn-secondary action-btn-paper st-action-btn st-action-btn--accent"
           @click="router.push('/paper')"
         >
-          周末组卷
+          组卷
         </van-button>
       </div>
     </div>

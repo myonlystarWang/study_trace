@@ -2,7 +2,7 @@
   <div class="score-view">
     <!-- 顶部导航栏 -->
     <van-nav-bar
-      title="学情成绩分析"
+      title="学情成绩"
     />
 
     <div class="score-content">
