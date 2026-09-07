@@ -1,20 +1,24 @@
 <template>
   <div class="mistake-view">
-    <!-- 顶部主标签页切换与周末组卷快捷入口 -->
-    <div class="mistake-header-bar">
-      <van-tabs v-model:active="activeTab" color="#2563eb" line-width="36px" shrink @change="onTabChange" class="mistake-tabs">
-        <van-tab
-          title="今日复习"
-          :badge="reviewQueueCount > 0 ? reviewQueueCount : null"
-          name="review"
-        />
-        <van-tab title="错题总库" name="all" />
-      </van-tabs>
-      <div class="paper-quick-btn" @click="$router.push('/paper')">
-        <van-icon name="notes-o" />
-        <span>周末组卷</span>
+    <!-- 顶部导航栏 -->
+    <van-nav-bar
+      title="错题复习本"
+      right-text="周末组卷"
+      @click-right="$router.push('/paper')"
+    />
+
+    <div class="mistake-content">
+      <!-- 顶部主标签页切换 -->
+      <div class="mistake-header-bar">
+        <van-tabs v-model:active="activeTab" color="#2563eb" line-width="36px" @change="onTabChange" class="mistake-tabs">
+          <van-tab
+            title="今日复习"
+            :badge="reviewQueueCount > 0 ? reviewQueueCount : null"
+            name="review"
+          />
+          <van-tab title="错题总库" name="all" />
+        </van-tabs>
       </div>
-    </div>
 
     <!-- 学科与状态筛选栏 (Chips) -->
     <div class="filter-section">
@@ -134,6 +138,7 @@
         <van-empty :description="activeTab === 'review' ? '今日推荐复习已全部完成！太棒了' : '暂无相关错题'" />
       </div>
     </van-pull-refresh>
+    </div>
 
     <!-- 底部常驻磨砂悬浮录入栏 -->
     <div class="floating-bottom-bar st-frosted-bar">
@@ -502,24 +507,26 @@ onMounted(async () => {
 .mistake-view {
   flex: 1;
   background-color: var(--st-bg-page, #f8fafc);
-  padding: 12px 14px 16px;
+  display: flex;
+  flex-direction: column;
 }
 
-/* 顶部导航与组卷入口 */
+.mistake-content {
+  padding: 12px 14px 100px;
+}
+
+/* 顶部标签页切换条 */
 .mistake-header-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: 12px;
   background: var(--st-bg-card, #ffffff);
   border-radius: var(--st-radius-lg, 14px);
-  padding: 2px 10px;
+  padding: 2px 6px;
   border: 1px solid var(--st-border, #f1f5f9);
   box-shadow: var(--st-shadow-card, 0 1px 3px rgba(15, 23, 42, 0.04));
 }
 
 .mistake-tabs {
-  flex: 1;
+  width: 100%;
 }
 
 .mistake-tabs :deep(.van-tabs__nav) {
@@ -527,29 +534,9 @@ onMounted(async () => {
 }
 
 .mistake-tabs :deep(.van-tab) {
-  padding: 0 14px;
-  font-size: 14px;
-}
-
-.paper-quick-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--st-primary-light, #eff6ff);
-  color: var(--st-primary, #2563eb);
-  padding: 6px 12px;
-  border-radius: var(--st-radius-full, 9999px);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid rgba(37, 99, 235, 0.2);
-  white-space: nowrap;
-  transition: all 0.15s ease;
-}
-
-.paper-quick-btn:active {
-  background: #dbeafe;
-  transform: scale(0.97);
+  padding: 0 16px;
+  font-size: 15px;
+  font-weight: 500;
 }
 
 /* 筛选栏 */
@@ -712,12 +699,15 @@ onMounted(async () => {
 /* 底部常驻悬浮栏 */
 .floating-bottom-bar {
   position: fixed;
-  bottom: 50px;
+  bottom: calc(50px + env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
   max-width: 500px;
   margin: 0 auto;
-  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  padding: 8px 16px;
+  background: linear-gradient(to top, rgba(248, 250, 252, 0.96) 80%, rgba(248, 250, 252, 0));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 40;
 }
 

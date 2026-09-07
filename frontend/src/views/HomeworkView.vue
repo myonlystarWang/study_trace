@@ -59,7 +59,7 @@
           <span class="day-number">{{ day.dateNumber }}</span>
           <span 
             class="day-dot" 
-            :class="{ completed: day.isSelected ? (rate === 100 && totalCount > 0) : false }"
+            :class="'dot-' + (day.status || 'gray')"
           ></span>
         </div>
       </div>
@@ -316,7 +316,7 @@
       v-model:show="showAddModal"
       :subjects="subjects"
       :date-str="currentDate"
-      @added="fetchHomework"
+      @added="handleHomeworkAdded"
     />
 
     <!-- 月历打卡浮窗组件 -->
@@ -378,6 +378,7 @@ const showCalendar = ref(false);
 const showEditModal = ref(false);
 const editingItem = ref(null);
 const editContent = ref('');
+const calendarStatusMap = ref({});
 
 const isToday = computed(() => {
   return currentDate.value === new Date().toISOString().split('T')[0];
@@ -404,11 +405,33 @@ const weekDays = computed(() => {
       label: labels[i],
       dateNumber: d.getDate().toString(),
       isToday: dateStr === todayStr,
-      isSelected: dateStr === currentDate.value
+      isSelected: dateStr === currentDate.value,
+      status: calendarStatusMap.value[dateStr] || 'gray'
     });
   }
   return list;
 });
+
+// 批量抓取周历涉及月份的打卡状态点
+const fetchWeekStatus = async () => {
+  const months = new Set();
+  weekDays.value.forEach((day) => {
+    months.add(day.dateStr.substring(0, 7));
+  });
+
+  try {
+    for (const m of months) {
+      const res = await homeworkApi.getCalendar(m);
+      if (res.data?.days) {
+        res.data.days.forEach((d) => {
+          calendarStatusMap.value[d.date] = d.status;
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Failed to fetch week status:', err);
+  }
+};
 
 const filteredItems = computed(() => {
   if (!selectedSubject.value) return items.value;
@@ -450,6 +473,7 @@ const changeWeek = (offset) => {
   d.setDate(d.getDate() + offset * 7);
   currentDate.value = d.toISOString().split('T')[0];
   fetchHomework();
+  fetchWeekStatus();
   showToast({ message: `${d.getMonth() + 1}月${d.getDate()}日所在周`, position: 'top', duration: 800 });
 };
 
@@ -471,6 +495,12 @@ const handleTouchEnd = (e) => {
 const handleDateSelect = (dateStr) => {
   currentDate.value = dateStr;
   fetchHomework();
+  fetchWeekStatus();
+};
+
+const handleHomeworkAdded = async () => {
+  await fetchHomework();
+  await fetchWeekStatus();
 };
 
 const fetchSubjects = async () => {
@@ -492,6 +522,19 @@ const fetchHomework = async () => {
     streak.value = res.data.streak;
     items.value = res.data.items;
     weekendRollover.value = res.data.weekend_rollover || null;
+
+    // 实时更新当前日期的打卡状态点
+    let currentStatus = 'gray';
+    if (totalCount.value > 0) {
+      if (completedCount.value === totalCount.value) {
+        currentStatus = 'green';
+      } else if (completedCount.value > 0) {
+        currentStatus = 'yellow';
+      } else {
+        currentStatus = 'red';
+      }
+    }
+    calendarStatusMap.value[currentDate.value] = currentStatus;
   } catch (e) {
     showToast('加载作业失败');
   } finally {
@@ -566,6 +609,7 @@ const handleDelete = (item) => {
 onMounted(async () => {
   await fetchSubjects();
   await fetchHomework();
+  await fetchWeekStatus();
 });
 </script>
 
@@ -573,7 +617,7 @@ onMounted(async () => {
 .homework-view {
   flex: 1;
   background-color: var(--st-bg-page, #f8fafc);
-  padding: 12px 14px 16px;
+  padding: 12px 14px 100px;
 }
 
 /* 顶栏信息 */
@@ -689,10 +733,11 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 8px 2px;
+  padding: 5px 2px 4px;
+  min-height: 48px;
   background-color: var(--st-bg-card, #ffffff);
   border: 1px solid var(--st-border, #f1f5f9);
-  border-radius: var(--st-radius-md, 10px);
+  border-radius: 9px;
   box-shadow: var(--st-shadow-card, 0 1px 3px rgba(15, 23, 42, 0.04));
   cursor: pointer;
   transition: all 0.15s ease;
@@ -706,17 +751,19 @@ onMounted(async () => {
 
 .week-day-pill .day-label {
   font-size: 11px;
+  line-height: 1;
   color: var(--st-text-muted, #94a3b8);
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
 
 .week-day-pill.active .day-label {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .week-day-pill .day-number {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+  line-height: 1.1;
   color: var(--st-text-primary, #0f172a);
 }
 
@@ -725,19 +772,48 @@ onMounted(async () => {
 }
 
 .week-day-pill .day-dot {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  margin-top: 4px;
-  background-color: transparent;
+  margin-top: 3px;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
-.week-day-pill .day-dot.completed {
-  background-color: var(--st-success, #10b981);
+.week-day-pill .day-dot.dot-green {
+  background-color: #10b981;
 }
 
-.week-day-pill.active .day-dot.completed {
-  background-color: #ffffff;
+.week-day-pill .day-dot.dot-yellow {
+  background-color: #f59e0b;
+}
+
+.week-day-pill .day-dot.dot-red {
+  background-color: #ef4444;
+}
+
+.week-day-pill .day-dot.dot-gray {
+  background-color: #cbd5e1;
+}
+
+/* 选中高亮状态下的状态指示点 */
+.week-day-pill.active .day-dot.dot-green {
+  background-color: #34d399;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
+}
+
+.week-day-pill.active .day-dot.dot-yellow {
+  background-color: #fde047;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
+}
+
+.week-day-pill.active .day-dot.dot-red {
+  background-color: #f87171;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
+}
+
+.week-day-pill.active .day-dot.dot-gray {
+  background-color: rgba(255, 255, 255, 0.45);
 }
 
 /* 进度概览卡片 */
@@ -812,7 +888,7 @@ onMounted(async () => {
 }
 
 .homework-list-wrapper {
-  padding-bottom: 84px; /* 避让底部悬浮操作栏与 Tabbar，确保最后一个卡片完整呈现不被截断 */
+  padding-bottom: 12px;
 }
 
 .rollover-section {
@@ -997,8 +1073,8 @@ onMounted(async () => {
 }
 
 .week-nav-arrow {
-  width: 24px;
-  height: 50px;
+  width: 20px;
+  height: 44px;
   border: none;
   background: transparent;
   color: var(--st-text-muted, #94a3b8);
@@ -1031,12 +1107,15 @@ onMounted(async () => {
 /* 底部常驻悬浮栏 */
 .floating-bottom-bar {
   position: fixed;
-  bottom: 50px;
+  bottom: calc(50px + env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
   max-width: 500px;
   margin: 0 auto;
-  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  padding: 8px 16px;
+  background: linear-gradient(to top, rgba(248, 250, 252, 0.96) 80%, rgba(248, 250, 252, 0));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   gap: 10px;

@@ -3,7 +3,6 @@
     :show="show"
     position="bottom"
     round
-    closeable
     :style="{ maxHeight: '80%' }"
     @update:show="$emit('update:show', $event)"
   >
