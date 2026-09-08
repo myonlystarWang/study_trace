@@ -190,7 +190,7 @@ schtasks /create /tn "StudyTrace" /tr "wscript.exe D:\工作\ww\personal_work\st
 | 3.1 | iPhone Safari 打开固定域名 | 页面正常加载，非 localhost |
 | 3.2 | 添加到主屏幕（PWA） | 全屏独立运行、图标正常 |
 | 3.3 | 完整业务闭环 | 录入作业 → 打卡 → 拍照错题 → OCR → 周末组卷，全链路通过 |
-| 3.4 | 推送渠道实测 | Bark / PushPlus 能收到提醒 |
+| 3.4 | 推送渠道实测 | 微信官方测试号 (Sandbox) / iOS Bark / 群机器人 能正常收到原生弹窗提醒与家庭全员广播 |
 | 3.5 | HTTPS 与证书 | 地址栏无证书警告（影响 PWA 与 Web Push） |
 
 ---

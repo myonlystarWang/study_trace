@@ -10,7 +10,7 @@
 | **真并发分发器（P0-2 整改）** | `asyncio.gather` 并发触发 | 彻底废除 `for...await` 串行遍历；实测多通道并发触发总耗时由 4s 骤降至 ≈0.2s，严格兑现 DoD 原文"并行触发"要求 |
 | **测试库环境隔离（P0-3 整改）** | `tests/conftest.py` Session 级独立 SQLite | 测试运行自动切入 `data/temp/test_study_trace.db`，实测跑完生产库 `data/study_trace.db` 污染数量为 0，彻底消除测试清空生产作业的灾难隐患 |
 | **调度锁真性断言（P0-4 整改）** | 同进程重入保护 + `assert second_locked is False` | 调度锁增加重入检测，测试用例增加硬核断言与释放后重获验证，坚决杜绝假性通过 |
-| **微信服务号中转** | `PushPlus`（微信首选，实名免费200条/天）+ `Server酱` | 全家直达个人微信，免装 App；原生支持家庭多成员建群推送；附带唯一时间戳序列号彻底防静默丢弃 |
+| **微信官方直推 (Sandbox)** | 腾讯微信官方公众平台接口测试号 | 彻底摒弃第三方中转（0元免认证、10万次/天额度）；原生模板消息弹窗与提示音直达个人微信；支持家庭成员多 OpenID 结构化卡片管理（爸爸/妈妈独立测试与并发广播）；卡片原生支持 URL 点击一键跳转 |
 | **分时分级调度引擎** | `backend/app/scheduler.py` | APScheduler 严格锁定 `Asia/Shanghai` 时区；20:10 / 21:10 满卡免打扰静默跳过；21:50 发送结构化战报喜报；Windows 原生 `msvcrt` 文件锁守护 dev reload 防重 |
 | **数据库级幂等约束** | `NotificationLog` 复合唯一约束 | 针对 SQLite 方言限制，严格手写 Alembic `batch_alter_table` 迁移通过表重建安全落地 |
 | **月度打卡日历接口** | `GET /api/homework/calendar?month=YYYY-MM` | 单条 SQL 聚合月度完成度，响应耗时 ≤ 50ms（实测 ~5ms）；精准映射 `green` / `yellow` / `red` / `gray` 四色 |
@@ -34,7 +34,7 @@
   3. `test_midway_reminder_skips_when_completed`: 验证中途时段作业全完成时自动静默跳过免打扰。PASSED
   4. `test_reminder_contains_uncompleted_items`: 验证催办提醒内容中包含未完成作业的学科与题干。PASSED
   5. `test_evening_summary_dispatches_when_completed`: 验证晚间 21:50 满卡时依然正常分发「🎉 今日作业满卡完成！」喜报。PASSED
-  6. `test_wechat_pushplus_and_serverchan`: 验证 PushPlus 报文构造、防重序列号与未实名 905 错误解析。PASSED
+  6. `test_wechat_sandbox_notification`: 验证微信官方测试号 access_token 缓存自愈、多 OpenID 解析、模板消息拼装及直跳 URL。PASSED
   7. `test_bark_notification`: 验证 Bark 推送构造、group='学迹'及 HTTP 200 业务报错判断。PASSED
   8. `test_webhook_adapter_and_error_handling`: 验证 Webhook 错误格式中文提示与企微/钉钉/飞书格式适配。PASSED
   9. `test_multichannel_fault_tolerance`: 验证通道 A 抛出异常不阻塞通道 B 送达。PASSED

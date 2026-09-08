@@ -25,14 +25,25 @@
    - 实现 `send_wechat_sandbox`：支持逗号/换行分隔多个家庭成员 `OpenID`，异步并发并行群发，全家人微信秒级同步弹窗。
    - 调度分发引擎 `dispatch_notification` 将 `wechat_sandbox` 设为默认推荐首选渠道。
    - 凭据持久化：`WECHAT_APP_ID`、`WECHAT_APP_SECRET`、`WECHAT_TEMPLATE_ID`、`WECHAT_OPEN_IDS` 完整持久化至 `.env` 与 `data/.env`。
-3. **iOS Bark 多设备群发增强**：
-   - 针对用户提出的全家多台 iPhone 同时接收诉求，升级 `send_bark` 支持逗号、换行分隔多个 Key，单次配置即可并行唤醒全家苹果设备。
-4. **前端设置视图升级 (SettingsView.vue)**：
-   - 通知设置面板将首选渠道升级为 `微信 (官方测试号)`，展示“免费 10万次/天 · 官方弹窗”。
-   - 提供专属 AppID、Secret、模板ID 与接收人 OpenIDs 表单，并内嵌即时「测试推送」按钮。
+   - 实现 `parse_wechat_open_ids`：不仅支持标准纯逗号格式，更深度支持结构化带称谓语法（如 `爸爸:oz1nN3D7...` 或 JSON 列表），推送时在模板消息中个性化尊称展示。
+3. **前端家庭成员结构化卡片管理 (SettingsView.vue)**：
+   - 彻底解决一长串冷冰冰的 OpenID 字符串混在文本框中难以辨认谁是谁的痛点。
+   - 重构为精致的**「微信接收成员列表」卡片**：
+     - 每个成员以独立卡片展示编号（#1、#2）、称谓（如“爸爸”、“妈妈”）与 OpenID。
+     - 支持为每个成员单独点击「测试」，仅推给该成员手机进行连通性确认。
+     - 支持单人一键移除与「添加家庭成员」轻量新增。
+     - 底部提供「全员广播测试」与「立即发送今日汇总」一键群发按钮。
    - 前端代码重新完成生产构建打包发布（`npm run build`）。
-5. **自动化测试与远程入库**：
-   - 在 `tests/test_m3_notifications_and_calendar.py` 中新增微信沙箱参数校验、Token 自动换取与多 OpenID 广播的单元测试，19 项用例全部通过。
+4. **iOS Bark 多设备并发群发增强**：
+   - 针对用户提出的全家多台 iPhone 同时接收诉求，升级 `send_bark` 支持逗号、换行分隔多个 Key，单次配置即可并行唤醒全家苹果设备。
+5. **全量项目文档全面对齐与同步**：
+   - 全面同步校准了 `doc/m3_plan.md`、`doc/m3_walkthrough.md`、`doc/development_plan.md`、`doc/implementation_plan.md`、`doc/m6_deployment.md`、`doc/UI Polish plan.md` 及 `README.md`，彻底清除 PushPlus/WxPusher 的历史过时信息，将微信官方测试号与 Bark 多机群发正式确立为生产推荐通道。
+6. **自动化测试套件全量通过**：
+   - 运行测试用例 `pytest tests/test_m3_notifications_and_calendar.py`，包含家长 PIN 拦截、官方测试号 Token 换取、模板消息拼装、卡片直跳 URL 校验与并发测试在内的 19 项用例全部 100% 通过。
+
+---
+
+## [v1.7.1] - 2026-09-07
 ### 微信推送全面升级为 WxPusher（0元认证、日免1000条、家庭群主题推送与双向扩展）
 
 #### 核心改动与落地成果 (Key Features & Delivery)
