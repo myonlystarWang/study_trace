@@ -669,3 +669,88 @@ async def test_weekly_report_dispatch(db_session: Session):
         call_title = mock_dispatch.call_args[0][0]
         assert "学迹学情周报" in call_title
 
+
+@pytest.mark.anyio
+async def test_wechat_sandbox_template_payload_scenarios():
+    """验证微信沙箱模板消息对各个场景（未满卡晚报、满卡喜报、中途催办、错题复习、周报）的精准归类与解析，不发生错位"""
+    captured_payloads = []
+
+    async def mock_post(url, json=None, headers=None, **kwargs):
+        captured_payloads.append(json)
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"errcode": 0, "errmsg": "ok"}
+        return mock_resp
+
+    with patch("backend.app.utils.notifier.get_wechat_access_token", new_callable=AsyncMock) as mock_token, \
+         patch("httpx.AsyncClient.post", side_effect=mock_post):
+        mock_token.return_value = "mock_token"
+
+        # 1. 晚间今日汇总快报 (未满卡/部分完成) -> 必须匹配到场景 D (日报汇总)，绝不能误判为错题复习或催办
+        sum_title, sum_content = notifier.build_summary_message(
+            student_name="王昱轩同学",
+            today_str="2026-09-08",
+            items=[
+                {"subject_name": "数学", "title": "练习册 P10", "is_completed": True, "completed_at": "2026-09-08 20:00:00"},
+                {"subject_name": "英语", "title": "背诵单词", "is_completed": False}
+            ],
+            streak_days=5,
+            ebbinghaus_count=0,
+            force=False
+        )
+        captured_payloads.clear()
+        ok, msg = await notifier.send_wechat_sandbox("appid", "secret", "tpl_id", "openid_1", sum_title, sum_content)
+        assert ok is True
+        assert len(captured_payloads) == 1
+        data = captured_payloads[0]["data"]
+        # 验证 keyword1 包含待完成条目，且 keyword2 包含连续打卡与完成进度
+        assert "待收尾" in data["keyword1"]["value"] or "英语" in data["keyword1"]["value"]
+        assert "1/2" in data["keyword2"]["value"]
+        assert "错题待重练" not in data["keyword1"]["value"]  # 严防误入错题分支
+
+        # 2. 满卡喜报 (100% 完成)
+        full_title, full_content = notifier.build_summary_message(
+            student_name="王昱轩同学",
+            today_str="2026-09-08",
+            items=[{"subject_name": "数学", "title": "练习册 P10", "is_completed": True}],
+            streak_days=5,
+            ebbinghaus_count=0,
+            force=False
+        )
+        captured_payloads.clear()
+        ok, _ = await notifier.send_wechat_sandbox("appid", "secret", "tpl_id", "openid_1", full_title, full_content)
+        assert ok is True
+        data = captured_payloads[0]["data"]
+        assert "100% 满卡完成" in data["keyword2"]["value"]
+
+        # 3. 错题艾宾浩斯抗遗忘提醒
+        eb_title, eb_content = notifier.build_ebbinghaus_message(
+            student_name="王昱轩同学",
+            today_str="2026-09-08",
+            mistakes_by_subject={"数学": 2, "英语": 1},
+            total_due=3
+        )
+        captured_payloads.clear()
+        ok, _ = await notifier.send_wechat_sandbox("appid", "secret", "tpl_id", "openid_1", eb_title, eb_content)
+        assert ok is True
+        data = captured_payloads[0]["data"]
+        assert "3 道错题待重练" in data["keyword1"]["value"]
+        assert "艾宾浩斯" in data["keyword2"]["value"]
+
+        # 4. 中途作业催办提醒
+        rem_title, rem_content = notifier.build_reminder_message(
+            student_name="王昱轩同学",
+            today_str="2026-09-08",
+            uncompleted_items=[{"subject_name": "语文", "title": "古诗文默写"}],
+            total=3,
+            completed=2
+        )
+        captured_payloads.clear()
+        ok, _ = await notifier.send_wechat_sandbox("appid", "secret", "tpl_id", "openid_1", rem_title, rem_content)
+        assert ok is True
+        data = captured_payloads[0]["data"]
+        assert "语文" in data["keyword1"]["value"]
+        assert "古诗文默写" in data["keyword1"]["value"]
+        assert "2/3" in data["keyword2"]["value"]
+
+
