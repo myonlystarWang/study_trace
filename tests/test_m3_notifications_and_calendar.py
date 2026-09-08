@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 
 from backend.app.main import app
 from backend.app.database import SessionLocal
-from backend.app.models import HomeworkItem, Subject, NotificationLog, Setting, Student
+from backend.app.models import HomeworkItem, Subject, NotificationLog, Setting, Student, MistakeRecord
 from backend.app.scheduler import (
     scheduler, setup_scheduler_jobs, check_and_dispatch_homework_reminders,
     acquire_scheduler_lock, release_scheduler_lock, SHANGHAI_TZ
@@ -613,3 +613,59 @@ def test_wechat_sandbox_endpoint_with_parent_pin():
         data = resp.json()
         assert data["channel"] == "wechat_sandbox"
         assert data["success"] is True
+
+
+@pytest.mark.anyio
+async def test_ebbinghaus_reminder_dispatch_and_skip(db_session: Session):
+    """测试艾宾浩斯复习调度：错题为0时静默跳过免打扰，有错题时成功分发"""
+    from backend.app.scheduler import check_and_dispatch_ebbinghaus_reminders
+
+    # 1. 清空错题时，应该 skipped
+    db_session.query(MistakeRecord).delete()
+    db_session.commit()
+
+    res = await check_and_dispatch_ebbinghaus_reminders(db=db_session)
+    assert res["status"] == "skipped"
+
+    # 2. 插入一条今日需复习错题
+    sub = db_session.query(Subject).first()
+    stu = db_session.query(Student).first()
+    today = date.today()
+    mr = MistakeRecord(
+        student_id=stu.id,
+        subject_id=sub.id,
+        source_type="homework",
+        source_reference="数学必刷题第4题",
+        original_image_path="/data/test.png",
+        extracted_text="这是一道错题",
+        error_type="概念模糊",
+        mastery_status="待复习",
+        next_review_date=today
+    )
+    db_session.add(mr)
+    db_session.commit()
+
+    with patch("backend.app.scheduler.dispatch_notification", new_callable=AsyncMock) as mock_dispatch:
+        mock_dispatch.return_value = {"wechat_sandbox": {"success": True, "message": "ok"}}
+        res = await check_and_dispatch_ebbinghaus_reminders(db=db_session)
+        assert res["status"] == "dispatched"
+        assert res["total_due"] >= 1
+        assert mock_dispatch.called
+        call_title = mock_dispatch.call_args[0][0]
+        assert "错题复习提醒" in call_title
+
+
+@pytest.mark.anyio
+async def test_weekly_report_dispatch(db_session: Session):
+    """测试周日晚学情周战报生成与分发"""
+    from backend.app.scheduler import check_and_dispatch_weekly_report
+
+    with patch("backend.app.scheduler.dispatch_notification", new_callable=AsyncMock) as mock_dispatch:
+        mock_dispatch.return_value = {"wechat_sandbox": {"success": True, "message": "ok"}}
+        res = await check_and_dispatch_weekly_report(db=db_session)
+        assert res["status"] == "dispatched"
+        assert "week" in res
+        assert mock_dispatch.called
+        call_title = mock_dispatch.call_args[0][0]
+        assert "学迹学情周报" in call_title
+

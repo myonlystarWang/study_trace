@@ -128,10 +128,92 @@ async def send_wechat_sandbox(
 
     send_url = f"https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={access_token}"
 
-    lines = [l.strip() for l in content.split("\n") if l.strip() and not l.strip().startswith(">")]
-    summary_text = "；".join(lines[:3]) if lines else "今日作业打卡提醒"
-    if len(summary_text) > 80:
-        summary_text = summary_text[:77] + "..."
+    def _build_template_payload_data(display_title: str) -> dict:
+        """根据通知标题与正文智能解析场景，组装带换行与色彩的微信测试号模板数据"""
+        # 1. 场景 A: 作业催办提醒 (未完成待办)
+        if any(k in title for k in ("催办", "待完成", "提醒")) and "满卡" not in title and "全部完成" not in title:
+            # 提取未完成作业列表
+            uncompleted_lines = []
+            for line in content.split("\n"):
+                line_str = line.strip()
+                m = re.search(r"-\s*(?:⏳\s*)?(?:\*\*)?\[(.*?)\](?:\*\*)?\s*(.*)", line_str)
+                if m:
+                    subj, item_name = m.group(1).strip(), m.group(2).strip()
+                    item_name = re.sub(r"\(.*?\)", "", item_name).strip()
+                    uncompleted_lines.append(f"· 【{subj}】{item_name}")
+
+            if uncompleted_lines:
+                if len(uncompleted_lines) <= 3:
+                    kw1_text = "\n".join(uncompleted_lines)
+                else:
+                    kw1_text = "\n".join(uncompleted_lines[:3]) + f"\n· ...等共 {len(uncompleted_lines)} 项未完成"
+            else:
+                kw1_text = "尚有未打卡课业条目待完成"
+
+            # 提取完成进度
+            progress_m = re.search(r"(\d+/\d+\s*项\s*(?:\(\d+%\))?)", content)
+            if progress_m:
+                kw2_text = f"{progress_m.group(1)} (待完成)"
+            else:
+                progress_simple = re.search(r"(\d+/\d+)", content)
+                kw2_text = f"{progress_simple.group(1)} 项已完成" if progress_simple else "部分科目待打卡完成"
+
+            return {
+                "first": {"value": display_title, "color": "#173177"},
+                "keyword1": {"value": kw1_text, "color": "#e11d48"},  # 警示红高亮待办
+                "keyword2": {"value": kw2_text, "color": "#f59e0b"},  # 进度橙
+                "remark": {"value": "距离就寝时间还剩不到 1 小时，请提醒孩子高效收尾。点击进入系统。", "color": "#64748b"}
+            }
+
+        # 2. 场景 B: 满卡喜报
+        elif "满卡" in title or "全部完成" in title or "太棒了" in content:
+            streak_m = re.search(r"连续打卡.*?第\s*(\d+)\s*天", content)
+            streak_info = f"连续打卡第 {streak_m.group(1)} 天 ｜ " if streak_m else ""
+            return {
+                "first": {"value": display_title, "color": "#07c160"},
+                "keyword1": {"value": "今日布置的所有学科作业均已 100% 打卡完成！🎉", "color": "#07c160"},
+                "keyword2": {"value": f"{streak_info}100% 满卡完成 🟢", "color": "#07c160"},
+                "remark": {"value": "孩子今天表现非常自律专注，请及时给予鼓励！点击查看今日详情。", "color": "#64748b"}
+            }
+
+        # 3. 场景 C: 学情周报战报
+        elif "周报" in title or "周战报" in title:
+            # 提取周完成情况
+            days_m = re.search(r"打卡\s*(\d+)\s*天.*?缺卡\s*(\d+)\s*天", content)
+            kw1_text = days_m.group(0) if days_m else "本周课业打卡全景已汇总生成"
+            rate_m = re.search(r"完成率\s*(\d+(?:\.\d+)?%)", content)
+            kw2_text = f"周完成率 {rate_m.group(1)}" if rate_m else "本周打卡表现良好"
+            return {
+                "first": {"value": display_title, "color": "#2563eb"},
+                "keyword1": {"value": kw1_text, "color": "#333333"},
+                "keyword2": {"value": kw2_text, "color": "#10b981"},
+                "remark": {"value": "点击进入学迹系统查看本周学力诊断与下周规划。", "color": "#64748b"}
+            }
+
+        # 4. 场景 D: 错题艾宾浩斯抗遗忘复习
+        elif any(k in title for k in ("复习", "错题", "艾宾浩斯")):
+            due_m = re.search(r"(\d+)\s*道错题", content)
+            due_cnt = due_m.group(1) if due_m else "多"
+            subjs_m = re.search(r"涉及科目[：:](.*?)(?:\n|$)", content)
+            subj_info = f" ({subjs_m.group(1).strip()})" if subjs_m else ""
+            return {
+                "first": {"value": display_title, "color": "#7c3aed"},
+                "keyword1": {"value": f"今日到达复习临界节点：共 {due_cnt} 道错题待重练{subj_info}", "color": "#e11d48"},
+                "keyword2": {"value": "艾宾浩斯抗遗忘周期 (+1d/+3d/+7d)", "color": "#f59e0b"},
+                "remark": {"value": "及时重练错题可降低 80% 遗忘率，点击立即进入重练复习。", "color": "#64748b"}
+            }
+
+        # 5. 通用兜底
+        lines = [l.strip() for l in content.split("\n") if l.strip() and not l.strip().startswith(">")]
+        summary_text = "；".join(lines[:2]) if lines else "今日学迹动态更新"
+        if len(summary_text) > 80:
+            summary_text = summary_text[:77] + "..."
+        return {
+            "first": {"value": display_title, "color": "#173177"},
+            "keyword1": {"value": summary_text, "color": "#333333"},
+            "keyword2": {"value": "学迹提醒通知", "color": "#07c160"},
+            "remark": {"value": "点击进入学迹系统查看详情或完成打卡", "color": "#64748b"}
+        }
 
     async def _send_to_user(name: str, openid: str) -> Tuple[bool, str]:
         # 若单人推送且有姓名，标题展示定制称谓
@@ -143,24 +225,7 @@ async def send_wechat_sandbox(
             "touser": openid,
             "template_id": template_id.strip(),
             "url": url,
-            "data": {
-                "first": {
-                    "value": display_title,
-                    "color": "#173177"
-                },
-                "keyword1": {
-                    "value": summary_text,
-                    "color": "#333333"
-                },
-                "keyword2": {
-                    "value": "打卡进行中 / 提醒",
-                    "color": "#ff9900" if "催办" in title else "#07c160"
-                },
-                "remark": {
-                    "value": "点击进入学迹系统查看详情或完成打卡",
-                    "color": "#666666"
-                }
-            }
+            "data": _build_template_payload_data(display_title)
         }
         try:
             async with httpx.AsyncClient(timeout=TIMEOUT) as client:
@@ -597,3 +662,51 @@ def build_summary_message(
         lines.append("\n💪 仍有部分作业待确认，请结合实际情况安排收尾。")
 
     return title, "\n".join(lines)
+
+
+def build_weekly_report_message(
+    student_name: str,
+    week_range_str: str,
+    completed_days: int,
+    total_days: int,
+    missing_days: List[str],
+    total_items: int,
+    completed_items: int,
+    streak_days: int
+) -> Tuple[str, str]:
+    """构建每周日晚学情周战报 (每周日 21:30)"""
+    rate = f"{(completed_items / total_items * 100):.1f}%" if total_items > 0 else "100%"
+    title = f"📊【学迹学情周报】{student_name} 本周课业打卡战报 ({week_range_str})"
+
+    miss_str = f"（{', '.join(missing_days)} 缺卡）" if missing_days else "（本周全勤无缺卡 🟢）"
+    lines = [
+        f"📅 **统计周期**：{week_range_str}",
+        f"🎯 **打卡完成**：打卡 **{completed_days}/{total_days}** 天 ｜ 缺卡 **{len(missing_days)}** 天 {miss_str}",
+        f"📈 **作业全貌**：本周共 **{total_items}** 项作业，完成 **{completed_items}** 项（完成率 **{rate}**）",
+        f"🔥 **当前连续**：连续打卡达成 **{streak_days}** 天",
+        "",
+        "💡 **家长周度建议**：及时复盘本周薄弱科目，利用周末 A4 重练卷巩固错题，为新一周蓄力！"
+    ]
+    return title, "\n".join(lines)
+
+
+def build_ebbinghaus_message(
+    student_name: str,
+    today_str: str,
+    mistakes_by_subject: Dict[str, int],
+    total_due: int
+) -> Tuple[str, str]:
+    """构建艾宾浩斯错题抗遗忘复习提醒"""
+    title = f"🧠【错题复习提醒】{student_name} 今日有 {total_due} 道错题待复习巩固 ({today_str})"
+    subj_list = [f"{subj} {cnt} 题" for subj, cnt in mistakes_by_subject.items()]
+    subj_text = "、".join(subj_list) if subj_list else "综合学科"
+
+    lines = [
+        f"今日到达抗遗忘复习关键节点：共 **{total_due}** 道错题进入复习窗口 ⏳",
+        f"涉及科目：{subj_text}",
+        "",
+        "根据艾宾浩斯遗忘曲线规律，今日完成巩固可阻断 80% 知识遗忘！",
+        "💪 建议在今晚作业开始前，先花 15 分钟快速重练复习。"
+    ]
+    return title, "\n".join(lines)
+
