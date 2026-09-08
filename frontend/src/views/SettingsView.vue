@@ -446,10 +446,10 @@
               </div>
             </div>
 
-            <!-- 整月每日打卡率走势折线图 -->
+            <!-- 整月每日作业量与打卡率走势混合图 -->
             <div class="monthly-chart-title">
-              <van-icon name="ascending" color="#2563eb" style="margin-right: 4px;" />
-              每日作业打卡率走势 (1~{{ monthlyData?.total_days || 30 }}日)
+              <van-icon name="chart-trending-o" color="#2563eb" style="margin-right: 4px;" />
+              每日作业量与打卡率走势 (1~{{ monthlyData?.total_days || 30 }}日)
             </div>
             <div ref="monthlyTrendChartRef" class="monthly-echarts-container"></div>
 
@@ -1029,62 +1029,120 @@ const fetchMonthlyAnalytics = async () => {
 
 const renderMonthlyCharts = () => {
   nextTick(() => {
-    // 1. 每日打卡率走势折线图
+    // 1. 每日作业量与打卡率走势双轴混合图 (柱状图+折线图)
     if (monthlyTrendChartRef.value) {
       if (!monthlyTrendChartInstance) {
         monthlyTrendChartInstance = echarts.init(monthlyTrendChartRef.value);
       }
       const days = monthlyData.value?.daily_trends?.map(d => `${parseInt(d.date.split('-')[2])}日`) || [];
       const rates = monthlyData.value?.daily_trends?.map(d => (d.total > 0 ? d.rate : null)) || [];
+      const totals = monthlyData.value?.daily_trends?.map(d => (d.total > 0 ? d.total : 0)) || [];
+
+      // 优雅计算 5 的整倍数作为 Y 轴上限，保证刻度均匀且美观 (如 5, 10, 15, 20)
+      const maxTotal = totals.length > 0 ? Math.max(...totals, 4) : 4;
+      const y1Max = Math.max(5, Math.ceil((maxTotal * 1.2) / 5) * 5);
 
       monthlyTrendChartInstance.setOption({
         tooltip: {
           trigger: 'axis',
+          axisPointer: {
+            type: 'shadow',
+            shadowStyle: { color: 'rgba(241, 245, 249, 0.65)' }
+          },
+          backgroundColor: 'rgba(255, 255, 255, 0.96)',
+          borderColor: '#e2e8f0',
+          borderWidth: 1,
+          padding: [8, 10],
+          textStyle: { color: '#0f172a', fontSize: 11 },
           formatter: (params) => {
             const p = params[0];
             const item = monthlyData.value?.daily_trends?.[p.dataIndex];
             if (!item || item.total === 0) {
-              return `<b>${item?.date || ''}</b><br/>当天无作业打卡记录`;
+              return `<b>${item?.date || ''}</b><br/><span style="color:#94a3b8;">当天无作业打卡安排</span>`;
             }
-            return `<b>${item.date}</b><br/>打卡率：${item.rate}%<br/>完成：${item.completed} / ${item.total} 项`;
+            return `
+              <div style="font-size:12px;font-weight:600;margin-bottom:4px;color:#0f172a;">${item.date}</div>
+              <div style="display:flex;align-items:center;gap:6px;margin:2px 0;">
+                <span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:#3b82f6;"></span>
+                <span>作业总量：<b>${item.total}</b> 项 (完成 ${item.completed} 项)</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;margin:2px 0;">
+                <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;"></span>
+                <span>当天打卡率：<b style="color:#10b981;">${item.rate}%</b></span>
+              </div>
+            `;
           }
         },
-        grid: { top: 25, right: 15, bottom: 25, left: 40 },
+        legend: {
+          show: true,
+          top: 0,
+          right: 12,
+          itemWidth: 10,
+          itemHeight: 7,
+          itemGap: 14,
+          textStyle: { fontSize: 10, color: '#64748b' },
+          data: ['作业总量', '打卡率']
+        },
+        grid: { top: 28, right: 38, bottom: 22, left: 28 },
         xAxis: {
           type: 'category',
           data: days,
           axisLabel: { fontSize: 10, color: '#64748b', interval: 4 },
-          axisLine: { lineStyle: { color: '#e2e8f0' } }
+          axisLine: { lineStyle: { color: '#e2e8f0' } },
+          axisTick: { alignWithLabel: true }
         },
-        yAxis: {
-          type: 'value',
-          min: 0,
-          max: 100,
-          axisLabel: { formatter: '{value}%', fontSize: 10, color: '#64748b' },
-          splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } }
-        },
+        yAxis: [
+          {
+            type: 'value',
+            name: '项',
+            nameTextStyle: { fontSize: 9, color: '#94a3b8', padding: [0, 0, 0, -8] },
+            min: 0,
+            max: y1Max,
+            interval: y1Max / 4,
+            axisLabel: { fontSize: 9, color: '#64748b' },
+            splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } }
+          },
+          {
+            type: 'value',
+            min: 0,
+            max: 100,
+            interval: 25,
+            axisLabel: { formatter: '{value}%', fontSize: 9, color: '#10b981' },
+            splitLine: { show: false }
+          }
+        ],
         series: [
+          {
+            name: '作业总量',
+            type: 'bar',
+            yAxisIndex: 0,
+            data: totals,
+            barMaxWidth: 11,
+            itemStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: '#60a5fa' },
+                { offset: 1, color: '#c7d2fe' }
+              ]),
+              borderRadius: [3, 3, 0, 0]
+            }
+          },
           {
             name: '打卡率',
             type: 'line',
+            yAxisIndex: 1,
             data: rates,
-            smooth: true,
+            smooth: 0.25,
             connectNulls: true,
             showSymbol: true,
             symbol: 'circle',
-            symbolSize: 6,
+            symbolSize: 5,
+            z: 3,
             itemStyle: {
               color: '#10b981',
-              borderWidth: 2,
+              borderWidth: 1.5,
               borderColor: '#ffffff'
             },
-            lineStyle: { width: 2.5, color: '#10b981' },
-            areaStyle: {
-              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: 'rgba(16, 185, 129, 0.25)' },
-                { offset: 1, color: 'rgba(16, 185, 129, 0.01)' }
-              ])
-            }
+            lineStyle: { width: 2.2, color: '#10b981' }
           }
         ]
       }, true);
@@ -1685,7 +1743,7 @@ onUnmounted(() => {
 
 .monthly-echarts-container {
   width: 100%;
-  height: 180px;
+  height: 205px;
 }
 
 .monthly-echarts-container.bar-height {
