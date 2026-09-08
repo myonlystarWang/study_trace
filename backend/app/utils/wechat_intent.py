@@ -76,6 +76,106 @@ def generate_wechat_reply_xml(to_user: str, from_user: str, reply_text: str) -> 
 </xml>"""
 
 
+KNOWN_SUBJECT_NAMES = {
+    "语文", "数学", "英语", "物理", "化学", "生物", "历史", "地理", "道法", "政治", "道德与法治",
+    "科学", "信息", "信息技术", "体育", "音乐", "美术", "综合", "劳技"
+}
+
+
+def normalize_text(text: str) -> str:
+    """规范化特殊文本字符：全角空格、不间断空格和特殊连字符"""
+    t = re.sub(r"[\u00a0\u3000\t]+", " ", text or "")
+    t = re.sub(r"[\u2010\u2011\u2012\u2013\u2014\u2212]", "-", t)
+    return t
+
+
+def clean_item_content(content: str) -> str:
+    """剥离前缀条目序号 (如 1. / 1、 / (1) / 1) / ① / - / • / *)"""
+    return re.sub(r"^(?:[①-⑩\d]+[\.、\)]|\([①-⑩\d]+\)|[•\-\*])\s*", "", content).strip()
+
+
+def parse_batch_homework_text(raw_content: str, db_subjects: Optional[List[str]] = None) -> List[Tuple[str, str]]:
+    """
+    解析微信群/微信老师发布的批量多科目作业通知。
+    支持班级群常见格式：
+    语文：
+    1. 预习第三课
+    2. 生字词语1+1
+    数学：
+    1. 打印的习题
+    英语：
+    1. 听写单词
+    """
+    subject_set = set(KNOWN_SUBJECT_NAMES)
+    if db_subjects:
+        subject_set.update(db_subjects)
+
+    norm_content = normalize_text(raw_content or "")
+    lines = [line.strip() for line in norm_content.splitlines()]
+
+    results: List[Tuple[str, str]] = []
+    current_subject: Optional[str] = None
+
+    skip_pattern = re.compile(
+        r"^(?:今日作业|今天作业|各科作业|作业通知|各位家长|请各位家长|请家长|作业如下|温馨提示|大家晚上好|收到请回复|各位同学|【今日作业】|【作业通知】)"
+    )
+
+    subj_header_re = re.compile(
+        r"^(?:[一二三四五六七八九十\d]+[\.、\s\)])?\s*(?:【|\[)?([\u4e00-\u9fa5]{2,6})(?:】|\])?\s*[:：]\s*(.*)$"
+    )
+    subj_single_line_re = re.compile(
+        r"^(?:[一二三四五六七八九十\d]+[\.、\s\)])?\s*(?:【|\[)?([\u4e00-\u9fa5]{2,6})(?:】|\])?$"
+    )
+
+    for line in lines:
+        if not line:
+            continue
+        if skip_pattern.search(line) and not subj_header_re.match(line):
+            continue
+
+        mA = subj_header_re.match(line)
+        if mA:
+            potential_subj = mA.group(1).strip()
+            matched_subj = None
+            if potential_subj in subject_set:
+                matched_subj = potential_subj
+            else:
+                for s in subject_set:
+                    if s in potential_subj or potential_subj in s:
+                        matched_subj = s
+                        break
+            if matched_subj:
+                current_subject = matched_subj
+                rest = mA.group(2).strip()
+                if rest:
+                    clean_rest = clean_item_content(rest)
+                    if clean_rest:
+                        results.append((current_subject, clean_rest))
+                continue
+
+        mB = subj_single_line_re.match(line)
+        if mB:
+            potential_subj = mB.group(1).strip()
+            matched_subj = None
+            if potential_subj in subject_set:
+                matched_subj = potential_subj
+            else:
+                for s in subject_set:
+                    if s in potential_subj or potential_subj in s:
+                        matched_subj = s
+                        break
+            if matched_subj:
+                current_subject = matched_subj
+                continue
+
+        if current_subject:
+            clean_item = clean_item_content(line)
+            if clean_item:
+                results.append((current_subject, clean_item))
+
+    return results
+
+
 async def handle_wechat_inbound_message(
     from_openid: str,
     content: str,
@@ -130,8 +230,8 @@ async def handle_wechat_inbound_message(
             f"· 发送：打卡 物理\n"
             f"· 发送：数学 做完了\n\n"
             f"2️⃣ 快捷录入作业：\n"
-            f"· 发送：新增作业 英语 默写第三单元单词\n"
-            f"· 发送：添加作业 语文 抄写生字生词\n\n"
+            f"· 单项录入：新增作业 英语 默写第三单元单词\n"
+            f"· 批量录入：直接复制微信群老师发的多科作业粘贴发送，自动分科入库！\n\n"
             f"3️⃣ 查看今日作业：\n"
             f"· 发送：今日作业 或 作业清单\n\n"
             f"4️⃣ 查看打卡天数与学情：\n"
@@ -330,7 +430,76 @@ async def handle_wechat_inbound_message(
 
             return reply_msg
 
-    # 7. 未能识别指令时的友好容错反馈
+    # 7. 意图：多科目批量录入作业 (如班级微信群复制粘贴的多科作业通知)
+    batch_items = parse_batch_homework_text(raw_content, [s.name for s in subjects])
+    if batch_items:
+        added_count = 0
+        skipped_count = 0
+        added_by_subject: Dict[str, List[str]] = {}
+
+        for subj_name, item_content in batch_items:
+            # 查找或创建对应学科
+            subject = db.query(Subject).filter(Subject.name == subj_name).first()
+            if not subject:
+                subject = db.query(Subject).filter(Subject.name.like(f"%{subj_name}%")).first()
+            if not subject:
+                subject = Subject(name=subj_name)
+                db.add(subject)
+                db.flush()
+
+            # 查重：避免同一天录入完全重复的作业
+            existing = db.query(HomeworkItem).filter(
+                HomeworkItem.student_id == student_id,
+                HomeworkItem.subject_id == subject.id,
+                HomeworkItem.date == today,
+                HomeworkItem.content == item_content
+            ).first()
+
+            if existing:
+                skipped_count += 1
+                continue
+
+            new_item = HomeworkItem(
+                student_id=student_id,
+                subject_id=subject.id,
+                date=today,
+                content=item_content,
+                is_completed=False
+            )
+            db.add(new_item)
+            added_count += 1
+            added_by_subject.setdefault(subject.name, []).append(item_content)
+
+        db.commit()
+
+        # 统计今日全盘作业总数
+        total_now = db.query(HomeworkItem).filter(
+            HomeworkItem.student_id == student_id,
+            HomeworkItem.date == today
+        ).count()
+
+        if added_count == 0 and skipped_count > 0:
+            return (
+                f"💡 提示：检测到这批作业（共 {skipped_count} 项）今日此前已全部录入，无需重复添加！\n"
+                f"回复【今日作业】可查阅当前清单，回复【学科 完成】可快速打卡。"
+            )
+
+        reply_lines = [f"📝 批量作业录入成功！本次新增 {added_count} 项作业：\n"]
+        for sname, items_list in added_by_subject.items():
+            reply_lines.append(f"【{sname}】({len(items_list)}项)")
+            for idx, c in enumerate(items_list, 1):
+                reply_lines.append(f"{idx}. {c}")
+            reply_lines.append("")
+
+        if skipped_count > 0:
+            reply_lines.append(f"（注：另有 {skipped_count} 项作业今日已在清单中，已自动去重跳过）\n")
+
+        reply_lines.append(f"📅 今日作业清单已更新（共 {total_now} 项）。")
+        reply_lines.append("💪 孩子完成后，直接回复【学科 完成】即可快速打卡。")
+
+        return "\n".join(reply_lines).strip()
+
+    # 8. 未能识别指令时的友好容错反馈
     return (
         f"🤖 收到来自{sender_name}的消息：\n“{raw_content}”\n\n"
         f"未能准确识别指令。建议您：\n"
