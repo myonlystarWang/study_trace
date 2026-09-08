@@ -119,11 +119,12 @@ cloudflared tunnel create study-trace
 # ★ 记录此 UUID
 ```
 
-**1.4 编写 `config.yml`**（路径 `%USERPROFILE%\.cloudflared\config.yml`）
+**1.4 编写 `config.yml`**（项目级隔离路径：`config\cloudflared\config.yml`）
 
 ```yaml
 tunnel: <Tunnel-UUID>
-credentials-file: C:\Users\<用户名>\.cloudflared\<Tunnel-UUID>.json
+credentials-file: D:\工作\ww\personal_work\study_trace\config\cloudflared\<Tunnel-UUID>.json
+protocol: http2
 
 ingress:
   - hostname: study.raddishlab.tech
@@ -137,12 +138,12 @@ ingress:
 cloudflared tunnel route dns study-trace study.raddishlab.tech
 ```
 
-**1.6 安装为 Windows 服务（推荐，比手动 `run` 稳定）**
+**1.6 注册为 Windows 系统服务（NSSM 方案，项目级独立隔离）**
 
-```powershell
-cloudflared service install
-# 服务方式常驻，开机自启、崩溃自动重启
-```
+采用 `C:\tools\nssm\nssm.exe` 统一注册为独立服务，避免多项目冲突：
+- `StudyTraceCloudflared`：带 `--config` 参数独立运行本项目的隧道。
+- `StudyTrace`：托管 Python 后端。
+一键安装脚本：以管理员身份执行 `scripts\install-studytrace-services.ps1`。
 
 **1.7 验证**
 
@@ -166,15 +167,13 @@ powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0
 powercfg /setactive SCHEME_CURRENT
 ```
 
-**2.2 StudyTrace 开机自启**
+**2.2 StudyTrace 与 Cloudflared 开机自启（NSSM 服务）**
 
-推荐用计划任务 + 静默 vbs（避免黑框被误关）：
-
-```powershell
-schtasks /create /tn "StudyTrace" /tr "wscript.exe D:\工作\ww\personal_work\study_trace\start-silent.vbs" /sc onlogon /rl highest /f
-```
-
-> 备选：NSSM 包装为 Windows 服务，配置 failure 自动重启。
+已全面废弃旧版 VBS/Startup 方案，通过 NSSM 注册为系统级服务：
+- 账号：`LocalSystem`（彻底免密，重启后无需登录 Windows 即可自动拉起）
+- 启动类型：`SERVICE_DELAYED_AUTO_START`（开机延迟启动，等待网络就绪）
+- 守护机制：`AppRestartDelay 5000`（异常崩溃 5 秒自动重启自愈）
+- 日志输出：`data\studytrace-*.log` 与 `data\cloudflared-*.log`
 
 **2.3 外部存活探测**
 

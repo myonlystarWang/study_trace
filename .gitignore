@@ -29,6 +29,8 @@ data/uploads/
 data/backups/
 data/exports/
 data/temp/
+data/*.log
+*.log
 tests/samples/_bench/
 
 # IDE
@@ -47,3 +49,5 @@ $RECYCLE.BIN/
 # Tooling
 .workbuddy/
 
+# Cloudflared credentials
+config/cloudflared/*.json

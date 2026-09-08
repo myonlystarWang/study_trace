@@ -1,0 +1,10 @@
+tunnel: b0a81d67-112b-48e9-b953-98215e248290
+credentials-file: D:\工作\ww\personal_work\study_trace\config\cloudflared\b0a81d67-112b-48e9-b953-98215e248290.json
+
+# 强制 TCP 443 走 http2，避免 QUIC(UDP) 代理环境不稳定
+protocol: http2
+
+ingress:
+  - hostname: study.raddishlab.tech
+    service: http://127.0.0.1:28000
+  - service: http_status:404
