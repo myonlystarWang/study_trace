@@ -116,7 +116,7 @@ async def handle_wechat_inbound_message(
 
     # 获取学生信息
     student = db.query(Student).filter(Student.id == student_id).first()
-    student_name = student.name if student else "初一同学"
+    student_name = student.name if student else "王昱轩同学"
     today = date.today()
     today_str = today.strftime("%Y-%m-%d")
 

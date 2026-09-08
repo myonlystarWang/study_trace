@@ -144,7 +144,7 @@ def compose_paper(body: PaperComposeIn, db: Session = Depends(get_db)):
     并将试卷快照落入 papers 表，返回 paper_id。
     """
     student = db.query(Student).filter(Student.id == 1).first()
-    student_name = student.name if student else "初一同学"
+    student_name = student.name if student else "王昱轩同学"
 
     if not body.mistake_ids:
         # 空试卷防护

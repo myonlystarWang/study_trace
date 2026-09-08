@@ -49,7 +49,7 @@
 
             <!-- 考生个人信息栏 -->
             <div class="paper-student-info">
-              <span class="info-item">考生姓名：<u>&nbsp;{{ paper.student_name || '初一同学' }}&nbsp;</u></span>
+              <span class="info-item">考生姓名：<u>&nbsp;{{ paper.student_name || '王昱轩同学' }}&nbsp;</u></span>
               <span class="info-item">班级：<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u></span>
               <span class="info-item">学号：<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u></span>
               <span class="info-item">日期：____年__月__日</span>
@@ -219,7 +219,7 @@ const paper = ref({
   paper_id: 0,
   title: '初一错题周末重练卷',
   subtitle: '满分: 100分 · 建议用时: 45分钟',
-  student_name: '初一同学',
+  student_name: '王昱轩同学',
   sort_by: 'subject',
   space_level: 'standard',
   style_mode: 'grid',
