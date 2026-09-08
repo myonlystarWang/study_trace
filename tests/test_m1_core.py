@@ -10,11 +10,13 @@ from backend.app.database import SessionLocal, engine, Base
 from backend.app.models import Student, Subject, HomeworkItem, MistakeRecord, MistakeReview
 from backend.app.routers.homework import calculate_streak
 from backend.app.utils.image_handler import save_image_bytes
+import pytest
 from backend.app.config import DATA_DIR, UPLOADS_DIR, settings
 
 client = TestClient(app)
 
 
+@pytest.fixture(autouse=True)
 def setup_function():
     """每个测试前清空业务表数据"""
     db = SessionLocal()
@@ -29,6 +31,10 @@ def test_streak_calculation():
     """测试 Streak 连续打卡算法：连续 3 天 -> 3，中断归零或重计，同一天多次打勾不重复，跨月正确"""
     db = SessionLocal()
     try:
+        # 清空业务表确保测试用例隔离独立
+        db.query(HomeworkItem).delete()
+        db.commit()
+
         # 获取数学科目 id
         math = db.query(Subject).filter(Subject.name == "数学").first()
         assert math is not None
@@ -36,7 +42,11 @@ def test_streak_calculation():
         today = date.today()
         d_minus_1 = today - timedelta(days=1)
         d_minus_2 = today - timedelta(days=2)
-        d_minus_4 = today - timedelta(days=4)  # 第 4 天前（中间隔了一天）
+        d_minus_3 = today - timedelta(days=3)
+        d_minus_4 = today - timedelta(days=4)
+
+        # 0. 明确 d-3 为未完成中断边界（杜绝周末宽限期跨日自动顺延判定）
+        db.add(HomeworkItem(student_id=1, subject_id=math.id, date=d_minus_3, content="未完成中断项", is_completed=False))
 
         # 1. 连续 3 天打勾全部完成（today, d-1, d-2）
         for d in [today, d_minus_1, d_minus_2]:

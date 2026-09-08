@@ -47,6 +47,7 @@ from backend.app.routers import (
     notifications as notifications_router,
     paper as paper_router,
     exams as exams_router,
+    wechat as wechat_router,
 )
 from backend.app.seed import seed_database
 
@@ -62,6 +63,7 @@ app.include_router(ocr_router.router)
 app.include_router(notifications_router.router)
 app.include_router(paper_router.router)
 app.include_router(exams_router.router)
+app.include_router(wechat_router.router)
 
 
 
