@@ -9,7 +9,7 @@ class Student(Base):
     __tablename__ = "students"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String(50), nullable=False, default="初一同学")
+    name = Column(String(50), nullable=False, default="王昱轩同学")
     grade = Column(String(20), default="初一")
     avatar = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.now)
@@ -136,7 +136,7 @@ class Paper(Base):
     show_error_type = Column(Boolean, default=False)
     estimated_pages = Column(Integer, default=1)
     warnings = Column(Text, nullable=True)  # JSON 数组，如 '["第 1 题内容较长..."]'
-    student_name = Column(String(50), nullable=False, default="初一同学")
+    student_name = Column(String(50), nullable=False, default="王昱轩同学")
     status = Column(String(20), default="draft", index=True)  # draft / printed / reviewed
     created_at = Column(DateTime, default=datetime.now, index=True)
 

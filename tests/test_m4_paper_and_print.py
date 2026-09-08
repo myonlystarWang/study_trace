@@ -168,7 +168,7 @@ def test_paper_compose_endpoint_and_assets():
 
         assert data["paper_id"] > 0
         assert data["title"] == "单元自测周末卷"
-        assert data["student_name"] == "初一同学"
+        assert data["student_name"] == "王昱轩同学"
         assert data["total_questions"] == 2
         assert len(data["questions"]) == 2
 

@@ -191,7 +191,7 @@ def seed_m4_data():
         # 1. 确保默认学生
         student = db.query(Student).filter(Student.id == 1).first()
         if not student:
-            student = Student(id=1, name="初一同学", grade="初一")
+            student = Student(id=1, name="王昱轩同学", grade="初一")
             db.add(student)
             db.commit()
 

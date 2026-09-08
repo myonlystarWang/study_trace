@@ -230,7 +230,7 @@ $$\text{错题库（筛选/预设）} \xrightarrow{\text{30秒组卷}} \text{专
    - 排序策略：`sort_by="subject"` 时核心 7 科按 `sort_order` 优先成卷，非核心科目（如艺术、信息科技）自动归入"综合"大题；`sort_by="order"` 保持输入顺序；`sort_by="random"` 随机打乱。
    - **落 `papers` 表**（见 §2.2.4），返回结构化试卷模型：
      - `paper_id`: 数据库主键，用于后续恢复与批量打卡
-     - `student_name`: 当前学生姓名（从 `students` 表读取 `id=1` 的 `name`，若无则回退到 `"初一同学"`）
+     - `student_name`: 当前学生姓名（从 `students` 表读取 `id=1` 的 `name`，若无则回退到 `"王昱轩同学"`）
      - `questions`: 顺序排好的一组试卷题目（题号、科目标签、题干文本、**完整可访问 URL** `original_image_path`、留白高度 `space_mm` 默认 45mm、`is_oversized: bool`）
      - `total_questions`, `estimated_pages`（粗略估算，见 §3.1.3）
      - `warnings: List[str]`（超长题目启发式警告，含字数与插图综合判定，见 §2.2.3）

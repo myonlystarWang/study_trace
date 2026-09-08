@@ -20,7 +20,7 @@ def seed_database():
         # 1. 确保默认学生存在
         student = db.query(Student).filter(Student.id == 1).first()
         if not student:
-            student = Student(id=1, name="初一同学", grade="初一")
+            student = Student(id=1, name="王昱轩同学", grade="初一")
             db.add(student)
 
         # 2. 确保预置初一 7 科存在并处理“道德与法治”重命名为“道法”

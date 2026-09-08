@@ -128,7 +128,7 @@ async def check_and_dispatch_homework_reminders(
 
         # 3. 构造推送内容 (查询真实学生姓名，避免硬编码)
         student = db.query(Student).filter(Student.id == student_id).first()
-        student_name = student.name if student else "初一同学"
+        student_name = student.name if student else "王昱轩同学"
 
         # 频控保护：手动立即发送 30 秒内防连击刷爆第三方额度
         if slot == "manual" and force_summary:
@@ -282,7 +282,7 @@ async def check_and_dispatch_ebbinghaus_reminders(
             subjs_count[sname] = subjs_count.get(sname, 0) + 1
 
         student = db.query(Student).filter(Student.id == student_id).first()
-        student_name = student.name if student else "初一同学"
+        student_name = student.name if student else "王昱轩同学"
 
         title, content = build_ebbinghaus_message(
             student_name=student_name,
@@ -348,7 +348,7 @@ async def check_and_dispatch_weekly_report(
                     missing_days.append(weekdays_cn[i])
 
         student = db.query(Student).filter(Student.id == student_id).first()
-        student_name = student.name if student else "初一同学"
+        student_name = student.name if student else "王昱轩同学"
         streak_days = calculate_streak(student_id, db)
 
         week_range_str = f"{start_of_week.strftime('%m.%d')} ~ {end_of_week.strftime('%m.%d')}"
