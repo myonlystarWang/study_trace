@@ -4,19 +4,23 @@
 
 根据最新实测审查与严格评审，本实施方案针对潜在工程阻塞点完成深度加固与风险清零：
 
-### 1.1 新增微信服务号中转通道（最高优先级）
-- **核心价值**：家庭日常主要看个人微信，无需安装额外 App（如 Bark、企微、钉钉），微信扫码关注服务号即可绑定，支持父母多成员建群推送，作业提醒直达微信会话卡片。
-- **首选服务**：**PushPlus（推送加）**
-  - **实名认证前置**：必须在微信公众号内完成手机实名认证，实名后方可享受 **200 条/天永久免费额度**（未实名接口返回 905 错误且可用额度为 0）。
-  - **内容防静默丢弃机制**：PushPlus 官方对“相同内容 1 小时限 3 条”且会静默丢弃。在 `notifier.py` 生成推送内容时，**末尾统一附带微秒时间戳与唯一防重序号**（如 `\n\n> 🔖 记录 ID: 20260906-201001-a1b2`），彻底规避静默丢弃陷阱。
-- **备选服务**：**Server酱（Turbo版）**，免费用户每日限 5 条，降为备用通道。
+### 1.1 微信官方直推与全渠道消息体系（最高优先级）
+- **核心价值**：家庭日常沟通与督导高度依赖微信。彻底摒弃第三方中转（PushPlus 手机实名收费、WxPusher 公众号模板被官方封禁强制装 App 的痛点），直接接入腾讯官方**「微信公众平台接口测试账号 (Sandbox)」**。
+- **首选微信方案**：**微信公众平台接口测试号 (Sandbox)**
+  - **零门槛与零费用**：个人微信扫码开通即得 AppID / AppSecret，永久 0 元免费，微信官方每日提供高达 **10 万次**调用额度。
+  - **原生弹窗与声音直达**：微信官方一级模板卡片消息推送，带系统级弹窗横幅与提示音，无需安装任何第三方 App。
+  - **卡片直跳**：模板消息原生支持配置 `url`，家长收到通知后点击卡片直接单手跳转进入智学迹 Web 系统。
+  - **家庭多成员并发广播**：设置页提供结构化家庭成员卡片管理（如爸爸、妈妈），支持单独重命名、单人测试、一键移除与全家多 OpenID 并发直发。
+  - **Token 智能自愈缓存**：后端 `notifier.py` 实现 2 小时内存缓存与提前 5 分钟自动换新机制，杜绝并发超限被封。
+- **首选 iOS 方案**：**Bark (极简 APNs 直推)**
+  - 支持全家多个 iPhone 设备的 Bark Key（逗号或换行分隔），实现家庭多机并发群发。
 - **渠道优先级确立**：
-  $$\text{PushPlus（微信首选，实名免费 200 条/天）} > \text{Server酱（备选，免费 5 条/天）} > \text{PWA Web Push（待 M6）} > \text{iOS Bark} > \text{钉钉 / 飞书 / 企微群机器人}$$
+  $$\text{微信公众平台接口测试号 (Sandbox 官方直推)} > \text{iOS Bark (iPhone 极简多机群发)} > \text{群机器人 Webhook (企微/钉钉/飞书)} > \text{备用渠道 (WxPusher / Server酱 / PushPlus)}$$
 
 ### 1.2 验收解耦（杜绝被未上线依赖阻断）
 - **痛点**：iOS Web Push 依赖公网 HTTPS + Cloudflare 域名（M6 范围）+ `pywebpush`/`cryptography` 签名库 + `vite-plugin-pwa`，在 M3 本地局域网内无法端到端真机验证。
 - **解耦决策**：
-  - **M3 主验渠道**：微信服务号（PushPlus/Server酱）、iOS Bark、群机器人。三者**均无需公网 HTTPS**，局域网即可 100% 闭环真机验收。
+  - **M3 主验渠道**：微信测试号（Sandbox）、iOS Bark、群机器人。三者均无需依赖外部复杂基建，局域网与公网均可 100% 闭环真机验收。
   - **Web Push 状态**：保留数据表模型与接口壳，优雅捕获缺少依赖，真机验收明确标注为**「待 M6 HTTPS 后验证」**，坚决不阻塞 M3 交付。
 
 ### 1.3 消除 5 项工程隐患（P0 彻底闭环）
@@ -53,7 +57,7 @@ backend/app/
 ├── models.py                  # [MODIFY] NotificationLog 补充 UniqueConstraint 与 Shanghai 时区 sent_at
 ├── scheduler.py               # [NEW] APScheduler 初始化、Windows msvcrt 锁、分时分级调度逻辑
 ├── utils/
-│   └── notifier.py            # [NEW] PushPlus/Server酱、Bark、群机器人分发器与带防重序号的 Markdown 模板
+│   └── notifier.py            # [NEW] 微信官方测试号(Sandbox)、Bark多机、群机器人与备用通道统一分发器
 ├── routers/
 │   ├── homework.py            # [MODIFY] 增加 GET /api/homework/calendar 接口 (pattern=..., 含 gray 映射)
 │   ├── notifications.py       # [NEW] 渠道配置、单通道测试、立即发送汇总 (force_summary)
@@ -70,17 +74,15 @@ backend/app/
 #### B. 多渠道分发器 `backend/app/utils/notifier.py`
 - 统一分发接口：`async def send_notification(title: str, content: str, channels: list[str] = None) -> dict[str, dict]`
 - 渠道适配器：
-  1. **PushPlus (`pushplus`)**：POST `https://www.pushplus.plus/send`
-     ```json
-     {"token": "...", "title": title, "content": content, "template": "markdown"}
-     ```
-     正文末尾注入防重序列号，防止静默丢弃。
-  2. **Server酱 (`serverchan`)**：POST `https://sctapi.ftqq.com/{KEY}.send`
-     ```json
-     {"title": title, "desp": content}
-     ```
-  3. **iOS Bark (`bark`)**：GET/POST `https://api.day.app/{key}/{title}/{body}?group=学迹`
-  4. **群机器人 (`webhook`)**：智能识别企微（`markdown.content`）、钉钉（`markdown.text`）、飞书（`content.post`）。
+  1. **微信官方测试号 (`wechat` / `wechat_sandbox`)**：POST `https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=...`
+     - 官方原生模板消息，0 元免费，10 万次/天调用额度。
+     - 支持家庭全员多 OpenID 并发直发（爸爸、妈妈结构化卡片管理）。
+     - 支持 `url` 属性配置，点击卡片直接单手跳转进入智学迹 Web 系统。
+     - 自带 2 小时 access_token 内存自愈缓存，提前 5 分钟自动静默换新。
+  2. **iOS Bark (`bark`)**：POST/GET `https://api.day.app/{key}/{title}/{body}?group=学迹`
+     - 支持逗号/换行分隔多个 Key 实现全家 iPhone 并发群发。
+  3. **群机器人 (`webhook`)**：智能识别企微（`markdown.content`）、钉钉（`markdown.text`）、飞书（`content.post`）。
+  4. **向后兼容备用渠道 (`wxpusher` / `serverchan` / `pushplus`)**：保留辅助备用中转通道代码，满足特定历史环境使用。
   5. **Web Push (`webpush`)**：通道代码预留，缺库或无 HTTPS 时返回友好指引，待 M6 激活。
 - **容错隔离**：每个渠道使用 `httpx.AsyncClient(timeout=5.0)` 独立请求与异常捕获，单渠道超时报错不阻塞其他渠道。
 
@@ -125,11 +127,13 @@ frontend/src/
 ```
 
 1. **`SettingsView.vue` 通知设置面板**：
-   - 渠道开关列表（默认推荐勾选 PushPlus 微信推送）。
-   - 提示认证：*“PushPlus 微信推送需先在公众号完成实名认证，每日享 200 条免费额度；未实名不可用。”*
-   - PushPlus Token、Server酱 SendKey、Bark Key、群机器人 Webhook URL 输入框。
+   - 渠道开关列表（默认推荐勾选微信测试号官方推送与 iOS Bark）。
+   - 微信测试号参数配置（AppID、AppSecret、TemplateID）。
+   - **家庭成员多 OpenID 结构化卡片列表**：卡片式展示（#1 爸爸、#2 妈妈），支持修改称谓、单人即时测试、单人移除、一键添加新成员与全员并发广播测试。
+   - iOS Bark Key 输入框（支持逗号或换行录入多个 Key，全家多机并发群发）。
+   - 群机器人 Webhook URL 输入框与辅助备用渠道。
    - 每个通道独立「测试」按钮，带即时反馈弹窗与错误详情。
-   - **「立即生成并发送今日汇总」** 按钮：随时手动触发一次全渠道推送。
+   - **「立即生成并发送今日汇总」** 按钮：随时手动触发一次全渠道全家推送。
    - 安全提示红框：*“提示：数据备份包包含本地数据库与通知凭据，请妥善保管勿外传。”*
 2. **`CalendarModal.vue`**：
    - 月份切换器（`2026-09`）。
@@ -155,8 +159,8 @@ frontend/src/
 | 5 | **晚间满卡仍发晚报** | 自动化 | `test_evening_summary_dispatches_when_completed` | 当日作业全部打勾时，21:50 触发依然成功发出「🎉 今日满卡」喜报 |
 | 6 | **催办带待办清单** | 自动化 | `test_reminder_contains_uncompleted_items` | 当有未完成作业时，催办内容中提取出具体的学科名称、待办题干与学生姓名 |
 | 7 | **立即发送汇总与频控** | 自动化 | `test_force_summary_dispatch_and_rate_limit` | `force_summary=True` 立即推送最新快照，并有 30 秒防连击频控保护 |
-| 8 | **微信服务号推送** | 自动化 | `test_wechat_pushplus_and_serverchan` | 模拟 PushPlus 与 Server酱 报文构造，验证附带防重序号，未实名 905 错误友好提示 |
-| 9 | **iOS Bark 推送** | 自动化 | `test_bark_notification` | 验证 Bark 拼装 URL 包含分组、标题与正文，code!=200 失败时不误判为成功 |
+| 8 | **微信官方直推与家庭广播** | 自动化 | `test_wechat_sandbox_notification` | 模拟获取 access_token、多 OpenID 解析、模板消息拼装、卡片跳转 URL 与单人/全员测试 |
+| 9 | **iOS Bark 多设备群发** | 自动化 | `test_bark_notification` | 验证 Bark 拼装 URL 包含分组、标题与正文，支持逗号/换行分隔的多设备 Key 并发群发 |
 | 10 | **群机器人与错误提示** | 自动化 | `test_webhook_adapter_and_error_handling` | 适配企微/钉钉/飞书格式；当 Webhook URL 格式非法时返回友好的中文提示 |
 | 11 | **多渠道并行与容错** | 自动化 | `test_multichannel_fault_tolerance` | 模拟渠道 A 抛出网络超时，渠道 B 正常返回，验证通道互不干扰 |
 | 12 | **月历 API 性能与准确度** | 自动化 | `test_monthly_calendar_api_performance_and_accuracy` | 测试 `GET /api/homework/calendar` 执行耗时 ≤ 50ms，红/黄/绿/灰四色状态精确匹配 |

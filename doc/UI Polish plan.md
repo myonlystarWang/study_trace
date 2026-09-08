@@ -30,7 +30,7 @@
 | 语义色 Token | 背景色变量 | 图标色变量 | 适用场景与业务含义 |
 |:--|:--|:--|:--|
 | **Primary 蓝** | `--st-primary-light: #eff6ff` | `--st-primary: #2563eb` | 常规模块、分析看板、成绩走势、历史组卷 |
-| **Success 绿** | `--st-success-light: #ecfdf5` | `--st-success: #10b981` | 作业打卡完成、知识点掌握、微信 PushPlus 渠道 |
+| **Success 绿** | `--st-success-light: #ecfdf5` | `--st-success: #10b981` | 作业打卡完成、知识点掌握、微信官方测试号渠道 |
 | **Warning 橙** | `--st-warning-light: #fffbeb` | `--st-warning: #f59e0b` | 待复习提醒、Server酱渠道、科目未完成频次分布 |
 | **Danger 红** | `--st-danger-light: #fef2f2` | `--st-danger: #ef4444` | 薄弱诊断预警、遗忘顽固题、专注计时器、安全警示 |
 | **Info 天蓝** | `--st-info-light: #f0f9ff` | `--st-info: #0284c7` | 7 科雷达均衡度、规则提示、说明小贴士、月度深度透视 |
@@ -180,10 +180,10 @@
 
 ### 7. [frontend/src/views/SettingsView.vue](file:///d:/工作/ww/personal_work/study_trace/frontend/src/views/SettingsView.vue)（家长设置与月度透视）
 - **L007 门禁图标**：`<div class="gate-icon">🔒</div>` $\to$ `<div class="gate-icon-circle"><van-icon name="lock" /></div>`
-- **L056 微信推送**：`🟢 微信公众号推送` $\to$ `<span class="st-icon-badge st-icon-badge--success"><van-icon name="chat-o" /></span> <span>微信公众号推送 (PushPlus 首选推荐)</span>`
-- **L077 微信提示**：`💡 提示：微信关注“PushPlus推送加”...` $\to$ `<van-notice-bar left-icon="info-o" text="提示：微信关注“PushPlus推送加”公众号，必须完成手机号实名认证方可享有 200 条/天免费额度；未实名接口将返回 905。" />`
-- **L084 Server酱**：`🟡 Server酱 (Turbo版 备选)` $\to$ `<span class="st-icon-badge st-icon-badge--warning"><van-icon name="bell-o" /></span> <span>Server酱 (Turbo版 备选)</span>`
-- **L108 iOS Bark**：`🍎 iOS Bark 推送 (全家 iPhone 首选)` $\to$ `<span class="st-icon-badge st-icon-badge--purple"><van-icon name="phone-o" /></span> <span>iOS Bark 推送 (全家 iPhone 首选)</span>`
+- **L056 微信推送**：`<span class="st-icon-badge st-icon-badge--success"><van-icon name="chat-o" /></span> <span>微信公众平台接口测试号 (Sandbox 官方首选直推)</span>`
+- **L077 微信提示**：`<van-notice-bar left-icon="info-o" text="提示：微信公众平台官方接口测试号，永久 0 元免费、10 万次/天额度、官方原生模板卡片弹窗；支持家庭成员多 OpenID 结构化卡片管理与并发广播。" />`
+- **L084 Server酱**：`<span class="st-icon-badge st-icon-badge--warning"><van-icon name="bell-o" /></span> <span>Server酱 (Turbo版 备选)</span>`
+- **L108 iOS Bark**：`<span class="st-icon-badge st-icon-badge--purple"><van-icon name="phone-o" /></span> <span>iOS Bark 推送 (全家 iPhone 首选 · 支持多设备 Key 并发群发)</span>`
 - **L132 群机器人**：`🤖 群机器人 Webhook (企微 / 钉钉 / 飞书)` $\to$ `<span class="st-icon-badge st-icon-badge--neutral"><van-icon name="cluster-o" /></span> <span>群机器人 Webhook (企微 / 钉钉 / 飞书)</span>`
 - **L173 立即生成按钮**：`🚀 立即生成并发送今日汇总...` $\to$ `<van-button icon="guide-o" type="primary" block @click="triggerSendDailySummary">立即发送今日汇总 (即时推送快照)</van-button>`
 - **L179 成绩看板分组**：`title="📊 成绩管理与月度学情看板 (家长专属)"` $\to$ `<div class="st-section-header"><span class="st-icon-badge st-icon-badge--primary"><van-icon name="chart-trending-o" /></span> <span>成绩管理与月度学情看板</span></div>`
