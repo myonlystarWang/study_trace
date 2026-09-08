@@ -419,11 +419,9 @@
 
           <div class="monthly-analytics-box">
             <div class="monthly-header">
-              <div class="monthly-title-box">
-                <span class="st-icon-badge st-icon-badge--primary" style="width: 24px; height: 24px; font-size: 12px;">
-                  <van-icon name="calendar-o" />
-                </span>
-                <span class="monthly-title">打卡出勤深度分析</span>
+              <div class="monthly-chart-title" style="margin-bottom: 0;">
+                <van-icon name="calendar-o" color="#2563eb" style="margin-right: 4px;" />
+                打卡出勤深度分析
               </div>
               <div class="month-stepper">
                 <van-button size="mini" icon="arrow-left" @click="changeMonth(-1)" />

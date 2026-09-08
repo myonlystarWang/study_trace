@@ -222,3 +222,98 @@ async def test_wechat_inbound_duplicate_msg_id():
     resp2 = client.post("/api/wechat/callback", content=xml_data.encode("utf-8"))
     assert resp2.status_code == 200
     assert resp2.text == "success"
+
+
+def test_parse_batch_homework_text():
+    """单元测试：多科目批量作业文本解析器，覆盖特殊全角空格、连字符及各种序号"""
+    from backend.app.utils.wechat_intent import parse_batch_homework_text
+
+    raw_text = """语文：
+
+1.预习第三课。
+2.第二课生字词语1+1
+ 
+数学：
+ 
+1.\xa0打印的习题
+ 
+英语：
+ 
+1.\xa0听写7页8页单词。
+ 
+生物：
+ 
+1.\xa0练习册1\u20114页。"""
+
+    items = parse_batch_homework_text(raw_text)
+    assert len(items) == 5
+    assert items[0] == ("语文", "预习第三课。")
+    assert items[1] == ("语文", "第二课生字词语1+1")
+    assert items[2] == ("数学", "打印的习题")
+    assert items[3] == ("英语", "听写7页8页单词。")
+    assert items[4] == ("生物", "练习册1-4页。")
+
+
+@pytest.mark.anyio
+async def test_wechat_inbound_batch_homework(db_session: Session):
+    """端到端测试：微信上行批量作业通知，写入数据库并即时清理测试脏数据"""
+    from_user = "oz1nN3CuVUQ4S8yJ4PWU6wY2jsmo"  # 妈妈的合法 OpenID
+    today = date.today()
+
+    batch_content = """语文：
+
+1.预习第三课。
+2.第二课生字词语1+1
+ 
+数学：
+ 
+1.\xa0打印的习题
+ 
+英语：
+ 
+1.\xa0听写7页8页单词。
+ 
+生物：
+ 
+1.\xa0练习册1\u20114页。"""
+
+    msg_id = f"msg_batch_{int(time.time())}"
+    xml_data = f"""<xml>
+<ToUserName><![CDATA[gh_test]]></ToUserName>
+<FromUserName><![CDATA[{from_user}]]></FromUserName>
+<CreateTime>{int(time.time())}</CreateTime>
+<MsgType><![CDATA[text]]></MsgType>
+<Content><![CDATA[{batch_content}]]></Content>
+<MsgId>{msg_id}</MsgId>
+</xml>"""
+
+    try:
+        resp = client.post("/api/wechat/callback", content=xml_data.encode("utf-8"))
+        assert resp.status_code == 200
+        reply = parse_wechat_xml(resp.text)
+        content = reply.get("Content", "")
+        assert "批量作业录入成功" in content
+        assert "【语文】(2项)" in content
+        assert "【数学】(1项)" in content
+        assert "【英语】(1项)" in content
+        assert "【生物】(1项)" in content
+
+        # 验证数据库中确实插入了这些作业
+        db_items = db_session.query(HomeworkItem).filter(
+            HomeworkItem.date == today,
+            HomeworkItem.content.in_([
+                "预习第三课。", "第二课生字词语1+1", "打印的习题", "听写7页8页单词。", "练习册1-4页。"
+            ])
+        ).all()
+        assert len(db_items) == 5
+
+    finally:
+        # 无论成功或失败，强制彻底删除测试插入的这 5 项作业，保持运行中数据库的绝对洁净！
+        db_session.query(HomeworkItem).filter(
+            HomeworkItem.date == today,
+            HomeworkItem.content.in_([
+                "预习第三课。", "第二课生字词语1+1", "打印的习题", "听写7页8页单词。", "练习册1-4页。"
+            ])
+        ).delete(synchronize_session=False)
+        db_session.commit()
+
