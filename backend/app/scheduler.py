@@ -2,9 +2,9 @@ import os
 import sys
 import logging
 from pathlib import Path
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -16,7 +16,9 @@ from backend.app.models import HomeworkItem, MistakeRecord, NotificationLog, Stu
 from backend.app.routers.homework import calculate_streak
 from backend.app.routers.notifications import load_notification_config
 from backend.app.utils.notifier import (
-    build_reminder_message, build_summary_message, dispatch_notification
+    build_reminder_message, build_summary_message,
+    build_weekly_report_message, build_ebbinghaus_message,
+    dispatch_notification
 )
 
 logger = logging.getLogger("scheduler")
@@ -246,11 +248,145 @@ async def check_and_dispatch_homework_reminders(
             db.close()
 
 
+async def check_and_dispatch_ebbinghaus_reminders(
+    db: Optional[Session] = None,
+    student_id: int = 1
+) -> Dict[str, Any]:
+    """
+    艾宾浩斯抗遗忘错题复习定时巡检 (每日 18:30)
+    - 统计当日到达复习窗口的错题条数 (next_review_date <= today 且未完全掌握)
+    - 若数量为 0，静默跳过免打扰；若大于 0，分发错题复习卡片
+    """
+    close_db = False
+    if db is None:
+        db = SessionLocal()
+        close_db = True
+
+    try:
+        today = datetime.now(SHANGHAI_TZ).date()
+        due_mistakes = db.query(MistakeRecord).filter(
+            MistakeRecord.student_id == student_id,
+            MistakeRecord.mastery_status != "已掌握",
+            MistakeRecord.next_review_date <= today
+        ).all()
+
+        total_due = len(due_mistakes)
+        if total_due == 0:
+            logger.info("今日暂无到达艾宾浩斯复习窗口的错题，自动静默跳过免打扰。")
+            return {"status": "skipped", "reason": "no_due_mistakes"}
+
+        # 统计学科分布
+        subjs_count: Dict[str, int] = {}
+        for m in due_mistakes:
+            sname = m.subject.name if m.subject else "综合"
+            subjs_count[sname] = subjs_count.get(sname, 0) + 1
+
+        student = db.query(Student).filter(Student.id == student_id).first()
+        student_name = student.name if student else "初一同学"
+
+        title, content = build_ebbinghaus_message(
+            student_name=student_name,
+            today_str=today.strftime("%Y-%m-%d"),
+            mistakes_by_subject=subjs_count,
+            total_due=total_due
+        )
+
+        cfg = load_notification_config(db)
+        enabled_channels = cfg.get("enabled_channels", ["wechat_sandbox"])
+        results = await dispatch_notification(title, content, channels=enabled_channels, config=cfg)
+
+        return {"status": "dispatched", "total_due": total_due, "details": results}
+    finally:
+        if close_db:
+            db.close()
+
+
+async def check_and_dispatch_weekly_report(
+    db: Optional[Session] = None,
+    student_id: int = 1
+) -> Dict[str, Any]:
+    """
+    每周日晚学情周报战报 (每周日 21:30)
+    - 汇总本周一至周日各天作业打卡达成情况、缺卡天数与周度总完成率
+    """
+    close_db = False
+    if db is None:
+        db = SessionLocal()
+        close_db = True
+
+    try:
+        today = datetime.now(SHANGHAI_TZ).date()
+        # 计算本周一与周日
+        start_of_week = today - timedelta(days=today.weekday())  # 周一
+        end_of_week = start_of_week + timedelta(days=6)         # 周日
+
+        weekdays_cn = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+        completed_days = 0
+        total_days = 7
+        missing_days: List[str] = []
+
+        total_homework_cnt = 0
+        completed_homework_cnt = 0
+
+        for i in range(7):
+            cur_date = start_of_week + timedelta(days=i)
+            items = db.query(HomeworkItem).filter(
+                HomeworkItem.student_id == student_id,
+                HomeworkItem.date == cur_date
+            ).all()
+
+            if not items:
+                # 当天无作业布置视作正常无缺卡，不计入缺失
+                pass
+            else:
+                total_homework_cnt += len(items)
+                dones = sum(1 for it in items if it.is_completed)
+                completed_homework_cnt += dones
+                if dones == len(items):
+                    completed_days += 1
+                else:
+                    missing_days.append(weekdays_cn[i])
+
+        student = db.query(Student).filter(Student.id == student_id).first()
+        student_name = student.name if student else "初一同学"
+        streak_days = calculate_streak(student_id, db)
+
+        week_range_str = f"{start_of_week.strftime('%m.%d')} ~ {end_of_week.strftime('%m.%d')}"
+        title, content = build_weekly_report_message(
+            student_name=student_name,
+            week_range_str=week_range_str,
+            completed_days=completed_days,
+            total_days=total_days,
+            missing_days=missing_days,
+            total_items=total_homework_cnt,
+            completed_items=completed_homework_cnt,
+            streak_days=streak_days
+        )
+
+        cfg = load_notification_config(db)
+        enabled_channels = cfg.get("enabled_channels", ["wechat_sandbox"])
+        results = await dispatch_notification(title, content, channels=enabled_channels, config=cfg)
+
+        return {"status": "dispatched", "week": week_range_str, "details": results}
+    finally:
+        if close_db:
+            db.close()
+
+
 def setup_scheduler_jobs() -> None:
     """初始化 APScheduler 定时任务 (Asia/Shanghai)"""
     scheduler.remove_all_jobs()
 
-    # 1. 20:10 中途催办
+    # 1. 18:30 艾宾浩斯抗遗忘错题复习提醒 (无待复习错题自动跳过免打扰)
+    scheduler.add_job(
+        check_and_dispatch_ebbinghaus_reminders,
+        trigger=CronTrigger(hour=18, minute=30, timezone=SHANGHAI_TZ),
+        id="ebbinghaus_18_30",
+        name="18:30 艾宾浩斯错题复习提醒",
+        replace_existing=True
+    )
+
+    # 2. 20:10 中途催办 (全完成自动跳过免打扰)
     scheduler.add_job(
         check_and_dispatch_homework_reminders,
         trigger=CronTrigger(hour=20, minute=10, timezone=SHANGHAI_TZ),
@@ -260,7 +396,7 @@ def setup_scheduler_jobs() -> None:
         replace_existing=True
     )
 
-    # 2. 21:10 中途催办
+    # 3. 21:10 中途催办 (全完成自动跳过免打扰)
     scheduler.add_job(
         check_and_dispatch_homework_reminders,
         trigger=CronTrigger(hour=21, minute=10, timezone=SHANGHAI_TZ),
@@ -270,7 +406,16 @@ def setup_scheduler_jobs() -> None:
         replace_existing=True
     )
 
-    # 3. 21:50 晚间总结日报
+    # 4. 21:30 周日学情周战报 (每周日晚统计整周完成与缺卡)
+    scheduler.add_job(
+        check_and_dispatch_weekly_report,
+        trigger=CronTrigger(day_of_week="sun", hour=21, minute=30, timezone=SHANGHAI_TZ),
+        id="weekly_report_sun",
+        name="每周日 21:30 学情周报战报",
+        replace_existing=True
+    )
+
+    # 5. 21:50 晚间总结日报 (满卡喜报 / 收官汇总)
     scheduler.add_job(
         check_and_dispatch_homework_reminders,
         trigger=CronTrigger(hour=21, minute=50, timezone=SHANGHAI_TZ),
