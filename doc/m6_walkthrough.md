@@ -10,7 +10,7 @@
 | :--- | :--- | :--- | :--- |
 | **阶段 0** | 暴露前安全加固与大端口隔离 | ✅ **已交付** | 生产绑定 `28000`，开发绑定 `28001`；`/api/backup/export` 与 `import` 加家长 PIN 门禁；初始 PIN 888888 强制弹窗警告；`SECRET_KEY` 随机生成落 `data/.env`；生产收紧 CORS；**57/57 自动化测试 100% 全绿** |
 | **阶段 1** | Cloudflare 命名隧道打通 | ✅ **已交付** | 官方 `cloudflared` (2026.8.3) 安装；授权域名 `raddishlab.tech`；创建隧道 `study-trace` (UUID: `b0a81d67-112b-48e9-b953-98215e248290`)；自动路由 CNAME 到 `study.raddishlab.tech` 并映射到 `127.0.0.1:28000` |
-| **阶段 2** | 常开守护与开机静默自启 | ✅ **已交付** | `powercfg` 关闭接电休眠与合盖睡眠；编写 [`start-silent.vbs`](file:///d:/%E5%B7%A5%E4%BD%9C/ww/personal_work/study_trace/start-silent.vbs)（无黑框弹窗静默启动后端与隧道）与 [`stop.bat`](file:///d:/%E5%B7%A5%E4%BD%9C/ww/personal_work/study_trace/stop.bat)；在 `shell:startup` 部署自启快捷方式 |
+| **阶段 2** | 常开守护与开机免登录自启 | ✅ **已升级** | 采用 NSSM 注册系统服务（`StudyTraceCloudflared` 与 `StudyTrace`），运行账号为 `LocalSystem`，无需登录桌面开机自启，配置 5 秒崩溃自愈与独立文件日志；废弃旧版 Startup/VBS 方案 |
 | **阶段 3** | 真机外网闭环验证 | ✅ **已验证** | `https://study.raddishlab.tech/api/health` 与前端应用均通过 Cloudflare CDN 正常访问，证书有效 |
 | **阶段 4** | 文档更新与 GitHub 同步 | ✅ **已交付** | 更新 `README.md`、`doc/change_log.md` (v1.7.0)、`doc/m6_deployment.md`；代码全量提交，打标 `m6-done` 并推送至 GitHub 远端 |
 
@@ -46,14 +46,24 @@ uv run pytest -v
 
 ---
 
-## 三、真机使用与操作指南
+## 三、真机使用与运维指南
 
 ### 1. 家里手机端访问（断开 WiFi 使用蜂窝网络测试）
 1. 在 iPhone Safari 浏览器打开：`https://study.raddishlab.tech`
 2. 点击 Safari 底部「分享」按钮 -> **「添加到主屏幕」**；
 3. 即可在手机桌面上以独立全屏 PWA 形式随时随地打卡、拍照与复习。
 
-### 2. 日常启动与停止
-- **静默启动（无需命令行）**：双击根目录下的 [`start-silent.vbs`](file:///d:/%E5%B7%A5%E4%BD%9C/ww/personal_work/study_trace/start-silent.vbs)，服务与隧道将在后台静默常驻，无 CMD 黑框。
-- **一键停止**：双击根目录下的 [`stop.bat`](file:///d:/%E5%B7%A5%E4%BD%9C/ww/personal_work/study_trace/stop.bat)，安全关闭 28000 服务进程与隧道。
-- **开机自启**：已在系统自启目录配置了快捷方式，电脑重启登录后将自动静默恢复服务与隧道。
+### 2. 服务管理与日常运维
+- **开机免登录自启**：系统服务由 Windows SCM 托管，机器开机/重启无需登录 Windows 桌面即可在后台自启运行。
+- **崩溃自动恢复**：后端与隧道如遇异常退出，Windows 会在 5 秒后自动拉起。
+- **服务状态查看**：
+  ```powershell
+  Get-Service StudyTraceCloudflared, StudyTrace
+  ```
+- **服务重启**：
+  ```powershell
+  Restart-Service StudyTraceCloudflared
+  Restart-Service StudyTrace
+  ```
+- **一键安装/重新注册**：右键以管理员身份运行 `scripts\install-studytrace-services.ps1`
+- **一键卸载回滚**：右键以管理员身份运行 `scripts\uninstall-studytrace-services.ps1`

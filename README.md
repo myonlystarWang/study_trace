@@ -208,19 +208,21 @@ StudyTrace 推荐以一台常开电脑作为宿主节点，通过 **Cloudflare N
    cloudflared tunnel create study-trace
    cloudflared tunnel route dns study-trace study.<你的域名>
    ```
-3. **映射配置**（`%USERPROFILE%\.cloudflared\config.yml`）：
+3. **映射配置**（项目内独立配置 `config\cloudflared\config.yml`）：
    ```yaml
    tunnel: <Tunnel-UUID>
-   credentials-file: C:\Users\<用户名>\.cloudflared\<Tunnel-UUID>.json
+   credentials-file: D:\工作\ww\personal_work\study_trace\config\cloudflared\<Tunnel-UUID>.json
+   protocol: http2
    ingress:
      - hostname: study.<你的域名>
        service: http://127.0.0.1:28000
      - service: http_status:404
    ```
-4. **后台静默常驻与自启**：
-   - 启动：双击 `start-silent.vbs`（后台静默拉起 StudyTrace 与 Tunnel，无黑框弹窗）
-   - 停止：双击 `stop.bat`（一键停止端口 28000 服务与隧道进程）
-   - 开机自启：将 `start-silent.vbs` 的快捷方式置于 `shell:startup` 目录即可
+4. **后台系统服务与自启（NSSM 托管）**：
+   - 注册与启动：右键以管理员身份运行 `scripts\install-studytrace-services.ps1`，将 `StudyTrace` 与 `StudyTraceCloudflared` 注册为 Windows 系统服务。
+   - 特性：开机免登录自启、5 秒崩溃自动重启自愈、独立日志落盘。
+   - 服务管理：通过 PowerShell 执行 `Get-Service StudyTraceCloudflared, StudyTrace` 查看，或 `Restart-Service` 重启。
+   - 卸载回滚：右键以管理员身份运行 `scripts\uninstall-studytrace-services.ps1` 即可干净清理服务。
 5. **手机端访问与 PWA**：
    - 用手机 Safari/Chrome 打开 `https://study.<你的域名>`，点击“添加到主屏幕”，即可作为独立全屏 App 使用。
 
