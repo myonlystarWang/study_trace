@@ -306,6 +306,57 @@
         </div>
 
         <div class="popup-scroll-body">
+          <!-- 智能大段文字识别填表卡片（仅新建时显示） -->
+          <div class="smart-parse-card" v-if="!isEditing">
+            <div class="smart-parse-header">
+              <div class="smart-parse-title">
+                <span class="smart-parse-icon-badge">
+                  <van-icon name="records" />
+                </span>
+                <span class="title-text">智能大段文字识别填表</span>
+              </div>
+              <span class="smart-parse-tag">微信/短信通知秒填</span>
+            </div>
+
+            <div class="smart-parse-input-box">
+              <van-field
+                v-model="rawScoreText"
+                rows="3"
+                autosize
+                type="textarea"
+                placeholder="直接粘贴微信群或短信成绩通知，例如：&#10;“期中考试成绩：语文108/120 数学116/120 英语112/120 道法89 历史92 地理85 生物缺考，班排第5名，校排第28名”"
+                class="smart-parse-textarea"
+              />
+            </div>
+
+            <div class="smart-parse-actions">
+              <button type="button" class="sample-btn" @click="fillSampleText">
+                <van-icon name="guide-o" /> 填入示例
+              </button>
+              <div class="actions-right">
+                <button
+                  type="button"
+                  class="clear-text-btn"
+                  v-if="rawScoreText"
+                  @click="rawScoreText = ''"
+                >
+                  清空
+                </button>
+                <van-button
+                  type="primary"
+                  size="small"
+                  round
+                  icon="passed"
+                  :disabled="!rawScoreText.trim()"
+                  @click="handleParseAndFill"
+                  class="parse-submit-btn"
+                >
+                  智能识别并填入
+                </van-button>
+              </div>
+            </div>
+          </div>
+
           <!-- 基本信息表单 -->
           <van-cell-group inset title="考试基本信息">
             <van-field
@@ -430,6 +481,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { showToast, showConfirmDialog } from 'vant';
 import { examApi, settingsApi } from '../api';
 import echarts from '../utils/echarts';
+import { parseScoreText } from '../utils/scoreParser';
 
 // 页面基础状态
 const examList = ref([]);
@@ -470,6 +522,59 @@ const formData = ref({
   remarks: '',
   scores: []
 });
+
+// 大段成绩文本智能识别
+const rawScoreText = ref('');
+
+const fillSampleText = () => {
+  rawScoreText.value = `各位家长好，初一上学期期中考试成绩已出：
+语文：108/120
+数学：116/120
+英语：112/120
+道法：89/100
+历史：92/100
+地理：85/100
+生物：90/100
+班级排名：5，年级排名：28`;
+};
+
+const handleParseAndFill = () => {
+  if (!rawScoreText.value.trim()) return;
+  const parsed = parseScoreText(rawScoreText.value, subjects.value);
+  if (!parsed || (parsed.matchedCount === 0 && !parsed.title)) {
+    showToast('未能识别出成绩信息，请检查文本格式');
+    return;
+  }
+
+  if (parsed.title) formData.value.title = parsed.title;
+  if (parsed.exam_type) formData.value.exam_type = parsed.exam_type;
+  if (parsed.exam_date) formData.value.exam_date = parsed.exam_date;
+  if (parsed.class_rank !== null) formData.value.class_rank = parsed.class_rank;
+  if (parsed.grade_rank !== null) formData.value.grade_rank = parsed.grade_rank;
+  if (parsed.remarks) formData.value.remarks = parsed.remarks;
+
+  let fillCount = 0;
+  // 遍历匹配到的科目，覆盖到 formData.value.scores
+  parsed.parsedScores.forEach(ps => {
+    const targetItem = formData.value.scores.find(s =>
+      (ps.subject_id && s.subject_id === ps.subject_id) ||
+      s.subject_name === ps.subject_name ||
+      (ps.subject_name.includes(s.subject_name) || s.subject_name.includes(ps.subject_name))
+    );
+    if (targetItem) {
+      targetItem.is_absent = !!ps.is_absent;
+      targetItem.score = ps.score;
+      if (ps.full_score) targetItem.full_score = ps.full_score;
+      fillCount++;
+    }
+  });
+
+  showToast({
+    type: 'success',
+    message: `已自动识别 ${fillCount} 门学科成绩与考试信息！`,
+    icon: 'success'
+  });
+};
 
 // 计算属性
 const coreSubjects = computed(() => {
@@ -834,6 +939,8 @@ const openCreateModal = () => {
     full_score: ['语文', '数学', '英语'].includes(sub.name) ? 120 : (sub.full_score || 100),
     is_absent: false
   }));
+
+  rawScoreText.value = '';
 
   formData.value = {
     title: '',
@@ -1503,6 +1610,116 @@ const handleDeleteExam = (exam) => {
   flex: 1;
   overflow-y: auto;
   padding-bottom: 24px;
+}
+
+/* 智能大段文字识别填表卡片 */
+.smart-parse-card {
+  margin: 12px 16px 6px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.smart-parse-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.smart-parse-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.smart-parse-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.smart-parse-tag {
+  font-size: 11px;
+  color: #2563eb;
+  background: #dbeafe;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.smart-parse-input-box {
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.smart-parse-textarea {
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 8px 10px;
+}
+
+.smart-parse-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sample-btn {
+  background: transparent;
+  border: 1px dashed #94a3b8;
+  color: #64748b;
+  font-size: 11px;
+  border-radius: 14px;
+  padding: 3px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.2s;
+}
+
+.sample-btn:active {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clear-text-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.clear-text-btn:active {
+  color: #64748b;
+}
+
+.parse-submit-btn {
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
 }
 
 .live-calc-bar {
