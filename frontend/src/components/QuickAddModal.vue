@@ -174,6 +174,16 @@
       </div>
     </div>
   </van-popup>
+
+  <!-- 作业拍照框选裁剪弹窗 -->
+  <ImageCropper
+    v-if="showCropper"
+    v-model:show="showCropper"
+    :image-url="cropperImageUrl"
+    @crop="onCropConfirm"
+    @skip="onCropSkip"
+    @cancel="onCropCancel"
+  />
 </template>
 
 <script setup>
@@ -181,6 +191,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { showToast } from 'vant';
 import { homeworkApi, ocrApi, settingsApi } from '../api';
 import { compressImage } from '../utils/imageCompress';
+import ImageCropper from './ImageCropper.vue';
 
 const props = defineProps({
   show: Boolean,
@@ -208,6 +219,11 @@ const selectedSubject = ref(null);
 const saving = ref(false);
 const ocrLoading = ref(false);
 const cameraFileList = ref([]);
+
+// 拍照框选裁剪状态
+const showCropper = ref(false);
+const cropperImageUrl = ref('');
+const pendingCameraFile = ref(null);
 const internalSubjects = ref([]);
 let pollTimer = null;
 
@@ -524,12 +540,18 @@ const pollTask = (taskId) => {
   }, 600);
 };
 
-const onOcrUpload = async (fileItem) => {
+const onOcrUpload = (fileItem) => {
+  pendingCameraFile.value = fileItem;
+  cropperImageUrl.value = fileItem.content || (fileItem.file ? URL.createObjectURL(fileItem.file) : '');
+  showCropper.value = true;
+};
+
+const executeOcrWithFile = async (targetFile) => {
   ocrLoading.value = true;
   try {
-    const compressed = await compressImage(fileItem.file, 1600, 0.82);
+    const compressed = await compressImage(targetFile, 1600, 0.82);
     const fd = new FormData();
-    fd.append('file', compressed.file);
+    fd.append('file', compressed.file || targetFile);
     fd.append('mode', 'auto');
     const res = await ocrApi.createTask(fd);
     await pollTask(res.data.task_id);
@@ -537,6 +559,29 @@ const onOcrUpload = async (fileItem) => {
     ocrLoading.value = false;
     showToast('提交识别失败');
   }
+};
+
+const onCropConfirm = async (cropData) => {
+  showCropper.value = false;
+  if (cropData?.file) {
+    if (cropData.blobUrl) {
+      cameraFileList.value = [{ url: cropData.blobUrl }];
+    }
+    await executeOcrWithFile(cropData.file);
+  }
+};
+
+const onCropSkip = async () => {
+  showCropper.value = false;
+  if (pendingCameraFile.value?.file) {
+    await executeOcrWithFile(pendingCameraFile.value.file);
+  }
+};
+
+const onCropCancel = () => {
+  showCropper.value = false;
+  cameraFileList.value = [];
+  pendingCameraFile.value = null;
 };
 
 // 智能多学科并发录入
