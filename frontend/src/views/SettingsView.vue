@@ -40,462 +40,597 @@
           class="settings-top-notice"
         />
 
-        <!-- 卡片 1: 每日提醒与多渠道推送设置 -->
-        <div class="st-card">
-          <div class="st-section-header">
-            <span class="st-icon-badge st-icon-badge--primary">
-              <van-icon name="volume-o" />
-            </span>
-            <span class="section-title">推送提醒设置</span>
-          </div>
-
-          <!-- 时段说明 -->
-          <van-cell
-            title="提醒策略"
-            label="20:10 / 21:10 中途催办 (100%完成自动跳过免打扰) ｜ 21:50 晚间汇总日报 (满卡送达喜报)"
-          />
-
-          <!-- 启用渠道选择区 (2列响应式卡片网格，彻底释放水平空间) -->
-          <div class="channel-selector-section">
-            <div class="channel-selector-header">
-              <span class="selector-title">启用推送渠道（多选）</span>
-              <span class="selector-count" v-if="notifConfig.enabled_channels.length > 0">
-                已启用 {{ notifConfig.enabled_channels.length }} 个渠道
+        <!-- 常驻顶部：月度出勤核心看板与快捷操作 -->
+        <div class="st-card overview-dashboard-card">
+          <div class="overview-card-header">
+            <div class="overview-title-group">
+              <span class="st-icon-badge st-icon-badge--info">
+                <van-icon name="chart-trending-o" />
               </span>
-              <span class="selector-count-empty" v-else>
-                未启用任何渠道
-              </span>
+              <span class="overview-title">出勤核心看板</span>
             </div>
-            <van-checkbox-group v-model="notifConfig.enabled_channels" class="channel-grid">
-              <div
-                class="channel-select-card"
-                :class="{ 'is-active': notifConfig.enabled_channels.includes('wechat_sandbox') }"
-                @click="toggleChannel('wechat_sandbox')"
-              >
-                <van-checkbox name="wechat_sandbox" shape="square" @click.stop />
-                <span class="st-icon-badge st-icon-badge--success channel-badge">
-                  <van-icon name="chat-o" />
-                </span>
-                <span class="channel-card-text">微信测试号</span>
-              </div>
-
-              <div
-                class="channel-select-card"
-                :class="{ 'is-active': notifConfig.enabled_channels.includes('serverchan') }"
-                @click="toggleChannel('serverchan')"
-              >
-                <van-checkbox name="serverchan" shape="square" @click.stop />
-                <span class="st-icon-badge st-icon-badge--warning channel-badge">
-                  <van-icon name="comment-o" />
-                </span>
-                <span class="channel-card-text">Server酱</span>
-              </div>
-
-              <div
-                class="channel-select-card"
-                :class="{ 'is-active': notifConfig.enabled_channels.includes('bark') }"
-                @click="toggleChannel('bark')"
-              >
-                <van-checkbox name="bark" shape="square" @click.stop />
-                <span class="st-icon-badge st-icon-badge--purple channel-badge">
-                  <van-icon name="phone-o" />
-                </span>
-                <span class="channel-card-text">iOS Bark</span>
-              </div>
-
-              <div
-                class="channel-select-card"
-                :class="{ 'is-active': notifConfig.enabled_channels.includes('webhook') }"
-                @click="toggleChannel('webhook')"
-              >
-                <van-checkbox name="webhook" shape="square" @click.stop />
-                <span class="st-icon-badge st-icon-badge--neutral channel-badge">
-                  <van-icon name="cluster-o" />
-                </span>
-                <span class="channel-card-text">群机器人</span>
-              </div>
-            </van-checkbox-group>
-          </div>
-
-          <!-- 未启用渠道时的友好提示 -->
-          <div class="channel-empty-tip" v-if="notifConfig.enabled_channels.length === 0">
-            <van-icon name="info-o" />
-            <span>请在上方勾选需要启用的渠道，系统将展开对应配置项</span>
-          </div>
-
-          <!-- 微信官方测试号配置 (Sandbox) -->
-          <div class="channel-config-box" v-if="notifConfig.enabled_channels.includes('wechat_sandbox')">
-            <div class="channel-header">
-              <div class="channel-header-left">
-                <span class="st-icon-badge st-icon-badge--success">
-                  <van-icon name="chat-o" />
-                </span>
-                <span class="channel-title">微信测试号</span>
-              </div>
-              <span class="st-status-tag st-status-tag--success">免费10万次/天</span>
-            </div>
-            <van-field
-              v-model="notifConfig.wechat_app_id"
-              label="AppID"
-              label-width="85px"
-              center
-              class="channel-field"
-              placeholder="测试号 AppID (wx...)"
-            />
-            <van-field
-              v-model="notifConfig.wechat_app_secret"
-              label="Secret"
-              label-width="85px"
-              type="password"
-              center
-              class="channel-field"
-              placeholder="测试号 AppSecret"
-            />
-            <van-field
-              v-model="notifConfig.wechat_template_id"
-              label="模板ID"
-              label-width="85px"
-              center
-              class="channel-field"
-              placeholder="消息模板 ID"
-            />
-            <!-- 结构化家庭成员接收人列表 -->
-            <div class="wechat-members-section">
-              <div class="wechat-members-header">
-                <span class="wechat-members-title">
-                  <van-icon name="friends-o" />
-                  家庭成员接收列表 ({{ wechatMemberList.length }}人)
-                </span>
-                <van-button
-                  size="mini"
-                  type="primary"
-                  plain
-                  class="channel-test-btn"
-                  :loading="testingChannel === 'wechat_sandbox'"
-                  @click="handleTestChannel('wechat_sandbox', {
-                    target: serializeWechatMembers(),
-                    app_id: notifConfig.wechat_app_id,
-                    app_secret: notifConfig.wechat_app_secret,
-                    template_id: notifConfig.wechat_template_id
-                  })"
-                >
-                  全员广播测试
-                </van-button>
-              </div>
-
-              <div class="wechat-member-card" v-for="(m, idx) in wechatMemberList" :key="idx">
-                <div class="wechat-member-row-top">
-                  <div class="wechat-member-identity">
-                    <span class="member-index-badge">#{{ idx + 1 }}</span>
-                    <input
-                      v-model="m.name"
-                      class="member-name-input"
-                      placeholder="称谓 (如 爸爸/妈妈)"
-                    />
-                  </div>
-                  <div class="wechat-member-actions">
-                    <van-button
-                      size="mini"
-                      type="default"
-                      class="member-single-test-btn"
-                      :loading="testingChannel === `wechat_single_${idx}`"
-                      @click="testSingleMember(m, idx)"
-                    >
-                      单人测试
-                    </van-button>
-                    <van-icon
-                      name="delete-o"
-                      class="member-del-btn"
-                      v-if="wechatMemberList.length > 1"
-                      @click="removeWechatMember(idx)"
-                    />
-                  </div>
-                </div>
-                <div class="wechat-member-openid-box">
-                  <input
-                    v-model="m.openid"
-                    class="member-openid-input"
-                    placeholder="请输入微信 OpenID (以 oz1n... 开头)"
-                  />
-                </div>
-              </div>
-
-              <div class="wechat-add-member-wrapper">
-                <van-button
-                  size="small"
-                  type="primary"
-                  plain
-                  icon="plus"
-                  block
-                  class="wechat-add-btn"
-                  @click="addWechatMember"
-                >
-                  添加家庭成员 OpenID
-                </van-button>
-              </div>
-            </div>
-            <div class="channel-caption">
-              <van-icon name="info-o" class="caption-icon" />
-              <span>直连微信官方服务器；扫测试号二维码关注后，将 OpenID 填入上方并备注，即可同步弹窗接收。</span>
+            <div class="month-stepper">
+              <van-button size="mini" icon="arrow-left" @click="changeMonth(-1)" />
+              <span class="current-month-text">{{ currentYear }} 年 {{ currentMonth }} 月</span>
+              <van-button size="mini" icon="arrow" @click="changeMonth(1)" />
             </div>
           </div>
 
-          <!-- Server酱 配置 (按需展示) -->
-          <div class="channel-config-box" v-if="notifConfig.enabled_channels.includes('serverchan')">
-            <div class="channel-header">
-              <div class="channel-header-left">
-                <span class="st-icon-badge st-icon-badge--warning">
-                  <van-icon name="comment-o" />
-                </span>
-                <span class="channel-title">Server酱 (Turbo版)</span>
-              </div>
-              <span class="st-status-tag st-status-tag--warning">免费 5条/天</span>
+          <!-- 月度核心指标网格 -->
+          <div class="monthly-stats-grid">
+            <div class="monthly-stat-item">
+              <div class="m-stat-val text-primary">{{ monthlyData?.average_completion_rate ?? '--' }}%</div>
+              <div class="m-stat-label">月均打卡率</div>
             </div>
-            <van-field
-              v-model="notifConfig.serverchan_key"
-              label="SendKey"
-              label-width="70px"
-              center
-              class="channel-field"
-              placeholder="Server酱的 SCT SendKey"
-            >
-              <template #button>
-                <van-button
-                  size="small"
-                  type="default"
-                  class="channel-test-btn"
-                  :loading="testingChannel === 'serverchan'"
-                  @click="handleTestChannel('serverchan', notifConfig.serverchan_key)"
-                >
-                  测试
-                </van-button>
-              </template>
-            </van-field>
-          </div>
-
-          <!-- iOS Bark 配置 (按需展示) -->
-          <div class="channel-config-box" v-if="notifConfig.enabled_channels.includes('bark')">
-            <div class="channel-header">
-              <div class="channel-header-left">
-                <span class="st-icon-badge st-icon-badge--purple">
-                  <van-icon name="phone-o" />
-                </span>
-                <span class="channel-title">iOS Bark 推送</span>
-              </div>
-              <span class="st-status-tag st-status-tag--purple">iPhone 首选 · 免账号</span>
+            <div class="monthly-stat-item">
+              <div class="m-stat-val">{{ monthlyData?.recorded_days ?? 0 }} / {{ monthlyData?.total_days ?? 0 }}</div>
+              <div class="m-stat-label">有效打卡天数</div>
             </div>
-            <van-field
-              v-model="notifConfig.bark_key"
-              label="Bark Key"
-              label-width="70px"
-              center
-              class="channel-field"
-              placeholder="Bark App 中的设备 Key 或完整 URL"
-            >
-              <template #button>
-                <van-button
-                  size="small"
-                  type="default"
-                  class="channel-test-btn"
-                  :loading="testingChannel === 'bark'"
-                  @click="handleTestChannel('bark', notifConfig.bark_key)"
-                >
-                  测试
-                </van-button>
-              </template>
-            </van-field>
-            <div class="channel-caption">
-              <van-icon name="info-o" class="caption-icon" />
-              <span>支持多台 iPhone：在不同手机安装 Bark 后，将多个 Key 用逗号隔开，全家手机即可同时秒级收到锁屏通知。</span>
+            <div class="monthly-stat-item">
+              <div class="m-stat-val text-succ">{{ monthlyData?.perfect_days ?? 0 }} 天</div>
+              <div class="m-stat-label">全满卡天数</div>
             </div>
           </div>
 
-          <!-- 群机器人 Webhook (按需展示) -->
-          <div class="channel-config-box" v-if="notifConfig.enabled_channels.includes('webhook')">
-            <div class="channel-header">
-              <div class="channel-header-left">
-                <span class="st-icon-badge st-icon-badge--neutral">
-                  <van-icon name="cluster-o" />
-                </span>
-                <span class="channel-title">群机器人 Webhook</span>
-              </div>
-              <span class="st-status-tag st-status-tag--neutral">企微/钉钉/飞书</span>
-            </div>
-            <van-field
-              v-model="notifConfig.webhook_url"
-              label="Webhook"
-              label-width="70px"
-              center
-              class="channel-field"
-              placeholder="群机器人的完整 Webhook 链接"
-            >
-              <template #button>
-                <van-button
-                  size="small"
-                  type="default"
-                  class="channel-test-btn"
-                  :loading="testingChannel === 'webhook'"
-                  @click="handleTestChannel('webhook', notifConfig.webhook_url)"
-                >
-                  测试
-                </van-button>
-              </template>
-            </van-field>
-          </div>
-
-          <!-- 操作按钮行 (同行并排，紧凑利落) -->
-          <div class="notif-action-row">
+          <!-- 快捷操作：发送今日汇总 -->
+          <div class="overview-quick-actions">
             <van-button
               type="warning"
               plain
               round
+              size="small"
               icon="guide-o"
-              class="notif-btn notif-btn-secondary"
+              class="quick-summary-btn"
               :loading="sendingSummary"
               @click="handleSendSummaryNow"
             >
-              发送今日汇总
-            </van-button>
-            <van-button
-              type="primary"
-              round
-              class="notif-btn notif-btn-primary"
-              :loading="savingConfig"
-              @click="handleSaveConfig"
-            >
-              保存通知设置
+              一键发送今日作业汇总快报
             </van-button>
           </div>
         </div>
 
-        <!-- 卡片 2: 学科与满分管理 -->
-        <div class="st-card">
-          <div class="st-section-header">
-            <span class="st-icon-badge st-icon-badge--purple">
-              <van-icon name="apps-o" />
-            </span>
-            <span class="section-title">学科与满分管理</span>
+        <!-- 分类控制工具栏 -->
+        <div class="section-toolbar">
+          <div class="section-toolbar-left">
+            <span class="section-toolbar-title">系统管理与设置</span>
+            <span class="section-toolbar-count">6 项</span>
+          </div>
+          <button class="section-toggle-all-btn" @click="toggleAllSections">
+            <van-icon :name="areAllExpanded ? 'arrow-up' : 'arrow-down'" />
+            <span>{{ areAllExpanded ? '全部收起' : '全部展开' }}</span>
+          </button>
+        </div>
+
+        <!-- 卡片 1: 每日提醒与多渠道推送设置 (可折叠) -->
+        <div class="st-card st-collapse-card" :class="{ 'is-open': isSectionOpen('notif') }">
+          <div class="st-collapse-header" @click="toggleSection('notif')">
+            <div class="st-collapse-header-left">
+              <span class="st-icon-badge st-icon-badge--primary">
+                <van-icon name="volume-o" />
+              </span>
+              <div class="st-collapse-title-group">
+                <span class="st-collapse-title">推送提醒设置</span>
+                <span class="st-collapse-summary">{{ notifSummaryText }}</span>
+              </div>
+            </div>
+            <div class="st-collapse-header-right">
+              <van-icon name="arrow-down" class="st-collapse-arrow" />
+            </div>
           </div>
 
-          <div class="card-hint-text">
-            点击学科可调整满分分值（如100/120/150分），支持添加或删除自定义学科。
-          </div>
-
-          <div class="subject-cell-list">
+          <div class="st-collapse-body" v-show="isSectionOpen('notif')">
+            <!-- 时段说明 -->
             <van-cell
-              v-for="sub in subjects"
-              :key="sub.id"
-              :title="sub.name"
-              :label="sub.is_default ? '预置核心学科' : '自定义拓展学科'"
-              is-link
-              @click="openEditSubject(sub)"
-            >
-              <template #right-icon>
-                <div class="subject-cell-right">
-                  <span class="subject-score-val">{{ sub.full_score }} 分</span>
-                  <van-icon name="edit" class="subject-edit-icon" />
+              title="提醒策略"
+              label="20:10 / 21:10 中途催办 (100%完成自动跳过免打扰) ｜ 21:50 晚间汇总日报 (满卡送达喜报)"
+            />
+
+            <!-- 启用渠道选择区 (2列响应式卡片网格，彻底释放水平空间) -->
+            <div class="channel-selector-section">
+              <div class="channel-selector-header">
+                <span class="selector-title">启用推送渠道（多选）</span>
+                <span class="selector-count" v-if="notifConfig.enabled_channels.length > 0">
+                  已启用 {{ notifConfig.enabled_channels.length }} 个渠道
+                </span>
+                <span class="selector-count-empty" v-else>
+                  未启用任何渠道
+                </span>
+              </div>
+              <van-checkbox-group v-model="notifConfig.enabled_channels" class="channel-grid">
+                <div
+                  class="channel-select-card"
+                  :class="{ 'is-active': notifConfig.enabled_channels.includes('wechat_sandbox') }"
+                  @click="toggleChannel('wechat_sandbox')"
+                >
+                  <van-checkbox name="wechat_sandbox" shape="square" @click.stop />
+                  <span class="st-icon-badge st-icon-badge--success channel-badge">
+                    <van-icon name="chat-o" />
+                  </span>
+                  <span class="channel-card-text">微信测试号</span>
                 </div>
+
+                <div
+                  class="channel-select-card"
+                  :class="{ 'is-active': notifConfig.enabled_channels.includes('serverchan') }"
+                  @click="toggleChannel('serverchan')"
+                >
+                  <van-checkbox name="serverchan" shape="square" @click.stop />
+                  <span class="st-icon-badge st-icon-badge--warning channel-badge">
+                    <van-icon name="comment-o" />
+                  </span>
+                  <span class="channel-card-text">Server酱</span>
+                </div>
+
+                <div
+                  class="channel-select-card"
+                  :class="{ 'is-active': notifConfig.enabled_channels.includes('bark') }"
+                  @click="toggleChannel('bark')"
+                >
+                  <van-checkbox name="bark" shape="square" @click.stop />
+                  <span class="st-icon-badge st-icon-badge--purple channel-badge">
+                    <van-icon name="phone-o" />
+                  </span>
+                  <span class="channel-card-text">iOS Bark</span>
+                </div>
+
+                <div
+                  class="channel-select-card"
+                  :class="{ 'is-active': notifConfig.enabled_channels.includes('webhook') }"
+                  @click="toggleChannel('webhook')"
+                >
+                  <van-checkbox name="webhook" shape="square" @click.stop />
+                  <span class="st-icon-badge st-icon-badge--neutral channel-badge">
+                    <van-icon name="cluster-o" />
+                  </span>
+                  <span class="channel-card-text">群机器人</span>
+                </div>
+              </van-checkbox-group>
+            </div>
+
+            <!-- 未启用渠道时的友好提示 -->
+            <div class="channel-empty-tip" v-if="notifConfig.enabled_channels.length === 0">
+              <van-icon name="info-o" />
+              <span>请在上方勾选需要启用的渠道，系统将展开对应配置项</span>
+            </div>
+
+            <!-- 微信官方测试号配置 (Sandbox) -->
+            <div class="channel-config-box" v-if="notifConfig.enabled_channels.includes('wechat_sandbox')">
+              <div class="channel-header">
+                <div class="channel-header-left">
+                  <span class="st-icon-badge st-icon-badge--success">
+                    <van-icon name="chat-o" />
+                  </span>
+                  <span class="channel-title">微信测试号</span>
+                </div>
+                <span class="st-status-tag st-status-tag--success">免费10万次/天</span>
+              </div>
+              <van-field
+                v-model="notifConfig.wechat_app_id"
+                label="AppID"
+                label-width="85px"
+                center
+                class="channel-field"
+                placeholder="测试号 AppID (wx...)"
+              />
+              <van-field
+                v-model="notifConfig.wechat_app_secret"
+                label="Secret"
+                label-width="85px"
+                type="password"
+                center
+                class="channel-field"
+                placeholder="测试号 AppSecret"
+              />
+              <van-field
+                v-model="notifConfig.wechat_template_id"
+                label="模板ID"
+                label-width="85px"
+                center
+                class="channel-field"
+                placeholder="消息模板 ID"
+              />
+              <!-- 结构化家庭成员接收人列表 -->
+              <div class="wechat-members-section">
+                <div class="wechat-members-header">
+                  <span class="wechat-members-title">
+                    <van-icon name="friends-o" />
+                    家庭成员接收列表 ({{ wechatMemberList.length }}人)
+                  </span>
+                  <van-button
+                    size="mini"
+                    type="primary"
+                    plain
+                    class="channel-test-btn"
+                    :loading="testingChannel === 'wechat_sandbox'"
+                    @click="handleTestChannel('wechat_sandbox', {
+                      target: serializeWechatMembers(),
+                      app_id: notifConfig.wechat_app_id,
+                      app_secret: notifConfig.wechat_app_secret,
+                      template_id: notifConfig.wechat_template_id
+                    })"
+                  >
+                    全员广播测试
+                  </van-button>
+                </div>
+
+                <div class="wechat-member-card" v-for="(m, idx) in wechatMemberList" :key="idx">
+                  <div class="wechat-member-row-top">
+                    <div class="wechat-member-identity">
+                      <span class="member-index-badge">#{{ idx + 1 }}</span>
+                      <input
+                        v-model="m.name"
+                        class="member-name-input"
+                        placeholder="称谓 (如 爸爸/妈妈)"
+                      />
+                    </div>
+                    <div class="wechat-member-actions">
+                      <van-button
+                        size="mini"
+                        type="default"
+                        class="member-single-test-btn"
+                        :loading="testingChannel === `wechat_single_${idx}`"
+                        @click="testSingleMember(m, idx)"
+                      >
+                        单人测试
+                      </van-button>
+                      <van-icon
+                        name="delete-o"
+                        class="member-del-btn"
+                        v-if="wechatMemberList.length > 1"
+                        @click="removeWechatMember(idx)"
+                      />
+                    </div>
+                  </div>
+                  <div class="wechat-member-openid-box">
+                    <input
+                      v-model="m.openid"
+                      class="member-openid-input"
+                      placeholder="请输入微信 OpenID (以 oz1n... 开头)"
+                    />
+                  </div>
+                </div>
+
+                <div class="wechat-add-member-wrapper">
+                  <van-button
+                    size="small"
+                    type="primary"
+                    plain
+                    icon="plus"
+                    block
+                    class="wechat-add-btn"
+                    @click="addWechatMember"
+                  >
+                    添加家庭成员 OpenID
+                  </van-button>
+                </div>
+              </div>
+              <div class="channel-caption">
+                <van-icon name="info-o" class="caption-icon" />
+                <span>直连微信官方服务器；扫测试号二维码关注后，将 OpenID 填入上方并备注，即可同步弹窗接收。</span>
+              </div>
+            </div>
+
+            <!-- Server酱 配置 (按需展示) -->
+            <div class="channel-config-box" v-if="notifConfig.enabled_channels.includes('serverchan')">
+              <div class="channel-header">
+                <div class="channel-header-left">
+                  <span class="st-icon-badge st-icon-badge--warning">
+                    <van-icon name="comment-o" />
+                  </span>
+                  <span class="channel-title">Server酱 (Turbo版)</span>
+                </div>
+                <span class="st-status-tag st-status-tag--warning">免费 5条/天</span>
+              </div>
+              <van-field
+                v-model="notifConfig.serverchan_key"
+                label="SendKey"
+                label-width="70px"
+                center
+                class="channel-field"
+                placeholder="Server酱的 SCT SendKey"
+              >
+                <template #button>
+                  <van-button
+                    size="small"
+                    type="default"
+                    class="channel-test-btn"
+                    :loading="testingChannel === 'serverchan'"
+                    @click="handleTestChannel('serverchan', notifConfig.serverchan_key)"
+                  >
+                    测试
+                  </van-button>
+                </template>
+              </van-field>
+            </div>
+
+            <!-- iOS Bark 配置 (按需展示) -->
+            <div class="channel-config-box" v-if="notifConfig.enabled_channels.includes('bark')">
+              <div class="channel-header">
+                <div class="channel-header-left">
+                  <span class="st-icon-badge st-icon-badge--purple">
+                    <van-icon name="phone-o" />
+                  </span>
+                  <span class="channel-title">iOS Bark 推送</span>
+                </div>
+                <span class="st-status-tag st-status-tag--purple">iPhone 首选 · 免账号</span>
+              </div>
+              <van-field
+                v-model="notifConfig.bark_key"
+                label="Bark Key"
+                label-width="70px"
+                center
+                class="channel-field"
+                placeholder="Bark App 中的设备 Key 或完整 URL"
+              >
+                <template #button>
+                  <van-button
+                    size="small"
+                    type="default"
+                    class="channel-test-btn"
+                    :loading="testingChannel === 'bark'"
+                    @click="handleTestChannel('bark', notifConfig.bark_key)"
+                  >
+                    测试
+                  </van-button>
+                </template>
+              </van-field>
+              <div class="channel-caption">
+                <van-icon name="info-o" class="caption-icon" />
+                <span>支持多台 iPhone：在不同手机安装 Bark 后，将多个 Key 用逗号隔开，全家手机即可同时秒级收到锁屏通知。</span>
+              </div>
+            </div>
+
+            <!-- 群机器人 Webhook (按需展示) -->
+            <div class="channel-config-box" v-if="notifConfig.enabled_channels.includes('webhook')">
+              <div class="channel-header">
+                <div class="channel-header-left">
+                  <span class="st-icon-badge st-icon-badge--neutral">
+                    <van-icon name="cluster-o" />
+                  </span>
+                  <span class="channel-title">群机器人 Webhook</span>
+                </div>
+                <span class="st-status-tag st-status-tag--neutral">企微/钉钉/飞书</span>
+              </div>
+              <van-field
+                v-model="notifConfig.webhook_url"
+                label="Webhook"
+                label-width="70px"
+                center
+                class="channel-field"
+                placeholder="群机器人的完整 Webhook 链接"
+              >
+                <template #button>
+                  <van-button
+                    size="small"
+                    type="default"
+                    class="channel-test-btn"
+                    :loading="testingChannel === 'webhook'"
+                    @click="handleTestChannel('webhook', notifConfig.webhook_url)"
+                  >
+                    测试
+                  </van-button>
+                </template>
+              </van-field>
+            </div>
+
+            <!-- 保存配置按钮 -->
+            <div style="margin-top: 14px;">
+              <van-button
+                type="primary"
+                block
+                round
+                class="notif-save-btn"
+                :loading="savingConfig"
+                @click="handleSaveConfig"
+              >
+                保存推送设置
+              </van-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 卡片 2: 学科与满分管理 (可折叠) -->
+        <div class="st-card st-collapse-card" :class="{ 'is-open': isSectionOpen('subject') }">
+          <div class="st-collapse-header" @click="toggleSection('subject')">
+            <div class="st-collapse-header-left">
+              <span class="st-icon-badge st-icon-badge--purple">
+                <van-icon name="apps-o" />
+              </span>
+              <div class="st-collapse-title-group">
+                <span class="st-collapse-title">学科与满分管理</span>
+                <span class="st-collapse-summary">{{ subjectSummaryText }}</span>
+              </div>
+            </div>
+            <div class="st-collapse-header-right">
+              <van-icon name="arrow-down" class="st-collapse-arrow" />
+            </div>
+          </div>
+
+          <div class="st-collapse-body" v-show="isSectionOpen('subject')">
+            <div class="card-hint-text">
+              点击学科可调整满分分值（如100/120/150分），支持添加或删除自定义学科。
+            </div>
+
+            <div class="subject-cell-list">
+              <van-cell
+                v-for="sub in subjects"
+                :key="sub.id"
+                :title="sub.name"
+                :label="sub.is_default ? '预置核心学科' : '自定义拓展学科'"
+                is-link
+                @click="openEditSubject(sub)"
+              >
+                <template #right-icon>
+                  <div class="subject-cell-right">
+                    <span class="subject-score-val">{{ sub.full_score }} 分</span>
+                    <van-icon name="edit" class="subject-edit-icon" />
+                  </div>
+                </template>
+              </van-cell>
+            </div>
+
+            <van-cell
+              title="新增自定义学科"
+              icon="plus"
+              is-link
+              class="add-subject-cell"
+              @click="openAddSubject"
+            />
+          </div>
+        </div>
+
+        <!-- 卡片 3: 月度打卡深度分析图表 (可折叠) -->
+        <div class="st-card st-collapse-card" :class="{ 'is-open': isSectionOpen('chart') }">
+          <div class="st-collapse-header" @click="toggleSection('chart')">
+            <div class="st-collapse-header-left">
+              <span class="st-icon-badge st-icon-badge--info">
+                <van-icon name="bar-chart-o" />
+              </span>
+              <div class="st-collapse-title-group">
+                <span class="st-collapse-title">出勤深度图表分析</span>
+                <span class="st-collapse-summary">{{ chartSummaryText }}</span>
+              </div>
+            </div>
+            <div class="st-collapse-header-right">
+              <van-icon name="arrow-down" class="st-collapse-arrow" />
+            </div>
+          </div>
+
+          <div class="st-collapse-body" v-show="isSectionOpen('chart')">
+            <div class="monthly-analytics-box">
+              <!-- 整月每日作业量与打卡率走势混合图 -->
+              <div class="monthly-chart-title">
+                <van-icon name="chart-trending-o" color="#2563eb" style="margin-right: 4px;" />
+                每日作业量与打卡率走势 (1~{{ monthlyData?.total_days || 30 }}日)
+              </div>
+              <div ref="monthlyTrendChartRef" class="monthly-echarts-container"></div>
+
+              <!-- 各科目未完成频次分布柱状图 -->
+              <div class="monthly-chart-title" style="margin-top: 14px;">
+                <van-icon name="bar-chart-o" color="#f59e0b" style="margin-right: 4px;" />
+                各科目未完成频次分布
+              </div>
+              <div v-show="monthlyData?.subject_missing_distribution?.length > 0" ref="monthlyMissingChartRef" class="monthly-echarts-container bar-height"></div>
+              <div v-if="!monthlyData?.subject_missing_distribution?.length" class="monthly-perfect-tip">
+                <van-icon name="passed" color="#10b981" style="margin-right: 4px;" />
+                本月暂无科目未完成记录，各项作业皆如期完成！
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 卡片 4: OCR 识别引擎设置 (可折叠) -->
+        <div class="st-card st-collapse-card" :class="{ 'is-open': isSectionOpen('ocr') }">
+          <div class="st-collapse-header" @click="toggleSection('ocr')">
+            <div class="st-collapse-header-left">
+              <span class="st-icon-badge st-icon-badge--purple">
+                <van-icon name="photograph" />
+              </span>
+              <div class="st-collapse-title-group">
+                <span class="st-collapse-title">OCR 识别引擎设置</span>
+                <span class="st-collapse-summary">{{ ocrSummaryText }}</span>
+              </div>
+            </div>
+            <div class="st-collapse-header-right">
+              <van-icon name="arrow-down" class="st-collapse-arrow" />
+            </div>
+          </div>
+
+          <div class="st-collapse-body" v-show="isSectionOpen('ocr')">
+            <van-cell
+              title="当前生效推理引擎"
+              :value="ocrConfig.active_engine === 'CloudVLM' ? '智谱 GLM-4V-Flash（高精度云端）' : 'RapidOCR（本地轻量 CPU）'"
+              :label="ocrConfig.has_cloud_key ? '已开启云端多模态视觉模型，复杂排版与手写体优先使用' : '当前使用本地 CPU 模型；配置免费智谱 Key 可大幅提升作业与错题手写识别率'"
+            />
+
+            <van-cell-group inset style="margin: 8px 0;">
+              <van-field
+                v-model="ocrKeyInput"
+                type="password"
+                label="云端 API Key"
+                :placeholder="ocrConfig.has_cloud_key ? '已配置: ' + ocrConfig.cloud_key_masked : '智谱开放平台免费 Key (留空使用本地离线)'"
+                clearable
+              />
+            </van-cell-group>
+
+            <div class="ocr-card-actions">
+              <van-button
+                type="primary"
+                size="small"
+                round
+                :loading="savingOcr"
+                @click="saveOcrSettings"
+              >
+                保存 OCR 设置
+              </van-button>
+              <van-button
+                v-if="ocrConfig.has_cloud_key"
+                plain
+                type="danger"
+                size="small"
+                round
+                @click="clearOcrKey"
+              >
+                恢复纯本地离线
+              </van-button>
+            </div>
+            <div class="card-hint-text" style="margin-top: 8px;">
+              说明：智谱 GLM-4V-Flash 视觉模型永久免费。前往 bigmodel.cn 注册即可免费获取 API Key。若不配置则默认使用本地 CPU RapidOCR 离线引擎。
+            </div>
+          </div>
+        </div>
+
+        <!-- 卡片 5: 数据安全与全站备份 (可折叠) -->
+        <div class="st-card st-collapse-card" :class="{ 'is-open': isSectionOpen('backup') }">
+          <div class="st-collapse-header" @click="toggleSection('backup')">
+            <div class="st-collapse-header-left">
+              <span class="st-icon-badge st-icon-badge--success">
+                <van-icon name="shield-o" />
+              </span>
+              <div class="st-collapse-title-group">
+                <span class="st-collapse-title">数据安全与备份</span>
+                <span class="st-collapse-summary">{{ backupSummaryText }}</span>
+              </div>
+            </div>
+            <div class="st-collapse-header-right">
+              <van-icon name="arrow-down" class="st-collapse-arrow" />
+            </div>
+          </div>
+
+          <div class="st-collapse-body" v-show="isSectionOpen('backup')">
+            <van-cell title="全站数据导出备份" is-link label="包含 SQLite 数据库与所有错题高清原图" @click="handleExportBackup" />
+            <van-cell title="从备份 Zip 包还原" label="恢复前将自动在本地创建数据快照">
+              <template #right-icon>
+                <van-uploader :after-read="handleImportBackup" accept=".zip">
+                  <van-button size="small" type="primary">选择并还原</van-button>
+                </van-uploader>
               </template>
             </van-cell>
           </div>
-
-          <van-cell
-            title="新增自定义学科"
-            icon="plus"
-            is-link
-            class="add-subject-cell"
-            @click="openAddSubject"
-          />
         </div>
 
-        <!-- 卡片 3: 月度打卡透视 -->
-        <div class="st-card">
-          <div class="st-section-header">
-            <span class="st-icon-badge st-icon-badge--info">
-              <van-icon name="chart-trending-o" />
-            </span>
-            <span class="section-title">月度打卡透视</span>
-          </div>
-
-          <div class="monthly-analytics-box">
-            <div class="monthly-header">
-              <div class="monthly-chart-title" style="margin-bottom: 0;">
-                <van-icon name="calendar-o" color="#2563eb" style="margin-right: 4px;" />
-                打卡出勤深度分析
-              </div>
-              <div class="month-stepper">
-                <van-button size="mini" icon="arrow-left" @click="changeMonth(-1)" />
-                <span class="current-month-text">{{ currentYear }} 年 {{ currentMonth }} 月</span>
-                <van-button size="mini" icon="arrow" @click="changeMonth(1)" />
+        <!-- 卡片 6: 安全设置与系统关于 (可折叠) -->
+        <div class="st-card st-collapse-card" :class="{ 'is-open': isSectionOpen('security') }">
+          <div class="st-collapse-header" @click="toggleSection('security')">
+            <div class="st-collapse-header-left">
+              <span class="st-icon-badge st-icon-badge--neutral">
+                <van-icon name="setting-o" />
+              </span>
+              <div class="st-collapse-title-group">
+                <span class="st-collapse-title">安全口令与关于</span>
+                <span class="st-collapse-summary">{{ securitySummaryText }}</span>
               </div>
             </div>
-
-            <!-- 月度核心指标网格 -->
-            <div class="monthly-stats-grid">
-              <div class="monthly-stat-item">
-                <div class="m-stat-val text-primary">{{ monthlyData?.average_completion_rate ?? '--' }}%</div>
-                <div class="m-stat-label">月均打卡率</div>
-              </div>
-              <div class="monthly-stat-item">
-                <div class="m-stat-val">{{ monthlyData?.recorded_days ?? 0 }} / {{ monthlyData?.total_days ?? 0 }}</div>
-                <div class="m-stat-label">有效打卡天数</div>
-              </div>
-              <div class="monthly-stat-item">
-                <div class="m-stat-val text-succ">{{ monthlyData?.perfect_days ?? 0 }} 天</div>
-                <div class="m-stat-label">全满卡天数</div>
-              </div>
-            </div>
-
-            <!-- 整月每日作业量与打卡率走势混合图 -->
-            <div class="monthly-chart-title">
-              <van-icon name="chart-trending-o" color="#2563eb" style="margin-right: 4px;" />
-              每日作业量与打卡率走势 (1~{{ monthlyData?.total_days || 30 }}日)
-            </div>
-            <div ref="monthlyTrendChartRef" class="monthly-echarts-container"></div>
-
-            <!-- 各科目未完成频次分布柱状图 -->
-            <div class="monthly-chart-title" style="margin-top: 14px;">
-              <van-icon name="bar-chart-o" color="#f59e0b" style="margin-right: 4px;" />
-              各科目未完成频次分布
-            </div>
-            <div v-show="monthlyData?.subject_missing_distribution?.length > 0" ref="monthlyMissingChartRef" class="monthly-echarts-container bar-height"></div>
-            <div v-if="!monthlyData?.subject_missing_distribution?.length" class="monthly-perfect-tip">
-              <van-icon name="passed" color="#10b981" style="margin-right: 4px;" />
-              本月暂无科目未完成记录，各项作业皆如期完成！
+            <div class="st-collapse-header-right">
+              <van-icon name="arrow-down" class="st-collapse-arrow" />
             </div>
           </div>
-        </div>
 
-        <!-- 卡片 4: 数据安全与一键备份 -->
-        <div class="st-card">
-          <div class="st-section-header">
-            <span class="st-icon-badge st-icon-badge--success">
-              <van-icon name="shield-o" />
-            </span>
-            <span class="section-title">数据备份恢复</span>
+          <div class="st-collapse-body" v-show="isSectionOpen('security')">
+            <van-cell title="修改管理口令" is-link icon="lock" @click="showChangePin = true" />
+            <van-cell title="系统关于与运行自检" is-link icon="info-o" @click="$router.push('/about')" />
+            <van-cell title="退出管理并锁定口令" is-link icon="cross" @click="lockSettings" />
           </div>
-          <van-cell title="全站数据导出备份" is-link label="包含 SQLite 数据库与所有错题高清原图" @click="handleExportBackup" />
-          <van-cell title="从备份 Zip 包还原" label="恢复前将自动在本地创建数据快照">
-            <template #right-icon>
-              <van-uploader :after-read="handleImportBackup" accept=".zip">
-                <van-button size="small" type="primary">选择并还原</van-button>
-              </van-uploader>
-            </template>
-          </van-cell>
-
-        </div>
-
-        <!-- 卡片 5: 安全设置与系统关于 -->
-        <div class="st-card">
-          <div class="st-section-header">
-            <span class="st-icon-badge st-icon-badge--neutral">
-              <van-icon name="setting-o" />
-            </span>
-            <span class="section-title">安全口令与关于</span>
-          </div>
-          <van-cell title="修改管理口令" is-link icon="lock" @click="showChangePin = true" />
-          <van-cell title="系统关于与运行自检" is-link icon="info-o" @click="$router.push('/about')" />
-          <van-cell title="退出管理并锁定口令" is-link icon="cross" @click="lockSettings" />
         </div>
       </div>
     </div>
@@ -571,7 +706,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { showToast, showConfirmDialog, showDialog } from 'vant';
 import { settingsApi, backupApi, notificationApi, examApi } from '../api';
 import echarts from '../utils/echarts';
@@ -580,6 +715,81 @@ const isUnlocked = ref(sessionStorage.getItem('parent_unlocked') === 'true');
 const inputPin = ref('');
 const verifying = ref(false);
 const subjects = ref([]);
+
+// 折叠卡片状态管理 (默认全部收起，一屏尽收眼底)
+const activeSections = ref([]);
+const allSectionKeys = ['notif', 'subject', 'chart', 'ocr', 'backup', 'security'];
+
+const isSectionOpen = (key) => activeSections.value.includes(key);
+
+const toggleSection = (key) => {
+  const idx = activeSections.value.indexOf(key);
+  if (idx > -1) {
+    activeSections.value.splice(idx, 1);
+  } else {
+    activeSections.value.push(key);
+    if (key === 'chart') {
+      nextTick(() => {
+        handleSettingsResize();
+        renderMonthlyCharts();
+      });
+    }
+  }
+};
+
+const areAllExpanded = computed(() => activeSections.value.length === allSectionKeys.length);
+
+const toggleAllSections = () => {
+  if (areAllExpanded.value) {
+    activeSections.value = [];
+  } else {
+    activeSections.value = [...allSectionKeys];
+    nextTick(() => {
+      handleSettingsResize();
+      renderMonthlyCharts();
+    });
+  }
+};
+
+// 状态摘要文本计算
+const notifSummaryText = computed(() => {
+  const channels = notifConfig.value.enabled_channels || [];
+  if (!channels.length) return '未启用任何渠道';
+  const labels = [];
+  if (channels.includes('wechat_sandbox')) {
+    labels.push(`微信(${wechatMemberList.value.length}人)`);
+  }
+  if (channels.includes('serverchan')) labels.push('Server酱');
+  if (channels.includes('bark')) labels.push('Bark');
+  if (channels.includes('webhook')) labels.push('群机器人');
+  return `已启用 ${channels.length} 个渠道（${labels.join(' · ')}）`;
+});
+
+const subjectSummaryText = computed(() => {
+  const count = subjects.value.length;
+  if (!count) return '暂未配置学科';
+  const preview = subjects.value.slice(0, 3).map(s => s.name).join('/');
+  return `已配置 ${count} 门学科（${preview}等）`;
+});
+
+const chartSummaryText = computed(() => {
+  return `${currentYear.value}年${currentMonth.value}月 · 走势图与缺卡分布`;
+});
+
+const ocrSummaryText = computed(() => {
+  if (ocrConfig.value.active_engine === 'CloudVLM') {
+    return '智谱大模型 GLM-4V-Flash（高精度云端）';
+  }
+  return 'RapidOCR（本地轻量 CPU 离线）';
+});
+
+const backupSummaryText = computed(() => {
+  return '全站 SQLite 数据库与错题原图备份 / 还原';
+});
+
+const securitySummaryText = computed(() => {
+  return '管理口令 · 系统关于与自检 · 安全退出';
+});
 
 // 学科编辑与新增
 const showEditSubject = ref(false);
@@ -590,6 +800,17 @@ const newSub = ref({ name: '', full_score: 100 });
 // 口令修改
 const showChangePin = ref(false);
 const pinForm = ref({ oldPin: '', newPin: '' });
+
+// OCR 模型与配置
+const ocrConfig = ref({
+  active_engine: 'RapidOCR',
+  has_cloud_key: false,
+  cloud_key_masked: '',
+  cloud_base_url: '',
+  cloud_model: ''
+});
+const ocrKeyInput = ref('');
+const savingOcr = ref(false);
 
 // 通知配置状态
 const notifConfig = ref({
@@ -728,6 +949,7 @@ const handleVerifyPin = async () => {
     fetchSubjects();
     fetchNotificationConfig();
     fetchMonthlyAnalytics();
+    fetchOcrConfig();
 
     if (res.data?.is_default_pin) {
       showDialog({
@@ -757,6 +979,46 @@ const lockSettings = () => {
   sessionStorage.removeItem('parent_pin');
   inputPin.value = '';
   showToast('已安全退出家长模式');
+};
+
+const fetchOcrConfig = async () => {
+  try {
+    const res = await settingsApi.getOcrConfig();
+    ocrConfig.value = res.data;
+  } catch (e) {
+    console.error('获取OCR配置失败', e);
+  }
+};
+
+const saveOcrSettings = async () => {
+  if (!ocrKeyInput.value.trim()) {
+    showToast('请输入 API Key 或点击恢复纯本地离线');
+    return;
+  }
+  savingOcr.value = true;
+  try {
+    await settingsApi.updateOcrConfig({
+      api_key: ocrKeyInput.value.trim()
+    });
+    showToast({ message: 'OCR 设置已更新', icon: 'success' });
+    ocrKeyInput.value = '';
+    await fetchOcrConfig();
+  } catch (e) {
+    showToast('保存失败');
+  } finally {
+    savingOcr.value = false;
+  }
+};
+
+const clearOcrKey = async () => {
+  try {
+    await settingsApi.updateOcrConfig({ api_key: '' });
+    showToast('已切换为纯本地离线模式');
+    ocrKeyInput.value = '';
+    await fetchOcrConfig();
+  } catch (e) {
+    showToast('重置失败');
+  }
 };
 
 const fetchSubjects = async () => {
@@ -1211,6 +1473,7 @@ onMounted(() => {
     fetchSubjects();
     fetchNotificationConfig();
     fetchMonthlyAnalytics();
+    fetchOcrConfig();
   }
 });
 
@@ -1222,6 +1485,12 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.ocr-card-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
 .settings-view {
   flex: 1;
   background-color: var(--st-bg-page, #f8fafc);
@@ -1759,5 +2028,200 @@ onUnmounted(() => {
   border: 1px solid #bbf7d0;
   text-align: center;
   margin-top: 6px;
+}
+
+/* 常驻出勤核心看板样式 */
+.overview-dashboard-card {
+  margin-bottom: 12px;
+  background: var(--st-bg-card, #ffffff);
+  border-radius: 14px;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--st-border, #f1f5f9);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.overview-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.overview-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.overview-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--st-text-primary, #0f172a);
+}
+
+.overview-quick-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.quick-summary-btn {
+  height: 32px;
+  padding: 0 16px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* 分类控制工具栏 */
+.section-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 4px 10px;
+}
+
+.section-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.section-toolbar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.section-toolbar-count {
+  font-size: 11px;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.section-toggle-all-btn {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: #2563eb;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.section-toggle-all-btn:hover {
+  background-color: #eff6ff;
+}
+
+/* 现代化折叠卡片 */
+.st-collapse-card {
+  margin-bottom: 10px;
+  background: var(--st-bg-card, #ffffff);
+  border-radius: 14px;
+  border: 1px solid var(--st-border, #f1f5f9);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.st-collapse-card.is-open {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.st-collapse-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+  background: #ffffff;
+  transition: background-color 0.15s ease;
+}
+
+.st-collapse-header:hover {
+  background-color: #f8fafc;
+}
+
+.st-collapse-header:active {
+  background-color: #f1f5f9;
+}
+
+.st-collapse-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.st-collapse-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.st-collapse-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--st-text-primary, #0f172a);
+  line-height: 1.3;
+}
+
+.st-collapse-summary {
+  font-size: 11px;
+  color: var(--st-text-secondary, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
+
+.st-collapse-header-right {
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  flex-shrink: 0;
+}
+
+.st-collapse-arrow {
+  font-size: 14px;
+  color: #94a3b8;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s ease;
+}
+
+.st-collapse-card.is-open .st-collapse-arrow {
+  transform: rotate(180deg);
+  color: #2563eb;
+}
+
+.st-collapse-body {
+  padding: 4px 14px 14px;
+  border-top: 1px solid #f1f5f9;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.notif-save-btn {
+  height: 38px;
+  font-size: 14px;
+  font-weight: 600;
 }
 </style>
