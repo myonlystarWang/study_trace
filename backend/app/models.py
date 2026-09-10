@@ -64,6 +64,7 @@ class MistakeRecord(Base):
     cropped_diagram_path = Column(String(255), nullable=True)
     
     extracted_text = Column(Text, nullable=True)
+    answer = Column(Text, nullable=True)
     error_type = Column(String(50), nullable=True)  # 概念模糊 / 粗心大意 / 思路卡壳 / 计算错误
     mastery_status = Column(String(20), default="未掌握", index=True)  # 未掌握 / 待复习 / 已掌握
     
