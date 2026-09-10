@@ -45,7 +45,9 @@ export const settingsApi = {
   deleteSubject: (id) => api.delete(`/settings/subjects/${id}`),
   verifyPin: (pin) => api.post('/settings/verify-pin', { pin }),
   changePin: (oldPin, newPin) => api.put('/settings/pin', { old_pin: oldPin, new_pin: newPin }),
-  getPinStatus: () => api.get('/settings/pin-status')
+  getPinStatus: () => api.get('/settings/pin-status'),
+  getOcrConfig: () => api.get('/settings/ocr-config'),
+  updateOcrConfig: (data) => api.put('/settings/ocr-config', data)
 };
 
 export const backupApi = {
@@ -57,6 +59,7 @@ export const backupApi = {
 };
 
 export const ocrApi = {
+  upload: (formData) => mistakeApi.uploadImage(formData),
   createTask: (formData) =>
     api.post('/ocr/tasks', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }

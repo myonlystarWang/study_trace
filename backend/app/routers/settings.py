@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -100,4 +100,72 @@ def api_change_pin(body: PinChangeIn, db: Session = Depends(get_db)):
     """修改家长端进入 PIN 口令"""
     change_pin(body.old_pin, body.new_pin, db)
     return {"status": "ok", "message": "口令已成功修改"}
+
+
+class OcrConfigIn(BaseModel):
+    api_key: Optional[str] = None
+    base_url: Optional[str] = None
+    model: Optional[str] = None
+
+
+@router.get("/ocr-config")
+def get_ocr_config():
+    """获取当前生效的 OCR 引擎状态与云端视觉模型配置"""
+    import os
+    from backend.app.utils.ocr_service import _read_env_file, list_engines
+    env = _read_env_file()
+    key = os.getenv("OCR_CLOUD_API_KEY") or env.get("OCR_CLOUD_API_KEY", "")
+    base_url = os.getenv("OCR_CLOUD_BASE_URL") or env.get(
+        "OCR_CLOUD_BASE_URL", "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+    )
+    model = os.getenv("OCR_CLOUD_MODEL") or env.get("OCR_CLOUD_MODEL", "glm-4v-flash")
+
+    masked = f"{key[:4]}...{key[-4:]}" if len(key) >= 10 else ("已配置" if key else "")
+    engines_info = list_engines()
+    return {
+        "active_engine": engines_info["default"],
+        "engines_detail": engines_info["detail"],
+        "has_cloud_key": bool(key),
+        "cloud_key_masked": masked,
+        "cloud_base_url": base_url,
+        "cloud_model": model,
+    }
+
+
+@router.put("/ocr-config")
+def update_ocr_config(cfg: OcrConfigIn):
+    """保存云端视觉模型配置到 data/.env 并实时热更新"""
+    import os
+    from pathlib import Path
+    env_path = Path(__file__).resolve().parents[3] / "data" / ".env"
+    lines = []
+    if env_path.exists():
+        lines = env_path.read_text(encoding="utf-8").splitlines()
+
+    new_lines = []
+    for l in lines:
+        s = l.strip()
+        if s.startswith("OCR_CLOUD_API_KEY=") or s.startswith("OCR_CLOUD_BASE_URL=") or s.startswith("OCR_CLOUD_MODEL="):
+            continue
+        new_lines.append(l)
+
+    if cfg.api_key is not None:
+        new_key = cfg.api_key.strip()
+        if new_key:
+            new_lines.append(f"OCR_CLOUD_API_KEY={new_key}")
+            os.environ["OCR_CLOUD_API_KEY"] = new_key
+        else:
+            os.environ.pop("OCR_CLOUD_API_KEY", None)
+
+    if cfg.base_url:
+        new_lines.append(f"OCR_CLOUD_BASE_URL={cfg.base_url.strip()}")
+        os.environ["OCR_CLOUD_BASE_URL"] = cfg.base_url.strip()
+
+    if cfg.model:
+        new_lines.append(f"OCR_CLOUD_MODEL={cfg.model.strip()}")
+        os.environ["OCR_CLOUD_MODEL"] = cfg.model.strip()
+
+    env_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+    return {"status": "ok", "message": "OCR配置已更新"}
+
 

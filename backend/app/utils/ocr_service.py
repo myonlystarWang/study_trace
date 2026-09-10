@@ -100,9 +100,16 @@ class BaseOCREngine(ABC):
 
     @staticmethod
     def _load_image(image: ImageInput) -> Image.Image:
+        from PIL import ImageOps
         if isinstance(image, Image.Image):
-            return image.convert("RGB")
-        return Image.open(image).convert("RGB")
+            img = image.convert("RGB")
+        else:
+            img = Image.open(image).convert("RGB")
+        try:
+            img = ImageOps.exif_transpose(img)
+        except Exception:
+            pass
+        return img
 
     def available(self) -> bool:
         """引擎当前是否可用（子类可覆盖做前置探测）。"""
@@ -128,7 +135,15 @@ class RapidOCREngine(BaseOCREngine):
     def recognize(self, image: ImageInput) -> OcrResult:
         t0 = time.time()
         img = self._load_image(image)
-        raw, _ = self._engine(img)
+        try:
+            from PIL import ImageEnhance, ImageOps
+            # 自动对比度拉伸并适度锐化，增强手机拍试卷的字迹反差
+            img_prep = ImageOps.autocontrast(img, cutoff=1)
+            enhancer = ImageEnhance.Sharpness(img_prep)
+            img_prep = enhancer.enhance(1.3)
+        except Exception:
+            img_prep = img
+        raw, _ = self._engine(img_prep)
         cost = int((time.time() - t0) * 1000)
         res = OcrResult.from_rapid(raw, self.name)
         res.cost_ms = cost
@@ -270,8 +285,8 @@ def get_ocr_engine(mode: str = "auto") -> BaseOCREngine:
         if e:
             return e
         raise RuntimeError("CloudVLM 未配置 Key")
-    # auto
-    for cls in (RapidOCREngine, PaddleOCREngine, CloudVLMEngine):
+    # auto: 用户若配置了高精度的云端大模型视觉 Key，优先使用 CloudVLM；否则平滑使用本地离线 RapidOCR
+    for cls in (CloudVLMEngine, RapidOCREngine, PaddleOCREngine):
         e = _try_build(cls)
         if e:
             return e
@@ -287,9 +302,9 @@ def list_engines() -> dict:
             out[eng.name] = "available" if eng.available() else "no_key"
         except Exception:
             out[cls.name] = "not_installed"
-    # 推断默认引擎
+    # 推断默认引擎：优先高精度 CloudVLM（若有 Key），次选本地离线 RapidOCR
     default = "ManualFallback"
-    for cls in (RapidOCREngine, PaddleOCREngine, CloudVLMEngine):
+    for cls in (CloudVLMEngine, RapidOCREngine, PaddleOCREngine):
         e = _try_build(cls)
         if e:
             default = e.name

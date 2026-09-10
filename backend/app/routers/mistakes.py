@@ -79,6 +79,7 @@ def get_mistakes(
             "thumbnail_path": r.thumbnail_path,
             "cropped_diagram_path": r.cropped_diagram_path,
             "extracted_text": r.extracted_text,
+            "answer": r.answer,
             "error_type": r.error_type,
             "mastery_status": r.mastery_status,
             "review_count": r.review_count,
@@ -107,6 +108,7 @@ def create_mistake(item: MistakeRecordCreate, db: Session = Depends(get_db)):
         thumbnail_path=item.thumbnail_path or item.original_image_path,
         cropped_diagram_path=item.cropped_diagram_path,
         extracted_text=item.extracted_text,
+        answer=item.answer,
         error_type=item.error_type,
         mastery_status=item.mastery_status or "未掌握",
         next_review_date=next_date,
@@ -144,6 +146,7 @@ def get_mistake_detail(mistake_id: int, db: Session = Depends(get_db)):
         "thumbnail_path": r.thumbnail_path,
         "cropped_diagram_path": r.cropped_diagram_path,
         "extracted_text": r.extracted_text,
+        "answer": r.answer,
         "error_type": r.error_type,
         "mastery_status": r.mastery_status,
         "review_count": r.review_count,
@@ -160,7 +163,15 @@ def update_mistake(mistake_id: int, item_in: dict, db: Session = Depends(get_db)
     if not r:
         raise HTTPException(status_code=404, detail="未找到该错题记录")
 
-    for field in ["extracted_text", "error_type", "cropped_diagram_path", "mastery_status", "source_reference"]:
+    for field in [
+        "extracted_text",
+        "answer",
+        "error_type",
+        "cropped_diagram_path",
+        "mastery_status",
+        "source_reference",
+        "subject_id",
+    ]:
         if field in item_in and item_in[field] is not None:
             setattr(r, field, item_in[field])
 

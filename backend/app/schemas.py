@@ -87,6 +87,7 @@ class MistakeRecordBase(BaseModel):
     thumbnail_path: Optional[str] = None
     cropped_diagram_path: Optional[str] = None
     extracted_text: Optional[str] = None
+    answer: Optional[str] = None
     error_type: Optional[str] = None
     mastery_status: str = "未掌握"  # 未掌握 / 待复习 / 已掌握
     next_review_date: Optional[date] = None
