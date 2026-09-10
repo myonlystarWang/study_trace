@@ -142,15 +142,52 @@
                     >
                       掌握啦
                     </van-button>
+                    <van-button
+                      size="small"
+                      plain
+                      type="primary"
+                      class="rev-action-btn btn-answer"
+                      :icon="openedAnswerIds.includes(item.id) ? 'eye-o' : 'closed-eye'"
+                      @click.stop="toggleAnswer(item.id)"
+                    >
+                      {{ openedAnswerIds.includes(item.id) ? '收起答案' : '查看答案' }}
+                    </van-button>
                   </div>
                 </div>
+
+                <!-- 针对已掌握状态的轻量答案查看栏 -->
+                <div class="mastered-answer-bar" v-if="!isBatchMode && activeTab !== 'review' && item.mastery_status === '已掌握'">
+                  <button class="toggle-answer-pill" @click.stop="toggleAnswer(item.id)">
+                    <van-icon :name="openedAnswerIds.includes(item.id) ? 'eye-o' : 'closed-eye'" />
+                    <span>{{ openedAnswerIds.includes(item.id) ? '收起答案' : '查看答案与解析' }}</span>
+                  </button>
+                </div>
+
+                <!-- 隐藏答案平滑滑动展开面板 -->
+                <transition name="van-slide-down">
+                  <div class="card-answer-panel" v-if="openedAnswerIds.includes(item.id)">
+                    <div class="answer-header">
+                      <span class="st-icon-badge st-icon-badge--info" style="width: 18px; height: 18px; font-size: 10px;">
+                        <van-icon name="notes-o" />
+                      </span>
+                      <span class="answer-title">参考答案与解析</span>
+                    </div>
+                    <div class="answer-body">
+                      <p class="answer-text">{{ item.answer || '暂无详细答案与解析，可左滑点击「编辑」进行补充。' }}</p>
+                    </div>
+                  </div>
+                </transition>
               </div>
             </div>
           </div>
 
-          <!-- 左滑呼出的删除操作抽屉 -->
+          <!-- 左滑呼出的操作抽屉（编辑 + 删除） -->
           <template #right>
             <div class="swipe-actions-box">
+              <button class="swipe-action-btn btn-edit" @click.stop="openEditMistake(item)">
+                <van-icon name="edit" size="16" />
+                <span>编辑</span>
+              </button>
               <button class="swipe-action-btn btn-delete" @click.stop="handleSingleDelete(item)">
                 <van-icon name="delete-o" size="16" />
                 <span>删除</span>
@@ -323,9 +360,123 @@
           />
         </div>
 
+        <div class="form-group">
+          <label class="form-label">参考答案与解析（选填，用于复习对照）</label>
+          <van-field
+            v-model="newMistake.answer"
+            type="textarea"
+            rows="2"
+            autosize
+            placeholder="填写参考答案、解题思路或易错点（默认隐藏，复习时可随时展开查看）"
+            class="sheet-input-field"
+          />
+        </div>
+
         <div class="modal-footer-btns">
           <van-button block round @click="closeAddModal">取消</van-button>
           <van-button type="primary" block round :loading="submitting" @click="submitAddMistake">保存入册</van-button>
+        </div>
+      </div>
+    </van-popup>
+
+    <!-- 编辑错题底部半屏抽屉 (Bottom Sheet) -->
+    <van-popup
+      v-model:show="showEditModal"
+      position="bottom"
+      round
+      class="bottom-sheet-modal"
+      :style="{ maxHeight: '85%' }"
+    >
+      <div class="add-modal-body" v-if="editingMistake">
+        <div class="sheet-grabber"></div>
+        <div class="st-section-header">
+          <span class="st-icon-badge st-icon-badge--info">
+            <van-icon name="edit" />
+          </span>
+          <span class="section-title">编辑错题</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">学科</label>
+          <div class="sheet-subject-chips">
+            <span
+              v-for="sub in subjects"
+              :key="sub.id"
+              class="st-chip"
+              :class="{ active: editingMistake.subject_id === sub.id }"
+              @click="editingMistake.subject_id = sub.id"
+            >
+              {{ sub.name }}
+            </span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">来源说明</label>
+          <van-field
+            v-model="editingMistake.source_reference"
+            placeholder="如：第三单元测验 / 周练习册 P20"
+            class="sheet-input-field"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">错因分类</label>
+          <div class="sheet-subject-chips">
+            <span
+              v-for="err in ['概念模糊', '粗心大意', '计算错误', '思路卡壳']"
+              :key="err"
+              class="st-chip"
+              :class="{ active: editingMistake.error_type === err }"
+              @click="editingMistake.error_type = err"
+            >
+              {{ err }}
+            </span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">掌握状态</label>
+          <div class="sheet-subject-chips">
+            <span
+              v-for="st in ['未掌握', '待复习', '已掌握']"
+              :key="st"
+              class="st-chip"
+              :class="{ active: editingMistake.mastery_status === st }"
+              @click="editingMistake.mastery_status = st"
+            >
+              {{ st }}
+            </span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">题干文字（可编辑）</label>
+          <van-field
+            v-model="editingMistake.extracted_text"
+            type="textarea"
+            rows="3"
+            autosize
+            placeholder="题干文字内容"
+            class="sheet-input-field"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">参考答案与解析（选填）</label>
+          <van-field
+            v-model="editingMistake.answer"
+            type="textarea"
+            rows="2"
+            autosize
+            placeholder="填写参考答案或解题步骤"
+            class="sheet-input-field"
+          />
+        </div>
+
+        <div class="modal-footer-btns">
+          <van-button block round @click="showEditModal = false">取消</van-button>
+          <van-button type="primary" block round :loading="savingEdit" @click="submitEditMistake">保存修改</van-button>
         </div>
       </div>
     </van-popup>
@@ -334,6 +485,16 @@
     <van-popup v-model:show="showPreview" round :style="{ padding: '10px', maxWidth: '90%' }">
       <img :src="previewUrl" style="max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px;" alt="原图" />
     </van-popup>
+
+    <!-- 错题拍照框选裁剪弹窗 -->
+    <ImageCropper
+      v-if="showCropper"
+      v-model:show="showCropper"
+      :image-url="cropperImageUrl"
+      @crop="onCropConfirm"
+      @skip="onCropSkip"
+      @cancel="onCropCancel"
+    />
   </div>
 </template>
 
@@ -343,6 +504,7 @@ import { useRouter } from 'vue-router';
 import { showToast, showConfirmDialog } from 'vant';
 import { mistakeApi, settingsApi, ocrApi } from '../api';
 import { compressImage } from '../utils/imageCompress';
+import ImageCropper from '../components/ImageCropper.vue';
 
 const router = useRouter();
 
@@ -451,11 +613,69 @@ const ocrLoading = ref(false);
 const uploadedFile = ref(null);
 let pollTimerM = null;
 
+// 图片框选裁剪状态
+const showCropper = ref(false);
+const cropperImageUrl = ref('');
+const pendingUploadFile = ref(null);
+
+// 答案查看展开状态
+const openedAnswerIds = ref([]);
+const toggleAnswer = (id) => {
+  const idx = openedAnswerIds.value.indexOf(id);
+  if (idx >= 0) {
+    openedAnswerIds.value.splice(idx, 1);
+  } else {
+    openedAnswerIds.value.push(id);
+  }
+};
+
+// 编辑错题状态
+const showEditModal = ref(false);
+const savingEdit = ref(false);
+const editingMistake = ref(null);
+
+const openEditMistake = (item) => {
+  editingMistake.value = {
+    id: item.id,
+    subject_id: item.subject_id,
+    source_reference: item.source_reference || '',
+    error_type: item.error_type || '概念模糊',
+    extracted_text: item.extracted_text || '',
+    answer: item.answer || '',
+    mastery_status: item.mastery_status || '未掌握'
+  };
+  showEditModal.value = true;
+};
+
+const submitEditMistake = async () => {
+  if (!editingMistake.value) return;
+  savingEdit.value = true;
+  try {
+    await mistakeApi.update(editingMistake.value.id, {
+      subject_id: editingMistake.value.subject_id,
+      source_reference: editingMistake.value.source_reference,
+      error_type: editingMistake.value.error_type,
+      extracted_text: editingMistake.value.extracted_text,
+      answer: editingMistake.value.answer,
+      mastery_status: editingMistake.value.mastery_status
+    });
+    showToast({ message: '错题已修改', icon: 'success' });
+    showEditModal.value = false;
+    fetchMistakes();
+  } catch (e) {
+    const msg = e.response?.data?.detail || '修改失败，请重试';
+    showToast(msg);
+  } finally {
+    savingEdit.value = false;
+  }
+};
+
 const newMistake = ref({
   subject_id: 1,
   source_reference: '',
   error_type: '概念模糊',
   extracted_text: '',
+  answer: '',
   original_image_path: null,
   thumbnail_path: null,
   storage_key: null
@@ -487,7 +707,6 @@ const getSubjectTagClass = (name) => {
     case '生物':
     case '地理': return 'st-subject-tag--warning';
     case '历史':
-    case '道法':
     case '道法': return 'st-subject-tag--danger';
     default: return 'st-subject-tag--neutral';
   }
@@ -539,7 +758,11 @@ const fetchMistakes = async () => {
       fetchReviewQueueCount();
     }
   } catch (e) {
-    showToast('获取错题列表失败');
+    if (e.message && (e.message.includes('Network Error') || e.code === 'ERR_NETWORK')) {
+      showToast('网络连接失败，请检查网络或系统代理');
+    } else {
+      showToast('获取错题列表失败');
+    }
   } finally {
     refreshing.value = false;
   }
@@ -566,19 +789,53 @@ const submitReview = async (id, result) => {
   }
 };
 
-const handleUpload = async (file) => {
-  uploadedFile.value = file;
+const handleUpload = (file) => {
+  pendingUploadFile.value = file;
+  cropperImageUrl.value = file.content || (file.file ? URL.createObjectURL(file.file) : '');
+  showCropper.value = true;
+};
+
+const executeUpload = async (rawFile, previewBlobUrl = null) => {
+  uploadedFile.value = { file: rawFile };
+  if (previewBlobUrl) {
+    fileList.value = [{ url: previewBlobUrl }];
+  }
   try {
     showToast({ type: 'loading', message: '处理并上传中...', forbidClick: true, duration: 0 });
-    const compressed = await compressImage(file.file);
-    const res = await ocrApi.upload(compressed);
-    newMistake.value.original_image_path = res.data.original_image_path;
-    newMistake.value.thumbnail_path = res.data.thumbnail_path;
+    const compressed = await compressImage(rawFile);
+    const fd = new FormData();
+    fd.append('file', compressed.file || rawFile);
+    const res = await mistakeApi.uploadImage(fd);
+    newMistake.value.original_image_path = res.data.original_url;
+    newMistake.value.thumbnail_path = res.data.thumbnail_url;
     newMistake.value.storage_key = res.data.storage_key;
     showToast({ type: 'success', message: '图片上传成功' });
   } catch (e) {
     showToast('图片上传失败，请重试');
   }
+};
+
+const onCropConfirm = async (cropData) => {
+  showCropper.value = false;
+  if (cropData?.file) {
+    await executeUpload(cropData.file, cropData.blobUrl);
+  }
+};
+
+const onCropSkip = async () => {
+  showCropper.value = false;
+  if (pendingUploadFile.value) {
+    await executeUpload(
+      pendingUploadFile.value.file,
+      pendingUploadFile.value.content || URL.createObjectURL(pendingUploadFile.value.file)
+    );
+  }
+};
+
+const onCropCancel = () => {
+  showCropper.value = false;
+  fileList.value = [];
+  pendingUploadFile.value = null;
 };
 
 const extractText = async () => {
@@ -589,23 +846,31 @@ const extractText = async () => {
 
   ocrLoading.value = true;
   try {
-    const res = await ocrApi.createTask(newMistake.value.storage_key);
+    const fd = new FormData();
+    fd.append('image_path', newMistake.value.storage_key);
+    fd.append('mode', 'auto');
+    const res = await ocrApi.createTask(fd);
     const taskId = res.data.task_id;
+    if (pollTimerM) clearInterval(pollTimerM);
     pollTimerM = setInterval(async () => {
       try {
         const statusRes = await ocrApi.getTask(taskId);
-        if (statusRes.data.status === 'completed') {
+        if (statusRes.data.status === 'succeeded') {
           clearInterval(pollTimerM);
+          pollTimerM = null;
           ocrLoading.value = false;
-          newMistake.value.extracted_text = statusRes.data.extracted_text;
-          showToast({ message: '识别成功，题干已自动提取！', icon: 'success' });
+          const text = statusRes.data.result?.text || '';
+          newMistake.value.extracted_text = text;
+          showToast({ message: `题干识别成功（${statusRes.data.result?.engine || 'OCR'}）`, icon: 'success' });
         } else if (statusRes.data.status === 'failed') {
           clearInterval(pollTimerM);
+          pollTimerM = null;
           ocrLoading.value = false;
           showToast('题干提取失败，请手动输入');
         }
       } catch (err) {
         clearInterval(pollTimerM);
+        pollTimerM = null;
         ocrLoading.value = false;
       }
     }, 500);
@@ -632,6 +897,7 @@ const submitAddMistake = async () => {
       source_reference: newMistake.value.source_reference,
       error_type: newMistake.value.error_type,
       extracted_text: newMistake.value.extracted_text,
+      answer: newMistake.value.answer,
       original_image_path: newMistake.value.original_image_path,
       thumbnail_path: newMistake.value.thumbnail_path
     });
@@ -655,6 +921,7 @@ const closeAddModal = () => {
     source_reference: '',
     error_type: '概念模糊',
     extracted_text: '',
+    answer: '',
     original_image_path: null,
     thumbnail_path: null,
     storage_key: null
@@ -854,12 +1121,14 @@ onMounted(async () => {
 
 .review-buttons-row {
   display: flex;
-  gap: 10px;
+  gap: 6px;
 }
 
 .rev-action-btn {
   flex: 1;
   font-weight: 600;
+  font-size: 12px;
+  padding: 0 4px;
   white-space: nowrap !important;
 }
 
@@ -1031,8 +1300,77 @@ onMounted(async () => {
   cursor: pointer;
 }
 
+.swipe-action-btn.btn-edit {
+  background-color: var(--st-primary, #2563eb);
+}
+
 .swipe-action-btn.btn-delete {
   background-color: var(--st-danger, #ef4444);
+}
+
+/* 答案展示面板与轻量胶囊样式 */
+.card-answer-panel {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: var(--st-radius-md, 8px);
+  border: 1px dashed #cbd5e1;
+  border-left: 3px solid var(--st-primary, #2563eb);
+}
+
+.answer-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.answer-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--st-text-primary, #0f172a);
+}
+
+.answer-body {
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.answer-text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.btn-answer {
+  background-color: #f8fafc !important;
+  color: var(--st-primary, #2563eb) !important;
+  border-color: #bfdbfe !important;
+}
+
+.mastered-answer-bar {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.toggle-answer-pill {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: var(--st-primary, #2563eb);
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: var(--st-radius-full, 9999px);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.toggle-answer-pill:active {
+  background: #e2e8f0;
 }
 
 .batch-bottom-bar {
