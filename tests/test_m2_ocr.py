@@ -43,12 +43,18 @@ def test_rapid_ocr_direct(samples):
 
 
 def test_ocr_async_pipeline(samples):
-    """POST /api/ocr/tasks -> 轮询 GET 直至 succeeded。"""
+    """POST /api/ocr/tasks -> 轮询 GET 直至 succeeded。
+
+    显式指定 mode=rapid 固定使用本地离线引擎：本用例验证的是「异步任务链路 +
+    中文印刷体识别准确度」，不依赖云端网络与 Key，避免 auto 模式在配置了云端
+    视觉 Key 的机器上被路由到 CloudVLM 而产生抖动。
+    """
     client = TestClient(app)
     data = samples["sample_chinese"].read_bytes()
     r = client.post(
         "/api/ocr/tasks",
         files={"file": ("sample_chinese.png", data, "image/png")},
+        data={"mode": "rapid"},
     )
     assert r.status_code == 202
     tid = r.json()["task_id"]
@@ -113,13 +119,19 @@ def test_task_missing():
 
 
 def test_engines_status():
-    """引擎状态接口应正确反映可用情况。"""
+    """引擎状态接口应正确反映可用情况。
+
+    契约：RapidOCR 作为本地离线引擎必须恒定可用（不依赖网络与 Key）；
+    default 必须与 auto 模式的实际选路完全一致 —— 配置了云端视觉 Key 时为
+    CloudVLM（高精度优先），未配置时回落 RapidOCR。
+    """
     client = TestClient(app)
     r = client.get("/api/ocr/engines")
     assert r.status_code == 200
     j = r.json()
-    assert j["default"] == "RapidOCR"
     assert j["detail"]["RapidOCR"] == "available"
+    assert j["default"] == get_ocr_engine("auto").name
+    assert j["default"] in {"CloudVLM", "RapidOCR"}
 
 
 def test_ocr_path_traversal_prevention():
