@@ -5,6 +5,7 @@
     class="cropper-popup"
     :style="{ height: '100%', width: '100%', maxHeight: '100%' }"
     :close-on-click-overlay="false"
+    :lock-scroll="false"
     teleport="body"
   >
     <div class="cropper-wrapper">
@@ -21,13 +22,7 @@
 
       <!-- 裁剪核心可视区 -->
       <div class="cropper-stage" ref="stageRef">
-        <div
-          class="canvas-container"
-          ref="containerRef"
-          :style="containerStyle"
-          @mousedown.self="onBgStart"
-          @touchstart.self="onBgStart"
-        >
+        <div class="canvas-container" ref="containerRef" :style="containerStyle">
           <!-- 真实渲染的底层图片 -->
           <img
             ref="imageRef"
@@ -43,8 +38,7 @@
             v-if="isReady"
             class="crop-box"
             :style="cropBoxStyle"
-            @mousedown.stop="startDragMove"
-            @touchstart.stop="startDragMove"
+            @pointerdown="onBoxPointerDown"
           >
             <!-- 9宫格网格线 -->
             <div class="crop-grid-line line-h-1"></div>
@@ -56,14 +50,14 @@
             <div class="crop-drag-hint">拖动选区或调整边框</div>
 
             <!-- 8个调整锚点 (4角 + 4边中点) -->
-            <div class="handle handle-tl" @mousedown.stop="startResize($event, 'tl')" @touchstart.stop="startResize($event, 'tl')"></div>
-            <div class="handle handle-tr" @mousedown.stop="startResize($event, 'tr')" @touchstart.stop="startResize($event, 'tr')"></div>
-            <div class="handle handle-bl" @mousedown.stop="startResize($event, 'bl')" @touchstart.stop="startResize($event, 'bl')"></div>
-            <div class="handle handle-br" @mousedown.stop="startResize($event, 'br')" @touchstart.stop="startResize($event, 'br')"></div>
-            <div class="handle handle-tm" @mousedown.stop="startResize($event, 'tm')" @touchstart.stop="startResize($event, 'tm')"></div>
-            <div class="handle handle-bm" @mousedown.stop="startResize($event, 'bm')" @touchstart.stop="startResize($event, 'bm')"></div>
-            <div class="handle handle-ml" @mousedown.stop="startResize($event, 'ml')" @touchstart.stop="startResize($event, 'ml')"></div>
-            <div class="handle handle-mr" @mousedown.stop="startResize($event, 'mr')" @touchstart.stop="startResize($event, 'mr')"></div>
+            <div class="handle handle-tl" @pointerdown="onHandlePointerDown($event, 'tl')"></div>
+            <div class="handle handle-tr" @pointerdown="onHandlePointerDown($event, 'tr')"></div>
+            <div class="handle handle-bl" @pointerdown="onHandlePointerDown($event, 'bl')"></div>
+            <div class="handle handle-br" @pointerdown="onHandlePointerDown($event, 'br')"></div>
+            <div class="handle handle-tm" @pointerdown="onHandlePointerDown($event, 'tm')"></div>
+            <div class="handle handle-bm" @pointerdown="onHandlePointerDown($event, 'bm')"></div>
+            <div class="handle handle-ml" @pointerdown="onHandlePointerDown($event, 'ml')"></div>
+            <div class="handle handle-mr" @pointerdown="onHandlePointerDown($event, 'mr')"></div>
           </div>
         </div>
       </div>
@@ -94,7 +88,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onBeforeUnmount, nextTick } from 'vue';
+import { ref, reactive, computed, onBeforeUnmount, onMounted, nextTick, watch } from 'vue';
 import { showToast } from 'vant';
 
 const props = defineProps({
@@ -120,8 +114,6 @@ const isCropping = ref(false);
 const imgMeta = reactive({
   naturalWidth: 0,
   naturalHeight: 0,
-  displayLeft: 0,
-  displayTop: 0,
   displayWidth: 0,
   displayHeight: 0
 });
@@ -146,17 +138,23 @@ const cropBoxStyle = computed(() => ({
   height: `${box.h}px`
 }));
 
-// 计算并对齐图片在可视舞台中的适配尺寸
-const computeLayout = () => {
+const MIN_SIZE = 50;
+
+/**
+ * 计算并对齐图片在可视舞台中的适配尺寸。
+ * 舞台尚未完成布局（宽高为 0）时直接返回，等 ResizeObserver / 下次可见时重算，
+ * 避免算出负尺寸导致选框被夹成极小值、且拖拽时被永久锁死。
+ */
+const computeLayout = (resetBox = true) => {
   if (!stageRef.value || !imgMeta.naturalWidth || !imgMeta.naturalHeight) return;
   const stageRect = stageRef.value.getBoundingClientRect();
-  const sw = stageRect.width - 24; // 留适当边距
-  const sh = stageRect.height - 24;
+  const sw = Math.max(0, stageRect.width - 24);
+  const sh = Math.max(0, stageRect.height - 24);
+  if (sw < 40 || sh < 40) return;
 
   const aspect = imgMeta.naturalWidth / imgMeta.naturalHeight;
   let dw = sw;
   let dh = dw / aspect;
-
   if (dh > sh) {
     dh = sh;
     dw = dh * aspect;
@@ -165,105 +163,122 @@ const computeLayout = () => {
   imgMeta.displayWidth = Math.round(dw);
   imgMeta.displayHeight = Math.round(dh);
 
-  // 初始化裁剪框（默认居中占用宽高的 80%）
-  const initW = Math.round(dw * 0.85);
-  const initH = Math.round(dh * 0.6);
-  box.w = Math.max(80, Math.min(initW, dw));
-  box.h = Math.max(80, Math.min(initH, dh));
-  box.x = Math.round((dw - box.w) / 2);
-  box.y = Math.round((dh - box.h) / 2);
+  if (resetBox) {
+    // 初始化裁剪框（默认居中占用宽高的 85% / 60%）
+    const initW = Math.round(dw * 0.85);
+    const initH = Math.round(dh * 0.6);
+    box.w = clamp(initW, MIN_SIZE, Math.round(dw));
+    box.h = clamp(initH, MIN_SIZE, Math.round(dh));
+    box.x = Math.round((dw - box.w) / 2);
+    box.y = Math.round((dh - box.h) / 2);
+  } else {
+    // 仅重排：把现有选框夹回可视范围，保留用户已拖拽的结果
+    box.w = clamp(box.w, MIN_SIZE, imgMeta.displayWidth);
+    box.h = clamp(box.h, MIN_SIZE, imgMeta.displayHeight);
+    box.x = clamp(box.x, 0, imgMeta.displayWidth - box.w);
+    box.y = clamp(box.y, 0, imgMeta.displayHeight - box.h);
+  }
 
   isReady.value = true;
 };
+
+const clamp = (v, min, max) => Math.min(Math.max(v, min), Math.max(min, max));
 
 const onImageLoaded = (e) => {
   const img = e.target;
   imgMeta.naturalWidth = img.naturalWidth || 1;
   imgMeta.naturalHeight = img.naturalHeight || 1;
   nextTick(() => {
-    computeLayout();
+    computeLayout(true);
   });
 };
 
+// ---------------------------------------------------------------------------
 // 交互逻辑：移动与缩放
+//
+// 关键点：这里必须用 Pointer Events，不能再用 touchstart/touchmove。
+// Vant Popup 的 useLockScroll 在 document 上挂了 touchmove 监听，当弹层内容
+// 不可滚动时会执行 preventDefault(event, true) —— 即 preventDefault + stopPropagation，
+// 事件在 document 冒泡阶段就被掐断，window 上的 touchmove 监听永远收不到，
+// 表现为「选框无法移动也无法缩小」。pointer 事件不受其影响，配合
+// setPointerCapture 可稳定拿到整段手势。
+// ---------------------------------------------------------------------------
 let dragMode = null; // 'move' | 'tl' | 'tr' | 'bl' | 'br' | 'tm' | 'bm' | 'ml' | 'mr'
+let activePointerId = null;
+let captureEl = null;
 let startPointer = { x: 0, y: 0 };
 let startBox = { x: 0, y: 0, w: 0, h: 0 };
 
-const getPointerPos = (e) => {
-  if (e.touches && e.touches.length > 0) {
-    return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  }
-  return { x: e.clientX, y: e.clientY };
+const isPrimaryPointer = (e) => e.pointerType !== 'mouse' || e.button === 0;
+
+const onBoxPointerDown = (e) => {
+  if (!isPrimaryPointer(e)) return;
+  e.preventDefault();
+  e.stopPropagation();
+  beginDrag(e, 'move');
 };
 
-const startDragMove = (e) => {
-  dragMode = 'move';
-  initDragState(e);
+const onHandlePointerDown = (e, handleType) => {
+  if (!isPrimaryPointer(e)) return;
+  e.preventDefault();
+  e.stopPropagation();
+  beginDrag(e, handleType);
 };
 
-const startResize = (e, handleType) => {
-  dragMode = handleType;
-  initDragState(e);
-};
-
-const onBgStart = () => {
-  // 点击空白不做动作
-};
-
-const initDragState = (e) => {
-  const pos = getPointerPos(e);
-  startPointer = { x: pos.x, y: pos.y };
+const beginDrag = (e, mode) => {
+  dragMode = mode;
+  activePointerId = e.pointerId;
+  startPointer = { x: e.clientX, y: e.clientY };
   startBox = { x: box.x, y: box.y, w: box.w, h: box.h };
 
-  window.addEventListener('mousemove', onPointerMove, { passive: false });
-  window.addEventListener('mouseup', onPointerEnd);
-  window.addEventListener('touchmove', onPointerMove, { passive: false });
-  window.addEventListener('touchend', onPointerEnd);
-};
+  captureEl = e.currentTarget;
+  try {
+    captureEl.setPointerCapture?.(e.pointerId);
+  } catch (err) {
+    captureEl = null;
+  }
 
-const MIN_SIZE = 50;
+  window.addEventListener('pointermove', onPointerMove, { passive: false });
+  window.addEventListener('pointerup', onPointerEnd);
+  window.addEventListener('pointercancel', onPointerEnd);
+};
 
 const onPointerMove = (e) => {
   if (!dragMode) return;
-  e.preventDefault?.(); // 阻止移动端橡皮筋滚动
+  if (activePointerId !== null && e.pointerId !== activePointerId) return;
+  if (e.cancelable) e.preventDefault();
 
-  const pos = getPointerPos(e);
-  const dx = pos.x - startPointer.x;
-  const dy = pos.y - startPointer.y;
+  const dx = e.clientX - startPointer.x;
+  const dy = e.clientY - startPointer.y;
 
   const maxW = imgMeta.displayWidth;
   const maxH = imgMeta.displayHeight;
 
   if (dragMode === 'move') {
-    let nx = startBox.x + dx;
-    let ny = startBox.y + dy;
-    nx = Math.max(0, Math.min(nx, maxW - startBox.w));
-    ny = Math.max(0, Math.min(ny, maxH - startBox.h));
-    box.x = nx;
-    box.y = ny;
+    box.x = Math.round(clamp(startBox.x + dx, 0, maxW - startBox.w));
+    box.y = Math.round(clamp(startBox.y + dy, 0, maxH - startBox.h));
     return;
   }
 
-  // 8向缩放计算
+  // 8 向缩放
   let newX = startBox.x;
   let newY = startBox.y;
   let newW = startBox.w;
   let newH = startBox.h;
 
   if (dragMode.includes('r')) {
-    newW = Math.max(MIN_SIZE, Math.min(startBox.w + dx, maxW - startBox.x));
+    newW = clamp(startBox.w + dx, MIN_SIZE, maxW - startBox.x);
   }
   if (dragMode.includes('l')) {
-    const clampDx = Math.max(-startBox.x, Math.min(dx, startBox.w - MIN_SIZE));
+    const clampDx = clamp(dx, -startBox.x, startBox.w - MIN_SIZE);
     newX = startBox.x + clampDx;
     newW = startBox.w - clampDx;
   }
   if (dragMode.includes('b')) {
-    newH = Math.max(MIN_SIZE, Math.min(startBox.h + dy, maxH - startBox.y));
+    newH = clamp(startBox.h + dy, MIN_SIZE, maxH - startBox.y);
   }
   if (dragMode.includes('t')) {
-    const clampDy = Math.max(-startBox.y, Math.min(dy, startBox.h - MIN_SIZE));
+    const clampDy = clamp(dy, -startBox.y, startBox.h - MIN_SIZE);
     newY = startBox.y + clampDy;
     newH = startBox.h - clampDy;
   }
@@ -275,15 +290,47 @@ const onPointerMove = (e) => {
 };
 
 const onPointerEnd = () => {
+  window.removeEventListener('pointermove', onPointerMove);
+  window.removeEventListener('pointerup', onPointerEnd);
+  window.removeEventListener('pointercancel', onPointerEnd);
+  try {
+    if (captureEl && activePointerId !== null) {
+      captureEl.releasePointerCapture?.(activePointerId);
+    }
+  } catch (err) {
+    /* 指针已释放，忽略 */
+  }
+  captureEl = null;
+  activePointerId = null;
   dragMode = null;
-  window.removeEventListener('mousemove', onPointerMove);
-  window.removeEventListener('mouseup', onPointerEnd);
-  window.removeEventListener('touchmove', onPointerMove);
-  window.removeEventListener('touchend', onPointerEnd);
 };
+
+// 舞台尺寸变化（弹层入场动画、旋转屏幕、软键盘收起）时重排，避免选框越界
+let resizeObserver = null;
+onMounted(() => {
+  if (typeof ResizeObserver !== 'undefined' && stageRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      if (isReady.value) computeLayout(false);
+      else computeLayout(true);
+    });
+    resizeObserver.observe(stageRef.value);
+  }
+});
+
+watch(
+  () => props.show,
+  (val) => {
+    if (val) {
+      isReady.value = false;
+      nextTick(() => computeLayout(true));
+    }
+  }
+);
 
 onBeforeUnmount(() => {
   onPointerEnd();
+  resizeObserver?.disconnect();
+  resizeObserver = null;
 });
 
 // 执行裁剪
@@ -312,34 +359,34 @@ const confirmCrop = async () => {
     const ctx = canvas.getContext('2d');
 
     const sourceImg = new Image();
-    sourceImg.crossOrigin = 'anonymous';
+    // 数据 URL / 同源 blob 不需要（也不应）设置 crossOrigin，否则部分 iOS 版本会加载失败
+    if (!/^(data:|blob:)/i.test(props.imageUrl)) {
+      sourceImg.crossOrigin = 'anonymous';
+    }
 
     await new Promise((resolve, reject) => {
       sourceImg.onload = resolve;
-      sourceImg.onerror = reject;
+      sourceImg.onerror = () => reject(new Error('图片解码失败'));
       sourceImg.src = props.imageUrl;
     });
 
     ctx.drawImage(sourceImg, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
-    canvas.toBlob(
-      (blob) => {
-        isCropping.value = false;
-        if (!blob) {
-          showToast('生成裁剪图片失败');
-          return;
-        }
-        const croppedFile = new File([blob], `crop_${Date.now()}.jpg`, {
-          type: 'image/jpeg',
-          lastModified: Date.now()
-        });
-        const blobUrl = URL.createObjectURL(blob);
-        emit('crop', { file: croppedFile, blobUrl, width: cropW, height: cropH });
-        emit('update:show', false);
-      },
-      'image/jpeg',
-      0.9
-    );
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+    isCropping.value = false;
+    if (!blob) {
+      showToast('生成裁剪图片失败，已改用原图');
+      emit('skip');
+      emit('update:show', false);
+      return;
+    }
+    const croppedFile = new File([blob], `crop_${Date.now()}.jpg`, {
+      type: 'image/jpeg',
+      lastModified: Date.now()
+    });
+    const blobUrl = URL.createObjectURL(blob);
+    emit('crop', { file: croppedFile, blobUrl, width: cropW, height: cropH });
+    emit('update:show', false);
   } catch (err) {
     isCropping.value = false;
     showToast('裁剪出错，已恢复使用原图');
@@ -371,6 +418,8 @@ const handleCancel = () => {
   background: #090d16;
   color: #fff;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   touch-action: none;
 }
 
@@ -402,7 +451,8 @@ const handleCancel = () => {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 8px;
+  padding: 8px 10px;
+  touch-action: manipulation;
 }
 
 .header-action-btn:active {
@@ -431,6 +481,7 @@ const handleCancel = () => {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
   border-radius: 4px;
   overflow: hidden;
+  touch-action: none;
 }
 
 .source-image {
@@ -448,6 +499,8 @@ const handleCancel = () => {
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.62);
   border: 2px solid #38bdf8;
   box-sizing: border-box;
+  touch-action: none;
+  z-index: 2;
 }
 
 /* 选框内的居中轻微提示 */
@@ -496,24 +549,28 @@ const handleCancel = () => {
   height: 100%;
 }
 
-/* 四角与边缘手柄 */
+/*
+ * 四角与边缘手柄。
+ * 手柄盒 36px、外扩仅 8px —— 这样即使选框贴到图片边缘（.canvas-container 是
+ * overflow:hidden），仍有 28px 落在选框内侧可点，中间的点也不会被裁掉。
+ */
 .handle {
   position: absolute;
-  width: 24px;
-  height: 24px;
+  width: 36px;
+  height: 36px;
   box-sizing: border-box;
   z-index: 5;
+  touch-action: none;
 }
 
-/* 增加触摸手柄的命中面积 (伪元素) */
 .handle::after {
   content: '';
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   background: #38bdf8;
   border: 2px solid #ffffff;
   border-radius: 50%;
@@ -521,44 +578,44 @@ const handleCancel = () => {
 }
 
 .handle-tl {
-  top: -12px;
-  left: -12px;
+  top: -8px;
+  left: -8px;
   cursor: nwse-resize;
 }
 .handle-tr {
-  top: -12px;
-  right: -12px;
+  top: -8px;
+  right: -8px;
   cursor: nesw-resize;
 }
 .handle-bl {
-  bottom: -12px;
-  left: -12px;
+  bottom: -8px;
+  left: -8px;
   cursor: nesw-resize;
 }
 .handle-br {
-  bottom: -12px;
-  right: -12px;
+  bottom: -8px;
+  right: -8px;
   cursor: nwse-resize;
 }
 
 .handle-tm {
-  top: -12px;
-  left: calc(50% - 12px);
+  top: -8px;
+  left: calc(50% - 18px);
   cursor: ns-resize;
 }
 .handle-bm {
-  bottom: -12px;
-  left: calc(50% - 12px);
+  bottom: -8px;
+  left: calc(50% - 18px);
   cursor: ns-resize;
 }
 .handle-ml {
-  top: calc(50% - 12px);
-  left: -12px;
+  top: calc(50% - 18px);
+  left: -8px;
   cursor: ew-resize;
 }
 .handle-mr {
-  top: calc(50% - 12px);
-  right: -12px;
+  top: calc(50% - 18px);
+  right: -8px;
   cursor: ew-resize;
 }
 
