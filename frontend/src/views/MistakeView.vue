@@ -332,6 +332,7 @@
             max-count="1"
             preview-size="80px"
           />
+          <p class="upload-hint">拍完会自动进入框选裁剪，确认后立即识别题干</p>
         </div>
 
         <div class="form-group">
@@ -343,11 +344,12 @@
               plain
               icon="scan"
               :loading="ocrLoading"
+              loading-text="识别中..."
               :disabled="!uploadedFile"
               class="ocr-extract-btn"
               @click="extractText"
             >
-              智能提取题干
+              重新识别题干
             </van-button>
           </div>
           <van-field
@@ -499,9 +501,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
-import { showToast, showConfirmDialog } from 'vant';
+import { showToast, showConfirmDialog, closeToast } from 'vant';
 import { mistakeApi, settingsApi, ocrApi } from '../api';
 import { compressImage } from '../utils/imageCompress';
 import ImageCropper from '../components/ImageCropper.vue';
@@ -612,6 +614,8 @@ const previewUrl = ref('');
 const ocrLoading = ref(false);
 const uploadedFile = ref(null);
 let pollTimerM = null;
+let ocrPollCount = 0;
+const OCR_MAX_POLLS = 60; // 500ms × 60 ≈ 30s 识别上限，超时给出明确提示而不是无限等待
 
 // 图片框选裁剪状态
 const showCropper = ref(false);
@@ -801,7 +805,7 @@ const executeUpload = async (rawFile, previewBlobUrl = null) => {
     fileList.value = [{ url: previewBlobUrl }];
   }
   try {
-    showToast({ type: 'loading', message: '处理并上传中...', forbidClick: true, duration: 0 });
+    showToast({ type: 'loading', message: '图片处理中...', forbidClick: true, duration: 0 });
     const compressed = await compressImage(rawFile);
     const fd = new FormData();
     fd.append('file', compressed.file || rawFile);
@@ -809,27 +813,32 @@ const executeUpload = async (rawFile, previewBlobUrl = null) => {
     newMistake.value.original_image_path = res.data.original_url;
     newMistake.value.thumbnail_path = res.data.thumbnail_url;
     newMistake.value.storage_key = res.data.storage_key;
-    showToast({ type: 'success', message: '图片上传成功' });
+    closeToast();
+    return true;
   } catch (e) {
+    closeToast();
     showToast('图片上传失败，请重试');
+    return false;
   }
 };
 
 const onCropConfirm = async (cropData) => {
   showCropper.value = false;
-  if (cropData?.file) {
-    await executeUpload(cropData.file, cropData.blobUrl);
-  }
+  if (!cropData?.file) return;
+  // 框选完成即自动识别，兑现「确认框选区域并识别」按钮文案
+  const ok = await executeUpload(cropData.file, cropData.blobUrl);
+  if (ok) await extractText();
 };
 
 const onCropSkip = async () => {
   showCropper.value = false;
-  if (pendingUploadFile.value) {
-    await executeUpload(
-      pendingUploadFile.value.file,
-      pendingUploadFile.value.content || URL.createObjectURL(pendingUploadFile.value.file)
-    );
-  }
+  const pending = pendingUploadFile.value;
+  if (!pending?.file) return;
+  const ok = await executeUpload(
+    pending.file,
+    pending.content || URL.createObjectURL(pending.file)
+  );
+  if (ok) await extractText();
 };
 
 const onCropCancel = () => {
@@ -838,13 +847,25 @@ const onCropCancel = () => {
   pendingUploadFile.value = null;
 };
 
+const finishOcr = (ok, message) => {
+  if (pollTimerM) {
+    clearInterval(pollTimerM);
+    pollTimerM = null;
+  }
+  ocrLoading.value = false;
+  closeToast();
+  showToast({ message, icon: ok ? 'success' : 'warning-o', duration: ok ? 2000 : 2600 });
+};
+
 const extractText = async () => {
+  if (ocrLoading.value) return false;
   if (!newMistake.value.storage_key) {
     showToast('请先上传错题图片');
-    return;
+    return false;
   }
 
   ocrLoading.value = true;
+  showToast({ type: 'loading', message: '正在识别题干…', duration: 0 });
   try {
     const fd = new FormData();
     fd.append('image_path', newMistake.value.storage_key);
@@ -852,31 +873,46 @@ const extractText = async () => {
     const res = await ocrApi.createTask(fd);
     const taskId = res.data.task_id;
     if (pollTimerM) clearInterval(pollTimerM);
-    pollTimerM = setInterval(async () => {
-      try {
-        const statusRes = await ocrApi.getTask(taskId);
-        if (statusRes.data.status === 'succeeded') {
-          clearInterval(pollTimerM);
-          pollTimerM = null;
-          ocrLoading.value = false;
-          const text = statusRes.data.result?.text || '';
-          newMistake.value.extracted_text = text;
-          showToast({ message: `题干识别成功（${statusRes.data.result?.engine || 'OCR'}）`, icon: 'success' });
-        } else if (statusRes.data.status === 'failed') {
-          clearInterval(pollTimerM);
-          pollTimerM = null;
-          ocrLoading.value = false;
-          showToast('题干提取失败，请手动输入');
+    ocrPollCount = 0;
+
+    return await new Promise((resolve) => {
+      pollTimerM = setInterval(async () => {
+        ocrPollCount += 1;
+        if (ocrPollCount > OCR_MAX_POLLS) {
+          finishOcr(false, '题干识别超时，请重试或手动输入');
+          resolve(false);
+          return;
         }
-      } catch (err) {
-        clearInterval(pollTimerM);
-        pollTimerM = null;
-        ocrLoading.value = false;
-      }
-    }, 500);
+        try {
+          const statusRes = await ocrApi.getTask(taskId);
+          const status = statusRes.data.status;
+          if (status === 'succeeded') {
+            const text = statusRes.data.result?.text || '';
+            const engine = statusRes.data.result?.engine || 'OCR';
+            const cost = statusRes.data.result?.cost_ms;
+            if (text.trim()) {
+              newMistake.value.extracted_text = text;
+              const costText = cost ? ` · ${(cost / 1000).toFixed(1)}s` : '';
+              finishOcr(true, `题干识别成功（${engine}${costText}）`);
+              resolve(true);
+            } else {
+              finishOcr(false, '未识别到文字，可重新框选或手动输入');
+              resolve(false);
+            }
+          } else if (status === 'failed') {
+            const detail = statusRes.data.error || '';
+            finishOcr(false, detail ? `题干提取失败：${String(detail).slice(0, 40)}` : '题干提取失败，请手动输入');
+            resolve(false);
+          }
+        } catch (err) {
+          finishOcr(false, '识别轮询异常，请重试');
+          resolve(false);
+        }
+      }, 500);
+    });
   } catch (e) {
-    ocrLoading.value = false;
-    showToast('发起识别任务失败');
+    finishOcr(false, '发起识别任务失败');
+    return false;
   }
 };
 
@@ -916,6 +952,12 @@ const closeAddModal = () => {
   showAddModal.value = false;
   fileList.value = [];
   uploadedFile.value = null;
+  if (pollTimerM) {
+    clearInterval(pollTimerM);
+    pollTimerM = null;
+  }
+  ocrLoading.value = false;
+  closeToast();
   newMistake.value = {
     subject_id: subjects.value.length > 0 ? subjects.value[0].id : 1,
     source_reference: '',
@@ -938,6 +980,13 @@ const previewImage = (url) => {
 onMounted(async () => {
   await fetchSubjects();
   await fetchMistakes();
+});
+
+onBeforeUnmount(() => {
+  if (pollTimerM) {
+    clearInterval(pollTimerM);
+    pollTimerM = null;
+  }
 });
 </script>
 
@@ -1438,6 +1487,13 @@ onMounted(async () => {
   border-radius: var(--st-radius-md, 10px);
   border: 1px solid var(--st-border, #f1f5f9);
   padding: 8px 12px;
+}
+
+.upload-hint {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--st-text-muted, #94a3b8);
 }
 
 .modal-footer-btns {
