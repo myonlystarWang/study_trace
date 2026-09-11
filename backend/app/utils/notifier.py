@@ -242,14 +242,14 @@ async def send_wechat_sandbox(
 
         # 6. 通用兜底
         lines = [l.strip() for l in content.split("\n") if l.strip() and not l.strip().startswith(">")]
-        summary_text = "；".join(lines[:2]) if lines else "今日学迹动态更新"
+        summary_text = "；".join(lines[:2]) if lines else "今日智学迹动态更新"
         if len(summary_text) > 80:
             summary_text = summary_text[:77] + "..."
         return {
             "first": {"value": display_title, "color": "#173177"},
             "keyword1": {"value": summary_text, "color": "#333333"},
-            "keyword2": {"value": "学迹提醒通知", "color": "#07c160"},
-            "remark": {"value": "点击进入学迹系统查看详情或完成打卡", "color": "#64748b"}
+            "keyword2": {"value": "智学迹提醒通知", "color": "#07c160"},
+            "remark": {"value": "点击进入智学迹系统查看详情或完成打卡", "color": "#64748b"}
         }
 
     async def _send_to_user(name: str, openid: str) -> Tuple[bool, str]:
@@ -325,7 +325,7 @@ async def send_wxpusher(
     if not topic_ids and not target_uids:
         return False, "WxPusher 必须指定 TopicId 或 UID 至少一项"
 
-    summary = title[:90] if title else "学迹通知"
+    summary = title[:90] if title else "智学迹通知"
     full_content = f"## {title}\n\n{content}"
 
     payload = {
@@ -627,7 +627,7 @@ def build_reminder_message(
 ) -> Tuple[str, str]:
     """构建中途催办提醒模板 (20:10 / 21:10)"""
     percent = int((completed / total * 100)) if total > 0 else 0
-    title = f"⏰【学迹作业提醒】{student_name} 今日作业待完成 ({today_str})"
+    title = f"⏰【智学迹作业提醒】{student_name} 今日作业待完成 ({today_str})"
 
     lines = [
         f"**亲爱的家长**：",
@@ -662,13 +662,13 @@ def build_summary_message(
     is_all_done = (total > 0 and completed == total)
 
     if force:
-        title = f"🚀【学迹即时战报】{student_name} 今日作业与复习快报 ({today_str})"
+        title = f"🚀【智学迹即时战报】{student_name} 今日作业与复习快报 ({today_str})"
         status_banner = f"⚡ **即时同步快报** ｜ 连续打卡：第 **{streak_days}** 天 ｜ 完成度：**{completed}/{total}**"
     elif is_all_done:
-        title = f"🎉【学迹今日战报】{student_name} 今日作业满卡完成！({today_str})"
+        title = f"🎉【智学迹今日战报】{student_name} 今日作业满卡完成！({today_str})"
         status_banner = f"🌟 **太棒了！今日全部作业均已完成满卡！**\n🔥 **连续打卡**：第 **{streak_days}** 天 ｜ 完成度：**100%** 🟢"
     else:
-        title = f"📊【学迹今日汇总】{student_name} 今日作业与复习快报 ({today_str})"
+        title = f"📊【智学迹今日汇总】{student_name} 今日作业与复习快报 ({today_str})"
         status_banner = f"🔥 **连续打卡**：第 **{streak_days}** 天 ｜ 完成度：**{completed}/{total}** 🟡"
 
     lines = [
@@ -713,7 +713,7 @@ def build_weekly_report_message(
 ) -> Tuple[str, str]:
     """构建每周日晚学情周战报 (每周日 21:30)"""
     rate = f"{(completed_items / total_items * 100):.1f}%" if total_items > 0 else "100%"
-    title = f"📊【学迹学情周报】{student_name} 本周课业打卡战报 ({week_range_str})"
+    title = f"📊【智学迹学情周报】{student_name} 本周课业打卡战报 ({week_range_str})"
 
     miss_str = f"（{', '.join(missing_days)} 缺卡）" if missing_days else "（本周全勤无缺卡 🟢）"
     lines = [

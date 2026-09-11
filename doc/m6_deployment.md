@@ -150,7 +150,7 @@ cloudflared tunnel route dns study-trace study.raddishlab.tech
 ```powershell
 cloudflared tunnel info study-trace
 curl https://study.<你的域名>/api/health
-# 期望：{"status":"ok","project":"学迹 StudyTrace",...}
+# 期望：{"status":"ok","project":"智学迹 StudyTrace",...}
 ```
 
 ---

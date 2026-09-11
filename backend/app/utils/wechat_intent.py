@@ -407,7 +407,7 @@ async def handle_wechat_inbound_message(
                 # 异步向家庭所有绑定成员广播满卡战报
                 try:
                     streak = calculate_streak(student_id, db)
-                    summary_title = f"🎉【学迹今日战报】{student_name} 今日作业满卡完成！({today_str})"
+                    summary_title = f"🎉【智学迹今日战报】{student_name} 今日作业满卡完成！({today_str})"
                     summary_content = (
                         f"🌟 **太棒了！今日所有作业均已完成满卡！**\n"
                         f"🔥 **连续打卡**：第 {streak} 天 ｜ 完成度：**100%** 🟢\n"

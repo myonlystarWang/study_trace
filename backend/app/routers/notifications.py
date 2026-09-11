@@ -102,7 +102,7 @@ async def test_notification_channel(
     """
     cfg = load_notification_config(db)
     title = "🔔【智学迹】微信推送通道测试"
-    content = "恭喜！智学迹通知服务 WxPusher 微信通道连通成功！\n\n- 服务名称：学迹 StudyTrace\n- 运行状态：服务连接正常\n- 推送渠道：WxPusher 家庭主题群\n- 每日作业提醒与晚间复习汇总将准时送达。"
+    content = "恭喜！智学迹通知服务 WxPusher 微信通道连通成功！\n\n- 服务名称：智学迹 StudyTrace\n- 运行状态：服务连接正常\n- 推送渠道：WxPusher 家庭主题群\n- 每日作业提醒与晚间复习汇总将准时送达。"
 
     target = None
     topic_id = None
