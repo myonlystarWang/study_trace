@@ -1,4 +1,4 @@
-# 学迹 StudyTrace — 开发计划与分阶段验收方案
+# 智学迹 StudyTrace — 开发计划与分阶段验收方案
 
 > 本文位置：`doc/development_plan.md`（计划原文同时存于 `C:\Users\ww\.workbuddy\plans\`，以 **doc 目录这份为准**）
 > 前置文档：`doc/implementation_plan.md`（方案设计，已通过 3 轮审查）

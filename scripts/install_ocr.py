@@ -56,7 +56,7 @@ def main() -> int:
     paddle = _check_paddle()
     cloud = _check_cloud_key()
 
-    print("=== 学迹 StudyTrace · OCR 环境自检 ===")
+    print("=== 智学迹 StudyTrace · OCR 环境自检 ===")
     print(f"  RapidOCR (默认/本地离线) : {'[OK] 可用' if rapid else '[MISSING] 未安装'}")
     print(f"  PaddleOCR (可选退路)     : {'[OK] 已安装' if paddle else '[-] 未安装（可选）'}")
     print(f"  CloudVLM  (云端兜底)     : {'[OK] 已配置 Key' if cloud else '[-] 未配置 Key（可选）'}")
