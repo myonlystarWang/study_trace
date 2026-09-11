@@ -35,7 +35,9 @@ export const mistakeApi = {
   submitReview: (id, result) => api.post(`/mistakes/${id}/review`, { mistake_id: id, result }),
   uploadImage: (formData) => api.post('/mistakes/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
-  })
+  }),
+  // kind: 'question' = 题干图 | 'diagram' = 题目配图（数轴/几何图）
+  deleteImage: (id, kind) => api.delete(`/mistakes/${id}/image/${kind}`)
 };
 
 export const settingsApi = {

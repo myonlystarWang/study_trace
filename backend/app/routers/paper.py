@@ -122,6 +122,7 @@ def get_paper_candidates(
                 extracted_text=r.extracted_text,
                 original_image_path=r.original_image_path,
                 thumbnail_path=r.thumbnail_path,
+                cropped_diagram_path=r.cropped_diagram_path,
                 error_type=r.error_type,
                 mastery_status=r.mastery_status,
                 review_count=r.review_count,
@@ -208,7 +209,11 @@ def compose_paper(body: PaperComposeIn, db: Session = Depends(get_db)):
     image_count = 0
 
     for idx, r in enumerate(ordered_records):
-        has_img = bool(r.original_image_path or r.thumbnail_path)
+        # 打印只使用"题目配图"（数轴/几何图等图形）。
+        # 题干整图（original_image_path）是孩子试卷的裁剪照，常带手写订正笔迹，
+        # 印到复习卷上等于直接给答案，故一律不输出。
+        diagram_url = r.cropped_diagram_path
+        has_img = bool(diagram_url)
         if has_img:
             image_count += 1
 
@@ -216,8 +221,6 @@ def compose_paper(body: PaperComposeIn, db: Session = Depends(get_db)):
         if is_oversized:
             warnings.append(f"第 {idx + 1} 题题干内容较长，可能跨页显示")
 
-        # 确保使用高清原图 URL，避免 320px 缩略图
-        img_url = r.original_image_path or r.thumbnail_path
         sub_display = _resolve_subject_display(r.subject.name if r.subject else None)
 
         questions.append(
@@ -227,7 +230,8 @@ def compose_paper(body: PaperComposeIn, db: Session = Depends(get_db)):
                 subject_id=r.subject_id,
                 subject_name=sub_display,
                 extracted_text=r.extracted_text,
-                original_image_path=img_url,
+                original_image_path=None,
+                diagram_image_path=diagram_url,
                 error_type=r.error_type if body.show_error_type else None,
                 space_mm=space_mm,
                 is_oversized=is_oversized,
@@ -333,11 +337,12 @@ def get_paper_by_id(paper_id: int, db: Session = Depends(get_db)):
         if mid not in record_map:
             continue
         r = record_map[mid]
-        has_img = bool(r.original_image_path or r.thumbnail_path)
+        # 同 compose：打印只输出题目配图，绝不输出可能带订正笔迹的题干整图
+        diagram_url = r.cropped_diagram_path
+        has_img = bool(diagram_url)
         is_oversized = _check_oversized(
             r.extracted_text, paper.space_level or "standard", has_image=has_img
         )
-        img_url = r.original_image_path or r.thumbnail_path
         sub_display = _resolve_subject_display(r.subject.name if r.subject else None)
 
         questions.append(
@@ -347,7 +352,8 @@ def get_paper_by_id(paper_id: int, db: Session = Depends(get_db)):
                 subject_id=r.subject_id,
                 subject_name=sub_display,
                 extracted_text=r.extracted_text,
-                original_image_path=img_url,
+                original_image_path=None,
+                diagram_image_path=diagram_url,
                 error_type=r.error_type if paper.show_error_type else None,
                 space_mm=space_mm,
                 is_oversized=is_oversized,

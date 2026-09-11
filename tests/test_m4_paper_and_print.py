@@ -24,9 +24,9 @@ def _clean_db():
     db.close()
 
 
-def _create_dummy_image() -> str:
-    """生成一张微型图片并保存，返回原图可访问 URL"""
-    im = Image.new("RGB", (100, 100), color="blue")
+def _create_dummy_image(color: str = "blue") -> str:
+    """生成一张微型图片并保存，返回原图可访问 URL（不同 color 得到不同 sha256/URL）"""
+    im = Image.new("RGB", (100, 100), color=color)
     buf = io.BytesIO()
     im.save(buf, format="JPEG")
     _, rel_orig, _ = save_image_bytes(buf.getvalue(), filename="test_img.jpg")
@@ -128,18 +128,25 @@ def test_paper_candidates_presets():
 
 
 def test_paper_compose_endpoint_and_assets():
-    """验证组装接口生成顺序编号、原图 URL 可访问性、留白高度、学生姓名及 papers 表落库"""
+    """验证组装接口生成顺序编号、配图 URL 可访问性、留白高度、学生姓名及 papers 表落库
+
+    关键行为：打印只输出「题目配图」(cropped_diagram_path)；
+    题干整图 (original_image_path) 是含手写订正的试卷照，绝不进复习卷。
+    """
     _clean_db()
     db = SessionLocal()
     try:
         math_sub = db.query(Subject).filter(Subject.name == "数学").first()
-        img_url = _create_dummy_image()
+        photo_url = _create_dummy_image("blue")    # 孩子试卷裁剪照，带订正笔迹
+        diagram_url = _create_dummy_image("red")   # 只留图形的配图
 
         r1 = MistakeRecord(
             student_id=1,
             subject_id=math_sub.id,
             extracted_text="几何大题测试",
-            original_image_path=img_url,
+            original_image_path=photo_url,
+            thumbnail_path=photo_url,
+            cropped_diagram_path=diagram_url,
             mastery_status="未掌握",
         )
         r2 = MistakeRecord(
@@ -174,11 +181,14 @@ def test_paper_compose_endpoint_and_assets():
 
         q1 = data["questions"][0]
         assert q1["order_num"] == 1
-        assert q1["original_image_path"] == img_url
+        # 含订正笔迹的题干整图绝不进卷
+        assert q1["original_image_path"] is None
+        # 只输出配图
+        assert q1["diagram_image_path"] == diagram_url
         assert q1["space_mm"] == 45  # standard 默认 45mm >= 40mm
 
-        # 验证原图 HTTP GET 契约
-        img_res = client.get(q1["original_image_path"])
+        # 验证配图 HTTP GET 契约
+        img_res = client.get(q1["diagram_image_path"])
         assert img_res.status_code == 200
         assert "image" in img_res.headers.get("content-type", "")
 
@@ -198,7 +208,7 @@ def test_paper_estimate_pages_rough():
         math_sub = db.query(Subject).filter(Subject.name == "数学").first()
         img_url = _create_dummy_image()
 
-        # 构造 20 道题，其中 6 道带图
+        # 构造 20 道题，其中 6 道带图（打印口径的"图"= 配图 cropped_diagram_path）
         records = []
         for i in range(20):
             has_img = i < 6
@@ -206,7 +216,7 @@ def test_paper_estimate_pages_rough():
                 student_id=1,
                 subject_id=math_sub.id,
                 extracted_text=f"题目 {i + 1}",
-                original_image_path=img_url if has_img else None,
+                cropped_diagram_path=img_url if has_img else None,
                 mastery_status="未掌握",
             )
             records.append(rec)
@@ -276,14 +286,14 @@ def test_paper_oversized_heuristic():
             mastery_status="未掌握",
         )
 
-        # 2. 图文结合超长启发式测试：
+        # 2. 图文结合超长启发式测试（打印口径的"图"= 配图 cropped_diagram_path）：
         dummy_img = _create_dummy_image()
         # 504 字 + 带图 -> standard 下即标记 oversized (>= 500)
         r_img_long = MistakeRecord(
             student_id=1,
             subject_id=math_sub.id,
             extracted_text="五百字带图长文本" * 63,  # 504 字
-            original_image_path=dummy_img,
+            cropped_diagram_path=dummy_img,
             mastery_status="未掌握",
         )
         # 256 字 + 带图 -> spacious 下标记 oversized (>= 250)，standard 下不标记
@@ -291,7 +301,7 @@ def test_paper_oversized_heuristic():
             student_id=1,
             subject_id=math_sub.id,
             extracted_text="二百五十字符文本" * 32,  # 256 字
-            original_image_path=dummy_img,
+            cropped_diagram_path=dummy_img,
             mastery_status="未掌握",
         )
 

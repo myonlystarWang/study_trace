@@ -438,7 +438,8 @@ const estimatedPages = computed(() => {
   const selectedItems = selectedIds.value
     .map((id) => allCandidatesMap.value[id] || candidates.value.find((c) => c.id === id))
     .filter(Boolean);
-  const imgCount = selectedItems.filter((c) => c.thumbnail_path || c.original_image_path).length;
+  // 与后端出卷口径一致：只有"题目配图"才计入图片数（含订正的题干照不入卷）
+  const imgCount = selectedItems.filter((c) => c.cropped_diagram_path).length;
   return Math.max(1, Math.round(count / 4) + Math.ceil(imgCount / 6));
 });
 
