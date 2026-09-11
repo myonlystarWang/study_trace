@@ -35,7 +35,7 @@
   4. `test_reminder_contains_uncompleted_items`: 验证催办提醒内容中包含未完成作业的学科与题干。PASSED
   5. `test_evening_summary_dispatches_when_completed`: 验证晚间 21:50 满卡时依然正常分发「🎉 今日作业满卡完成！」喜报。PASSED
   6. `test_wechat_sandbox_notification`: 验证微信官方测试号 access_token 缓存自愈、多 OpenID 解析、模板消息拼装及直跳 URL。PASSED
-  7. `test_bark_notification`: 验证 Bark 推送构造、group='学迹'及 HTTP 200 业务报错判断。PASSED
+  7. `test_bark_notification`: 验证 Bark 推送构造、group='智学迹'及 HTTP 200 业务报错判断。PASSED
   8. `test_webhook_adapter_and_error_handling`: 验证 Webhook 错误格式中文提示与企微/钉钉/飞书格式适配。PASSED
   9. `test_multichannel_fault_tolerance`: 验证通道 A 抛出异常不阻塞通道 B 送达。PASSED
   10. `test_webpush_decoupled_graceful_handling`: 验证 Web Push 解耦与友好提示。PASSED

@@ -35,7 +35,7 @@ uv run pytest -v
   ```bash
   curl.exe -i https://study.raddishlab.tech/api/health
   # HTTP/1.1 200 OK
-  # {"status":"ok","project":"学迹 StudyTrace","version":"0.1.0"}
+  # {"status":"ok","project":"智学迹 StudyTrace","version":"0.1.0"}
   ```
 - **公网未带 PIN 拖库拦截**：
   ```bash

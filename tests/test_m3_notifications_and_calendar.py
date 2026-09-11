@@ -667,7 +667,7 @@ async def test_weekly_report_dispatch(db_session: Session):
         assert "week" in res
         assert mock_dispatch.called
         call_title = mock_dispatch.call_args[0][0]
-        assert "学迹学情周报" in call_title
+        assert "智学迹学情周报" in call_title
 
 
 @pytest.mark.anyio
