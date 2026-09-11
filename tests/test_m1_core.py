@@ -232,6 +232,49 @@ def test_streak_across_month_boundary():
         db.close()
 
 
+def test_streak_not_inflated_by_empty_weekend():
+    """空周末不得虚增 streak。
+
+    构造：本周一至今天（含）每日均有已完成作业；本日之前紧邻的周末
+    （周五、周六、周日）完全没有任何作业。此时 streak 必须恰好等于
+    「本周一至今天」的天数，而不是被空周末额外加 2（周五无作业时不存在
+    可闭环的宽限期任务，该周末属于休息日，不能算作满卡日）。
+    """
+    db = SessionLocal()
+    try:
+        db.query(HomeworkItem).delete()
+        db.commit()
+
+        math = db.query(Subject).filter(Subject.name == "数学").first()
+        assert math is not None
+
+        today = date.today()
+        monday = today - timedelta(days=today.weekday())
+
+        # 本周一至今天，每天一条已完成作业；此前的周五/周六/周日保持空白
+        d = monday
+        while d <= today:
+            db.add(
+                HomeworkItem(
+                    student_id=1,
+                    subject_id=math.id,
+                    date=d,
+                    content=f"本周作业 {d}",
+                    is_completed=True,
+                )
+            )
+            d += timedelta(days=1)
+        db.commit()
+
+        expected = today.weekday() + 1  # 本周一(1) → 今天
+        streak = calculate_streak(1, db)
+        assert streak == expected, (
+            f"空周末不应计入 streak：本周一至今天共 {expected} 天，实际为 {streak}"
+        )
+    finally:
+        db.close()
+
+
 def test_backup_manifest_sha256_exact_match():
     """测试备份文件内部清单：每个被打包文件的 sha256 均与 manifest.json 记录 100% 严格一致"""
     import hashlib

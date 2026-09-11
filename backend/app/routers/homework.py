@@ -41,6 +41,13 @@ def calculate_streak(student_id: int, db: Session) -> int:
                 HomeworkItem.date == friday_date
             ).all()
 
+            # 该日与上周五均无任何作业 —— 属于完全空白的周末休息日。
+            # 宽限期的本意是「周五作业顺延到周末完成」，若周五本身没有作业，
+            # 这个周末就不存在可闭环的任务，不能作为满卡日计入 streak，
+            # 否则连续打卡天数会在空周末凭空增加。
+            if not items and not fri_items:
+                return False
+
             own_completed = all(it.is_completed for it in items) if items else True
             fri_completed = bool(fri_items and all(it.is_completed for it in fri_items))
 
