@@ -99,6 +99,18 @@
                   </span>
                 </div>
 
+                <!-- 题目配图（数轴/几何图），不含批改订正笔迹，复习与打印都用它 -->
+                <div
+                  class="card-diagram-box"
+                  v-if="item.cropped_diagram_path"
+                  @click.stop="previewImage(item.cropped_diagram_path)"
+                >
+                  <img :src="item.cropped_diagram_path" alt="题目配图" />
+                  <span class="img-preview-tag">
+                    <van-icon name="search" /> 题目配图
+                  </span>
+                </div>
+
                 <!-- 题目文本内容 -->
                 <div class="card-body">
                   <p class="question-text">{{ item.extracted_text || '暂无文字题干，请查看配图' }}</p>
@@ -336,6 +348,38 @@
         </div>
 
         <div class="form-group">
+          <label class="form-label">题目配图（选填）</label>
+          <div class="diagram-picker">
+            <div class="diagram-thumb" v-if="newMistake.cropped_diagram_path">
+              <img
+                :src="newMistake.cropped_diagram_path"
+                alt="题目配图"
+                @click="previewImage(newMistake.cropped_diagram_path)"
+              />
+              <div class="diagram-thumb-actions">
+                <button class="mini-btn" @click="openDiagramCropper">重框</button>
+                <button class="mini-btn mini-btn--danger" @click="removeNewDiagram">删除</button>
+              </div>
+            </div>
+            <van-button
+              v-else
+              size="small"
+              type="primary"
+              plain
+              icon="photograph"
+              :disabled="!pendingUploadFile"
+              class="diagram-add-btn"
+              @click="openDiagramCropper"
+            >
+              框选图形
+            </van-button>
+            <p class="upload-hint">
+              数轴、几何图等图形无法被文字识别保留，单独框出来存成配图；不添加则复习打印只出文字
+            </p>
+          </div>
+        </div>
+
+        <div class="form-group">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
             <label class="form-label" style="margin-bottom: 0;">题干文字（可编辑）</label>
             <van-button
@@ -345,7 +389,7 @@
               icon="scan"
               :loading="ocrLoading"
               loading-text="识别中..."
-              :disabled="!uploadedFile"
+              :disabled="!newMistake.original_image_path"
               class="ocr-extract-btn"
               @click="extractText"
             >
@@ -453,6 +497,70 @@
         </div>
 
         <div class="form-group">
+          <label class="form-label">题目图片</label>
+          <div class="edit-image-section">
+            <!-- 题干图：孩子试卷的裁剪照，常带批改与订正笔迹，可删可换 -->
+            <div class="edit-image-row">
+              <div class="edit-image-body">
+                <span class="edit-image-label">题干图</span>
+                <div class="diagram-thumb" v-if="editingMistake.thumbnail_path || editingMistake.original_image_path">
+                  <img
+                    :src="editingMistake.thumbnail_path || editingMistake.original_image_path"
+                    alt="题干图"
+                    @click="previewImage(editingMistake.original_image_path || editingMistake.thumbnail_path)"
+                  />
+                </div>
+                <span class="edit-image-empty" v-else>无</span>
+              </div>
+              <div class="edit-image-actions">
+                <button class="mini-btn" :disabled="editBusy" @click="openEditCropper('question')">重框</button>
+                <button
+                  class="mini-btn mini-btn--danger"
+                  :disabled="editBusy || !editingMistake.original_image_path"
+                  @click="deleteEditImage('question')"
+                >
+                  删除
+                </button>
+              </div>
+            </div>
+
+            <!-- 配图：只保留图形，复习与打印专用 -->
+            <div class="edit-image-row">
+              <div class="edit-image-body">
+                <span class="edit-image-label">题目配图</span>
+                <div class="diagram-thumb" v-if="editingMistake.cropped_diagram_path">
+                  <img
+                    :src="editingMistake.cropped_diagram_path"
+                    alt="题目配图"
+                    @click="previewImage(editingMistake.cropped_diagram_path)"
+                  />
+                </div>
+                <span class="edit-image-empty" v-else>无</span>
+              </div>
+              <div class="edit-image-actions">
+                <button
+                  class="mini-btn"
+                  :disabled="editBusy || !(editingMistake.original_image_path || editingMistake.thumbnail_path || editingMistake.cropped_diagram_path)"
+                  @click="openEditCropper('diagram')"
+                >
+                  框选
+                </button>
+                <button
+                  class="mini-btn mini-btn--danger"
+                  :disabled="editBusy || !editingMistake.cropped_diagram_path"
+                  @click="deleteEditImage('diagram')"
+                >
+                  删除
+                </button>
+              </div>
+            </div>
+            <p class="upload-hint">
+              复习卷只打印「题目配图」。题干图常带订正笔迹，若不想保留可直接删除。
+            </p>
+          </div>
+        </div>
+
+        <div class="form-group">
           <label class="form-label">题干文字（可编辑）</label>
           <van-field
             v-model="editingMistake.extracted_text"
@@ -488,11 +596,15 @@
       <img :src="previewUrl" style="max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px;" alt="原图" />
     </van-popup>
 
-    <!-- 错题拍照框选裁剪弹窗 -->
+    <!-- 错题拍照框选裁剪弹窗（题干 / 配图 两种模式复用同一组件） -->
     <ImageCropper
       v-if="showCropper"
       v-model:show="showCropper"
       :image-url="cropperImageUrl"
+      :title="cropperText.title"
+      :tip="cropperText.tip"
+      :confirm-text="cropperText.confirmText"
+      :skip-text="cropperText.skipText"
       @crop="onCropConfirm"
       @skip="onCropSkip"
       @cancel="onCropCancel"
@@ -501,7 +613,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { showToast, showConfirmDialog, closeToast } from 'vant';
 import { mistakeApi, settingsApi, ocrApi } from '../api';
@@ -612,15 +724,35 @@ const fileList = ref([]);
 const showPreview = ref(false);
 const previewUrl = ref('');
 const ocrLoading = ref(false);
-const uploadedFile = ref(null);
+const editBusy = ref(false);
 let pollTimerM = null;
 let ocrPollCount = 0;
 const OCR_MAX_POLLS = 60; // 500ms × 60 ≈ 30s 识别上限，超时给出明确提示而不是无限等待
 
 // 图片框选裁剪状态
+// cropperMode: question = 题干图（original/thumbnail）；diagram = 题目配图（数轴/几何图）
 const showCropper = ref(false);
 const cropperImageUrl = ref('');
+const cropperMode = ref('question');
 const pendingUploadFile = ref(null);
+// 编辑态裁剪：非 null 时表示本次裁剪是给某条已存记录换图
+const editCropKind = ref(null);
+
+const CROPPER_TEXT = {
+  question: {
+    title: '框选裁剪题目',
+    tip: '拖拽四周手柄框选题目区域，尽量把批改和订正笔迹排除在外',
+    confirmText: '确认框选区域并识别',
+    skipText: '跳过裁剪'
+  },
+  diagram: {
+    title: '框选题目中的图形',
+    tip: '把数轴、几何图等图形单独框出来，只用于复习打印，不影响题干文字',
+    confirmText: '确认添加配图',
+    skipText: '不添加配图'
+  }
+};
+const cropperText = computed(() => CROPPER_TEXT[cropperMode.value] || CROPPER_TEXT.question);
 
 // 答案查看展开状态
 const openedAnswerIds = ref([]);
@@ -646,9 +778,96 @@ const openEditMistake = (item) => {
     error_type: item.error_type || '概念模糊',
     extracted_text: item.extracted_text || '',
     answer: item.answer || '',
-    mastery_status: item.mastery_status || '未掌握'
+    mastery_status: item.mastery_status || '未掌握',
+    original_image_path: item.original_image_path || null,
+    thumbnail_path: item.thumbnail_path || null,
+    cropped_diagram_path: item.cropped_diagram_path || null
   };
   showEditModal.value = true;
+};
+
+/** 编辑态：打开裁剪器给已存记录换图 */
+const openEditCropper = (kind) => {
+  const target = editingMistake.value;
+  if (!target) return;
+  // 题干图缺失时退而用缩略图；配图可从题干图或原配图上再框
+  const url = kind === 'question'
+    ? (target.original_image_path || target.thumbnail_path)
+    : (target.original_image_path || target.thumbnail_path || target.cropped_diagram_path);
+  if (!url) {
+    showToast('这张记录没有可用的底图，请重新拍照上传');
+    return;
+  }
+  editCropKind.value = kind;
+  cropperMode.value = kind;
+  cropperImageUrl.value = url;
+  showCropper.value = true;
+};
+
+/** 编辑态：裁剪结果写回记录（先清旧图回收文件，再写入新图） */
+const replaceEditImage = async (kind, cropData) => {
+  const target = editingMistake.value;
+  if (!target || !cropData?.file) return;
+  editBusy.value = true;
+  try {
+    showToast({ type: 'loading', message: '图片处理中...', forbidClick: true, duration: 0 });
+    const data = await uploadImageFile(cropData.file);
+    await mistakeApi.deleteImage(target.id, kind);
+    if (kind === 'question') {
+      await mistakeApi.update(target.id, {
+        original_image_path: data.original_url,
+        thumbnail_path: data.thumbnail_url
+      });
+      target.original_image_path = data.original_url;
+      target.thumbnail_path = data.thumbnail_url;
+    } else {
+      await mistakeApi.update(target.id, { cropped_diagram_path: data.original_url });
+      target.cropped_diagram_path = data.original_url;
+    }
+    closeToast();
+    showToast({ message: kind === 'question' ? '题目图片已更换' : '配图已更新', icon: 'success' });
+    fetchMistakes();
+  } catch (e) {
+    closeToast();
+    showToast('图片保存失败，请重试');
+  } finally {
+    editBusy.value = false;
+  }
+};
+
+/** 编辑态：删除题干图或配图 */
+const deleteEditImage = async (kind) => {
+  const target = editingMistake.value;
+  if (!target) return;
+  try {
+    await showConfirmDialog({
+      title: kind === 'question' ? '删除题目图片' : '删除配图',
+      message: '删除后不可恢复，确定删除吗？'
+    });
+  } catch (e) {
+    return;
+  }
+  editBusy.value = true;
+  try {
+    await mistakeApi.deleteImage(target.id, kind);
+    if (kind === 'question') {
+      target.original_image_path = null;
+      target.thumbnail_path = null;
+    } else {
+      target.cropped_diagram_path = null;
+    }
+    showToast({ message: '图片已删除', icon: 'success' });
+    fetchMistakes();
+  } catch (e) {
+    showToast('删除失败，请重试');
+  } finally {
+    editBusy.value = false;
+  }
+};
+
+/** 录入态：撤掉已上传的配图 */
+const removeNewDiagram = () => {
+  newMistake.value.cropped_diagram_path = null;
 };
 
 const submitEditMistake = async () => {
@@ -682,6 +901,7 @@ const newMistake = ref({
   answer: '',
   original_image_path: null,
   thumbnail_path: null,
+  cropped_diagram_path: null,
   storage_key: null
 });
 
@@ -796,23 +1016,31 @@ const submitReview = async (id, result) => {
 const handleUpload = (file) => {
   pendingUploadFile.value = file;
   cropperImageUrl.value = file.content || (file.file ? URL.createObjectURL(file.file) : '');
+  cropperMode.value = 'question';
+  editCropKind.value = null;
   showCropper.value = true;
 };
 
-const executeUpload = async (rawFile, previewBlobUrl = null) => {
-  uploadedFile.value = { file: rawFile };
-  if (previewBlobUrl) {
-    fileList.value = [{ url: previewBlobUrl }];
-  }
+/** 压缩 + 上传，返回后端图片三元组；失败抛错 */
+const uploadImageFile = async (rawFile) => {
+  const compressed = await compressImage(rawFile);
+  const fd = new FormData();
+  fd.append('file', compressed.file || rawFile);
+  const res = await mistakeApi.uploadImage(fd);
+  return res.data;
+};
+
+/** 上传题干图，落到 newMistake */
+const uploadQuestionImage = async (rawFile, previewBlobUrl = null) => {
   try {
     showToast({ type: 'loading', message: '图片处理中...', forbidClick: true, duration: 0 });
-    const compressed = await compressImage(rawFile);
-    const fd = new FormData();
-    fd.append('file', compressed.file || rawFile);
-    const res = await mistakeApi.uploadImage(fd);
-    newMistake.value.original_image_path = res.data.original_url;
-    newMistake.value.thumbnail_path = res.data.thumbnail_url;
-    newMistake.value.storage_key = res.data.storage_key;
+    const data = await uploadImageFile(rawFile);
+    newMistake.value.original_image_path = data.original_url;
+    newMistake.value.thumbnail_path = data.thumbnail_url;
+    newMistake.value.storage_key = data.storage_key;
+    if (previewBlobUrl) {
+      fileList.value = [{ url: previewBlobUrl }];
+    }
     closeToast();
     return true;
   } catch (e) {
@@ -822,27 +1050,121 @@ const executeUpload = async (rawFile, previewBlobUrl = null) => {
   }
 };
 
+/** 上传题目配图（数轴/几何图），落到 newMistake.cropped_diagram_path */
+const uploadDiagramImage = async (rawFile) => {
+  try {
+    showToast({ type: 'loading', message: '配图处理中...', forbidClick: true, duration: 0 });
+    const data = await uploadImageFile(rawFile);
+    newMistake.value.cropped_diagram_path = data.original_url;
+    closeToast();
+    showToast({ message: '配图已添加', icon: 'success' });
+    return true;
+  } catch (e) {
+    closeToast();
+    showToast('配图上传失败，请重试');
+    return false;
+  }
+};
+
+/** 用同一张原图二次框选，只保留图形区域 */
+const openDiagramCropper = () => {
+  const pending = pendingUploadFile.value;
+  const url = pending?.content
+    || (pending?.file ? URL.createObjectURL(pending.file) : '')
+    || cropperImageUrl.value;
+  if (!url) {
+    showToast('请先拍照或上传题目图片');
+    return;
+  }
+  cropperImageUrl.value = url;
+  cropperMode.value = 'diagram';
+  editCropKind.value = null;
+  showCropper.value = true;
+};
+
+/** 题干图上传并识别完成后，问一句是否还要框图形 */
+const askForDiagramAfterQuestion = async () => {
+  if (newMistake.value.cropped_diagram_path) return;
+  try {
+    await showConfirmDialog({
+      title: '题目里有图形吗？',
+      message: '数轴、几何图这类图形没法被文字识别保留，可以再框一次单独存成配图，复习打印时会带上。',
+      confirmButtonText: '框选图形',
+      cancelButtonText: '没有图形'
+    });
+  } catch (e) {
+    return;
+  }
+  openDiagramCropper();
+};
+
 const onCropConfirm = async (cropData) => {
   showCropper.value = false;
   if (!cropData?.file) return;
-  // 框选完成即自动识别，兑现「确认框选区域并识别」按钮文案
-  const ok = await executeUpload(cropData.file, cropData.blobUrl);
-  if (ok) await extractText();
+
+  // 编辑态换图：直接写回记录
+  if (editCropKind.value) {
+    const kind = editCropKind.value;
+    editCropKind.value = null;
+    cropperMode.value = 'question';
+    await replaceEditImage(kind, cropData);
+    return;
+  }
+
+  if (cropperMode.value === 'diagram') {
+    await uploadDiagramImage(cropData.file);
+    cropperMode.value = 'question';
+    return;
+  }
+
+  const ok = await uploadQuestionImage(cropData.file, cropData.blobUrl);
+  if (!ok) return;
+  await extractText();
+  await askForDiagramAfterQuestion();
 };
 
 const onCropSkip = async () => {
   showCropper.value = false;
+
+  // 配图流程里「跳过」= 不添加配图，不影响已上传的题干图
+  if (cropperMode.value === 'diagram') {
+    cropperMode.value = 'question';
+    return;
+  }
+
   const pending = pendingUploadFile.value;
   if (!pending?.file) return;
-  const ok = await executeUpload(
+
+  // 整张照片通常带批改痕迹与订正答案，先明确告知风险再决定
+  try {
+    await showConfirmDialog({
+      title: '确认不裁剪？',
+      message: '将直接使用整张照片，照片里的批改痕迹和订正答案会一并保存，并可能随复习卷打印出来。',
+      confirmButtonText: '仍用整张',
+      cancelButtonText: '返回裁剪'
+    });
+  } catch (e) {
+    showCropper.value = true;
+    return;
+  }
+
+  const ok = await uploadQuestionImage(
     pending.file,
     pending.content || URL.createObjectURL(pending.file)
   );
-  if (ok) await extractText();
+  if (ok) {
+    await extractText();
+    await askForDiagramAfterQuestion();
+  }
 };
 
 const onCropCancel = () => {
+  const wasDiagram = cropperMode.value === 'diagram' || Boolean(editCropKind.value);
   showCropper.value = false;
+  cropperMode.value = 'question';
+  editCropKind.value = null;
+  // 放弃配图 / 放弃换图，不动已有图片
+  if (wasDiagram) return;
   fileList.value = [];
   pendingUploadFile.value = null;
 };
@@ -935,7 +1257,8 @@ const submitAddMistake = async () => {
       extracted_text: newMistake.value.extracted_text,
       answer: newMistake.value.answer,
       original_image_path: newMistake.value.original_image_path,
-      thumbnail_path: newMistake.value.thumbnail_path
+      thumbnail_path: newMistake.value.thumbnail_path,
+      cropped_diagram_path: newMistake.value.cropped_diagram_path
     });
     showToast({ message: '错题录入成功！', icon: 'success' });
     closeAddModal();
@@ -951,7 +1274,9 @@ const submitAddMistake = async () => {
 const closeAddModal = () => {
   showAddModal.value = false;
   fileList.value = [];
-  uploadedFile.value = null;
+  pendingUploadFile.value = null;
+  cropperMode.value = 'question';
+  editCropKind.value = null;
   if (pollTimerM) {
     clearInterval(pollTimerM);
     pollTimerM = null;
@@ -966,6 +1291,7 @@ const closeAddModal = () => {
     answer: '',
     original_image_path: null,
     thumbnail_path: null,
+    cropped_diagram_path: null,
     storage_key: null
   };
 };
@@ -1109,6 +1435,125 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+/* 题目配图（数轴/几何图），打印与复习专用 */
+.card-diagram-box {
+  position: relative;
+  width: 100%;
+  max-height: 140px;
+  border-radius: var(--st-radius-md, 10px);
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--st-bg-subtle, #f1f5f9);
+  border: 1px dashed var(--st-border, #e2e8f0);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.card-diagram-box img {
+  width: 100%;
+  max-height: 140px;
+  object-fit: contain;
+}
+
+/* 录入/编辑抽屉里的配图选择区 */
+.diagram-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.diagram-thumb {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.diagram-thumb img {
+  max-width: 160px;
+  max-height: 120px;
+  border-radius: var(--st-radius-md, 10px);
+  border: 1px solid var(--st-border, #e2e8f0);
+  object-fit: contain;
+  background: var(--st-bg-subtle, #f1f5f9);
+  cursor: pointer;
+}
+
+.diagram-thumb-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.mini-btn {
+  border: 1px solid var(--st-border, #e2e8f0);
+  background: var(--st-bg-subtle, #f8fafc);
+  color: var(--st-text-primary, #334155);
+  font-size: 12px;
+  padding: 3px 12px;
+  border-radius: var(--st-radius-full, 9999px);
+  cursor: pointer;
+}
+
+.mini-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.mini-btn--danger {
+  color: var(--st-danger, #dc2626);
+  border-color: var(--st-danger, #dc2626);
+  background: transparent;
+}
+
+.diagram-add-btn {
+  align-self: flex-start;
+}
+
+/* 编辑抽屉的图片管理区块 */
+.edit-image-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--st-radius-md, 10px);
+  background: var(--st-bg-subtle, #f8fafc);
+  border: 1px solid var(--st-border, #f1f5f9);
+}
+
+.edit-image-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.edit-image-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.edit-image-label {
+  font-size: 12px;
+  color: var(--st-text-muted, #64748b);
+  white-space: nowrap;
+}
+
+.edit-image-empty {
+  font-size: 12px;
+  color: var(--st-text-muted, #94a3b8);
+}
+
+.edit-image-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .question-text {

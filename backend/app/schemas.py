@@ -210,6 +210,8 @@ class PaperCandidateOut(BaseModel):
     extracted_text: Optional[str] = None
     original_image_path: Optional[str] = None
     thumbnail_path: Optional[str] = None
+    # 题目配图（数轴/几何图等），打印与页数估算口径以它为准
+    cropped_diagram_path: Optional[str] = None
     error_type: Optional[str] = None
     mastery_status: str
     review_count: int
@@ -238,6 +240,8 @@ class PaperQuestionOut(BaseModel):
     subject_name: str
     extracted_text: Optional[str] = None
     original_image_path: Optional[str] = None
+    # 题目配图（仅数轴/几何图等图形，不含含订正笔迹的整张题干照片），打印只用这张
+    diagram_image_path: Optional[str] = None
     error_type: Optional[str] = None
     space_mm: int = 45
     is_oversized: bool = False

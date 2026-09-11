@@ -14,9 +14,9 @@
         <button class="header-action-btn" @click="handleCancel">
           <van-icon name="cross" /> 取消
         </button>
-        <span class="header-title">框选裁剪题目</span>
+        <span class="header-title">{{ title }}</span>
         <button class="header-action-btn text-btn" @click="handleSkip">
-          跳过裁剪
+          {{ skipText }}
         </button>
       </div>
 
@@ -66,7 +66,7 @@
       <div class="cropper-footer">
         <div class="footer-tip">
           <van-icon name="info-o" />
-          <span>拖拽四周手柄框选要识别的题目，排除试卷其余无关干扰</span>
+          <span>{{ tip }}</span>
         </div>
         <div class="footer-actions">
           <van-button
@@ -79,7 +79,7 @@
             @click="confirmCrop"
             class="crop-confirm-btn"
           >
-            确认框选区域并识别
+            {{ confirmText }}
           </van-button>
         </div>
       </div>
@@ -99,6 +99,23 @@ const props = defineProps({
   imageUrl: {
     type: String,
     required: true
+  },
+  // 以下三个为文案插槽：让本组件既能裁剪题干，也能复用为「框选题目中的图形」
+  title: {
+    type: String,
+    default: '框选裁剪题目'
+  },
+  tip: {
+    type: String,
+    default: '拖拽四周手柄框选要识别的题目，排除试卷其余无关干扰'
+  },
+  confirmText: {
+    type: String,
+    default: '确认框选区域并识别'
+  },
+  skipText: {
+    type: String,
+    default: '跳过裁剪'
   }
 });
 

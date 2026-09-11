@@ -118,8 +118,9 @@
                   </div>
 
                   <!-- 题目插图 (max-height: 55mm 自适应) -->
-                  <div v-if="q.original_image_path" class="paper-question-img-wrap">
-                    <img :src="q.original_image_path" class="paper-question-img" alt="题目配图" />
+                  <!-- 只打印题目配图（数轴/几何图等）；含批改订正笔迹的题干照片一律不入卷 -->
+                  <div v-if="q.diagram_image_path" class="paper-question-img-wrap">
+                    <img :src="q.diagram_image_path" class="paper-question-img" alt="题目配图" />
                   </div>
 
                   <!-- 答题留白区域 (防截断 + 格式化底纹) -->

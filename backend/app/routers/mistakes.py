@@ -1,8 +1,10 @@
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
+from backend.app.config import DATA_DIR
 from backend.app.database import get_db
 from backend.app.models import MistakeRecord, MistakeReview, Subject
 from backend.app.schemas import (
@@ -11,6 +13,82 @@ from backend.app.schemas import (
 from backend.app.utils.image_handler import save_image_bytes
 
 router = APIRouter(prefix="/api/mistakes", tags=["错题本"])
+
+# 错题记录上所有指向图片的三列，删除错题或删图时据此判断文件是否还被引用
+IMAGE_FIELDS = ("original_image_path", "thumbnail_path", "cropped_diagram_path")
+# 允许显式传 null 清空的字段（其余字段传 null 视为"未修改"）
+NULLABLE_IMAGE_FIELDS = set(IMAGE_FIELDS)
+
+# kind -> 该 kind 对应的字段集合
+IMAGE_KIND_FIELDS = {
+    "question": ("original_image_path", "thumbnail_path"),
+    "diagram": ("cropped_diagram_path",),
+}
+
+
+def _resolve_upload_file(rel_path: Optional[str]) -> Optional[Path]:
+    """把 /uploads/... 形式的相对 URL 解析为磁盘绝对路径（越界路径一律拒绝）。"""
+    if not rel_path or not rel_path.startswith("/uploads/"):
+        return None
+    candidate = (DATA_DIR / rel_path.lstrip("/")).resolve()
+    uploads_root = (DATA_DIR / "uploads").resolve()
+    if uploads_root not in candidate.parents:
+        return None
+    return candidate
+
+
+def _sibling_paths(abs_path: Path) -> List[Path]:
+    """同一 sha256 文件在 originals/ 与 thumbnails/ 下成对存在，删除时要一起带走。"""
+    paths = [abs_path]
+    parts = list(abs_path.parts)
+    if "originals" in parts:
+        idx = parts.index("originals")
+        twin = Path(*parts[:idx], "thumbnails", *parts[idx + 1:])
+        paths.append(twin)
+    elif "thumbnails" in parts:
+        idx = parts.index("thumbnails")
+        twin = Path(*parts[:idx], "originals", *parts[idx + 1:])
+        paths.append(twin)
+    return paths
+
+
+def _purge_image_if_unreferenced(db: Session, rel_path: Optional[str]) -> bool:
+    """仅当没有任何错题记录再引用该图片时，才删除磁盘文件。返回是否真的删除。"""
+    if not rel_path:
+        return False
+    still_used = db.query(MistakeRecord).filter(
+        or_(*[getattr(MistakeRecord, f) == rel_path for f in IMAGE_FIELDS])
+    ).first()
+    if still_used:
+        return False
+
+    abs_path = _resolve_upload_file(rel_path)
+    if not abs_path:
+        return False
+    if not abs_path.exists():
+        return False
+
+    # 仅当同源文件确实已无引用，才删对应缩略图；逐个再查一次，避免误删仍被引用的缩略图
+    removed = False
+    for path in _sibling_paths(abs_path):
+        if not path.exists():
+            continue
+        # 计算该文件的相对 URL，再用同样的引用检查兜一次
+        try:
+            rel = "/" + path.relative_to(DATA_DIR).as_posix()
+        except ValueError:
+            continue
+        referenced = db.query(MistakeRecord).filter(
+            or_(*[getattr(MistakeRecord, f) == rel for f in IMAGE_FIELDS])
+        ).first()
+        if referenced:
+            continue
+        try:
+            path.unlink()
+            removed = True
+        except OSError:
+            pass
+    return removed
 
 
 @router.post("/upload")
@@ -163,6 +241,8 @@ def update_mistake(mistake_id: int, item_in: dict, db: Session = Depends(get_db)
     if not r:
         raise HTTPException(status_code=404, detail="未找到该错题记录")
 
+    # 图片类字段允许显式传 null 以清空（清空后由 /image 接口负责删磁盘文件）；
+    # 其余文本字段沿用"非 None 才更新"，避免前端漏传字段被误清空。
     for field in [
         "extracted_text",
         "answer",
@@ -171,13 +251,52 @@ def update_mistake(mistake_id: int, item_in: dict, db: Session = Depends(get_db)
         "mastery_status",
         "source_reference",
         "subject_id",
+        "original_image_path",
+        "thumbnail_path",
     ]:
-        if field in item_in and item_in[field] is not None:
-            setattr(r, field, item_in[field])
+        if field not in item_in:
+            continue
+        if item_in[field] is None and field not in NULLABLE_IMAGE_FIELDS:
+            continue
+        setattr(r, field, item_in[field])
 
     db.commit()
     db.refresh(r)
     return r
+
+
+@router.delete("/{mistake_id}/image/{kind}")
+def delete_mistake_image(mistake_id: int, kind: str, db: Session = Depends(get_db)):
+    """删除错题的图片。
+
+    kind=question → 题干图（同时清空 thumbnail_path）
+    kind=diagram  → 题目配图（数轴/几何图等）
+
+    记录字段置空后，仅当磁盘文件不再被任何错题引用时才真正删除，避免误删共享文件。
+    """
+    if kind not in IMAGE_KIND_FIELDS:
+        raise HTTPException(status_code=400, detail="kind 仅支持 question 或 diagram")
+
+    r = db.query(MistakeRecord).filter(MistakeRecord.id == mistake_id).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="未找到该错题记录")
+
+    cleared_paths: List[str] = []
+    for field in IMAGE_KIND_FIELDS[kind]:
+        current = getattr(r, field)
+        if current:
+            cleared_paths.append(current)
+        setattr(r, field, None)
+    db.commit()
+
+    purged = sum(1 for p in cleared_paths if _purge_image_if_unreferenced(db, p))
+    return {
+        "status": "ok",
+        "kind": kind,
+        "cleared": cleared_paths,
+        "files_deleted": purged,
+        "message": "图片已删除" if cleared_paths else "该记录本就没有此图片",
+    }
 
 
 @router.delete("/{mistake_id}")
@@ -185,8 +304,15 @@ def delete_mistake(mistake_id: int, db: Session = Depends(get_db)):
     r = db.query(MistakeRecord).filter(MistakeRecord.id == mistake_id).first()
     if not r:
         raise HTTPException(status_code=404, detail="未找到该错题记录")
+
+    image_paths = [getattr(r, f) for f in IMAGE_FIELDS if getattr(r, f)]
     db.delete(r)
     db.commit()
+
+    # 记录已删，再判断文件是否还被其它记录引用，未被引用则清理
+    for path in image_paths:
+        _purge_image_if_unreferenced(db, path)
+
     return {"status": "ok", "message": "错题已删除"}
 
 
