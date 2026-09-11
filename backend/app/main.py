@@ -100,7 +100,7 @@ else:
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>学迹 StudyTrace</title>
+                <title>智学迹 StudyTrace</title>
                 <style>
                     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f8fafc; color: #1e293b; }
                     .card { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); text-align: center; max-width: 420px; }
@@ -111,7 +111,7 @@ else:
             </head>
             <body>
                 <div class="card">
-                    <h1>学迹 StudyTrace</h1>
+                    <h1>智学迹 StudyTrace</h1>
                     <p>后端 API 服务运行正常。前端 Vite 工程正在构建或准备中。</p>
                     <div class="badge">API Status: OK · Port 8000</div>
                 </div>

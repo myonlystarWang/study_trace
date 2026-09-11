@@ -156,7 +156,7 @@ async def send_wechat_sandbox(
                 "first": {"value": display_title, "color": "#2563eb"},
                 "keyword1": {"value": kw1_text, "color": "#333333"},
                 "keyword2": {"value": kw2_text, "color": "#10b981"},
-                "remark": {"value": "点击进入学迹系统查看本周学力诊断与下周规划。", "color": "#64748b"}
+                "remark": {"value": "点击进入智学迹系统查看本周学力诊断与下周规划。", "color": "#64748b"}
             }
 
         # 3. 场景 C: 满卡喜报
@@ -452,7 +452,7 @@ async def send_bark(key: str, title: str, content: str) -> Tuple[bool, str]:
         payload = {
             "title": title,
             "body": content,
-            "group": "学迹",
+            "group": "智学迹",
             "icon": "https://cdn-icons-png.flaticon.com/512/2997/2997295.png"
         }
         try:

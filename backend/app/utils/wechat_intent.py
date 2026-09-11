@@ -209,7 +209,7 @@ async def handle_wechat_inbound_message(
     if allowed_openids and not is_authorized:
         logger.warning(f"Unauthorized WeChat OpenID attempted command: {from_openid}")
         return (
-            "⚠️ 身份提示：当前微信号尚未在学迹系统授权绑定。\n"
+            "⚠️ 身份提示：当前微信号尚未在智学迹系统授权绑定。\n"
             "为了保障孩子学情数据安全，请在电脑或手机端【家长管理 ➔ 微信设置】中添加您的 OpenID 后再试。\n"
             f"您的当前 OpenID 为：\n{from_openid}"
         )

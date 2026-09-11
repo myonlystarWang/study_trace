@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-学迹 StudyTrace — 一键启动主脚本
+智学迹 StudyTrace — 一键启动主脚本
 支持生产模式（默认单端口 8000 托管）与开发模式（--dev 热更新）
 """
 
@@ -127,7 +127,7 @@ def run_dev():
 
 def main():
     check_python_version()
-    parser = argparse.ArgumentParser(description="学迹 StudyTrace 启动程序")
+    parser = argparse.ArgumentParser(description="智学迹 StudyTrace 启动程序")
     parser.add_argument("--dev", action="store_true", help="以开发模式启动（支持前端 HMR 热更新）")
     args = parser.parse_args()
 

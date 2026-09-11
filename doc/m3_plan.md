@@ -79,7 +79,7 @@ backend/app/
      - 支持家庭全员多 OpenID 并发直发（爸爸、妈妈结构化卡片管理）。
      - 支持 `url` 属性配置，点击卡片直接单手跳转进入智学迹 Web 系统。
      - 自带 2 小时 access_token 内存自愈缓存，提前 5 分钟自动静默换新。
-  2. **iOS Bark (`bark`)**：POST/GET `https://api.day.app/{key}/{title}/{body}?group=学迹`
+  2. **iOS Bark (`bark`)**：POST/GET `https://api.day.app/{key}/{title}/{body}?group=智学迹`
      - 支持逗号/换行分隔多个 Key 实现全家 iPhone 并发群发。
   3. **群机器人 (`webhook`)**：智能识别企微（`markdown.content`）、钉钉（`markdown.text`）、飞书（`content.post`）。
   4. **向后兼容备用渠道 (`wxpusher` / `serverchan` / `pushplus`)**：保留辅助备用中转通道代码，满足特定历史环境使用。

@@ -77,7 +77,7 @@
               <div class="notice-title">【考生重练须知】</div>
               <div class="notice-item">1. 本卷为基于个人错题库定制生成的错题针对性重练卷，请独立闭卷规范作答；</div>
               <div class="notice-item">2. 建议使用 0.5mm 黑色水笔，在每道题目指定的网格留白答题区域内清晰书写；</div>
-              <div class="notice-item">3. 线下完成练习后，请回到学迹系统点击「重练打卡」，系统将一键推进艾宾浩斯复习周期。</div>
+              <div class="notice-item">3. 线下完成练习后，请回到智学迹系统点击「重练打卡」，系统将一键推进艾宾浩斯复习周期。</div>
             </div>
           </div>
 

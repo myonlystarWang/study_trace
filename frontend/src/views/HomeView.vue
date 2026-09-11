@@ -1,7 +1,7 @@
 <template>
   <div class="home-view">
     <van-nav-bar
-      title="关于学迹与系统自检"
+      title="关于智学迹与系统自检"
       left-arrow
       @click-left="$router.back()"
       fixed
@@ -15,7 +15,7 @@
         </div>
         <h2>专注初中成长 · 记录每步轨迹</h2>
         <p>新一代初中生无分心作业打卡、艾宾浩斯错题复习与 A4 智能重练系统</p>
-        <span class="st-status-tag st-status-tag--primary">学迹 StudyTrace v1.0</span>
+        <span class="st-status-tag st-status-tag--primary">智学迹 StudyTrace v1.0</span>
       </div>
 
       <div class="st-card">

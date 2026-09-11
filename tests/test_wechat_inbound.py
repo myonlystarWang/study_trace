@@ -197,7 +197,7 @@ async def test_wechat_inbound_unauthorized_openid():
     resp = client.post("/api/wechat/callback", content=xml_data.encode("utf-8"))
     assert resp.status_code == 200
     reply = parse_wechat_xml(resp.text)
-    assert "尚未在学迹系统授权绑定" in reply.get("Content", "")
+    assert "尚未在智学迹系统授权绑定" in reply.get("Content", "")
 
 
 @pytest.mark.anyio

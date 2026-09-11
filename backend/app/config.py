@@ -42,7 +42,7 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-    PROJECT_NAME: str = "学迹 StudyTrace"
+    PROJECT_NAME: str = "智学迹 StudyTrace"
     VERSION: str = "0.1.0"
     TIMEZONE: str = "Asia/Shanghai"
     

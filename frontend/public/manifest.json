@@ -1,6 +1,6 @@
 {
-  "name": "学迹 StudyTrace",
-  "short_name": "学迹",
+  "name": "智学迹 StudyTrace",
+  "short_name": "智学迹",
   "description": "初中生作业打卡与错题复习系统",
   "start_url": "/",
   "display": "standalone",

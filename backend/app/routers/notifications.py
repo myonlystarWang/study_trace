@@ -101,8 +101,8 @@ async def test_notification_channel(
     可传入临时 target（Token/Key/URL）及可选 topic_id 进行即时验证，若未传则使用已保存配置。
     """
     cfg = load_notification_config(db)
-    title = "🔔【学迹】微信推送通道测试"
-    content = "恭喜！学迹通知服务 WxPusher 微信通道连通成功！\n\n- 服务名称：学迹 StudyTrace\n- 运行状态：服务连接正常\n- 推送渠道：WxPusher 家庭主题群\n- 每日作业提醒与晚间复习汇总将准时送达。"
+    title = "🔔【智学迹】微信推送通道测试"
+    content = "恭喜！智学迹通知服务 WxPusher 微信通道连通成功！\n\n- 服务名称：学迹 StudyTrace\n- 运行状态：服务连接正常\n- 推送渠道：WxPusher 家庭主题群\n- 每日作业提醒与晚间复习汇总将准时送达。"
 
     target = None
     topic_id = None

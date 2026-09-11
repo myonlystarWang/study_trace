@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-学迹 StudyTrace — M5 成绩台账与学情分析 Demo 数据播种脚本
+智学迹 StudyTrace — M5 成绩台账与学情分析 Demo 数据播种脚本
 用于在开发与验收阶段注入多场真实考试记录（涵盖全科期中、单科缺考、单科周测等多样化场景）
 """
 

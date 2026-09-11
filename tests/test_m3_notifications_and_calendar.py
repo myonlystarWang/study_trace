@@ -353,7 +353,7 @@ async def test_wechat_pushplus_and_serverchan():
 # ==============================================================================
 @pytest.mark.anyio
 async def test_bark_notification():
-    """验证 Bark 推送 Payload 包含 group='学迹' 与合法结构，且正确处理 code 错误"""
+    """验证 Bark 推送 Payload 包含 group='智学迹' 与合法结构，且正确处理 code 错误"""
     # 1. 正常成功
     with patch("httpx.AsyncClient.post") as mock_post:
         mock_resp = MagicMock()
@@ -368,7 +368,7 @@ async def test_bark_notification():
         called_url = mock_post.call_args[0][0]
         assert "api.day.app/my_bark_key" in called_url
         called_json = mock_post.call_args[1]["json"]
-        assert called_json["group"] == "学迹"
+        assert called_json["group"] == "智学迹"
         assert called_json["title"] == "测试标题"
 
     # 2. HTTP 200 但 Bark 业务返回 400 失败
