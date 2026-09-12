@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 """
 智学迹 StudyTrace — 一键启动主脚本
-支持生产模式（默认单端口 8000 托管）与开发模式（--dev 热更新）
+支持生产模式（默认单端口 28000 托管）与开发模式（--dev 热更新）
 """
 
 import os
 import sys
+import logging
+import logging.config
 import subprocess
 import argparse
 from pathlib import Path
@@ -23,12 +25,53 @@ if _prepend_paths:
     os.environ["PATH"] = os.pathsep.join(_prepend_paths + [os.environ.get("PATH", "")])
 
 
+# ---------------------------------------------------------------------------
+# 统一日志：带时间戳 + 级别。INFO 及以上走 stdout（被 NSSM 写进 AppStdout），
+# ERROR 走 stderr（被 NSSM 写进 AppStderr），方便直接从日志定位问题。
+# ---------------------------------------------------------------------------
+LOG_FORMAT = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
+LOG_DATEFMT = "%Y-%m-%d %H:%M:%S"
+
+LOGGING_CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {"format": LOG_FORMAT, "datefmt": LOG_DATEFMT},
+    },
+    "handlers": {
+        "out": {
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout",
+            "formatter": "default",
+        },
+        "err": {
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stderr",
+            "formatter": "default",
+        },
+    },
+    "loggers": {
+        "uvicorn": {"handlers": ["out"], "level": "INFO", "propagate": False},
+        "uvicorn.error": {"handlers": ["err"], "level": "INFO", "propagate": False},
+        "uvicorn.access": {"handlers": ["out"], "level": "INFO", "propagate": False},
+        "StudyTrace": {"handlers": ["out"], "level": "INFO", "propagate": False},
+    },
+    "root": {"handlers": ["out"], "level": "INFO"},
+}
+
+_log = logging.getLogger("StudyTrace")
+
+
+def setup_logging():
+    logging.config.dictConfig(LOGGING_CONFIG)
+
+
 def check_python_version():
     """Python 版本守卫：必须为 3.11.x"""
     major, minor = sys.version_info[:2]
     if major != 3 or minor != 11:
-        print(f"[ERROR] 当前 Python 版本为 {major}.{minor}，系统要求必须为 Python 3.11。")
-        print("[TIP] 请使用 'uv run python run.py' 启动，或激活 .venv 虚拟环境。")
+        _log.error("当前 Python 版本为 %s.%s，系统要求必须为 Python 3.11。", major, minor)
+        _log.error("请使用 .venv 虚拟环境（venv 内的 python.exe）启动。")
         sys.exit(1)
 
 
@@ -39,13 +82,13 @@ def check_node_version():
         version_str = res.stdout.strip().lstrip("v")
         major = int(version_str.split(".")[0])
         if major < 20:
-            print(f"[ERROR] 当前 Node 版本为 v{version_str}，系统要求 Node >= 20 LTS。")
-            print("[TIP] 请使用 fnm 激活 Node 22（如执行 'fnm use 22'）。")
+            _log.error("当前 Node 版本为 v%s，系统要求 Node >= 20 LTS。", version_str)
+            _log.error("请使用 fnm 激活 Node 22（如执行 'fnm use 22'）。")
             sys.exit(1)
         return major
     except (subprocess.CalledProcessError, FileNotFoundError):
-        print("[ERROR] 未找到 Node.js 命令。")
-        print("[TIP] 请安装 Node 22 LTS 或通过 fnm 安装。")
+        _log.error("未找到 Node.js 命令。")
+        _log.error("请安装 Node 22 LTS 或通过 fnm 安装。")
         sys.exit(1)
 
 
@@ -68,7 +111,7 @@ def get_lan_ips():
 
 def ensure_database_migrated():
     """确保数据库迁移已升级至最新 head 版本（杜绝依赖手动执行或未迁移崩溃）"""
-    print("[StudyTrace] 检查并自动执行数据库迁移 (Alembic upgrade head)...")
+    _log.info("检查并自动执行数据库迁移 (Alembic upgrade head)...")
     from alembic.config import Config
     from alembic import command
     alembic_cfg = Config(str(BASE_DIR / "alembic.ini"))
@@ -78,24 +121,30 @@ def ensure_database_migrated():
 def run_prod():
     """生产模式：单端口一体化托管（28000 端口）"""
     from backend.app.config import settings
-    print(f"[StudyTrace] 正在启动生产服务（单端口 {settings.PORT} 模式）...")
+    _log.info("正在启动生产服务（单端口 %s 模式）...", settings.PORT)
     ensure_database_migrated()
     if not FRONTEND_DIST.exists():
-        print("[StudyTrace] 检测到前端构建产物不存在，正在自动执行前端构建...")
+        _log.info("检测到前端构建产物不存在，正在自动执行前端构建...")
         check_node_version()
         if not (FRONTEND_DIR / "node_modules").exists():
-            print("[StudyTrace] 检测到前端依赖未安装，正在自动执行 npm install...")
+            _log.info("检测到前端依赖未安装，正在自动执行 npm install...")
             subprocess.run(["npm", "install"], cwd=str(FRONTEND_DIR), check=True, shell=True)
         subprocess.run(["npm", "run", "build"], cwd=str(FRONTEND_DIR), check=True, shell=True)
 
     import uvicorn
-    print("[StudyTrace] 服务已就绪！")
-    print(f"  本地电脑访问: http://127.0.0.1:{settings.PORT}")
+    _log.info("服务已就绪！")
+    _log.info("  本地电脑访问: http://127.0.0.1:%s", settings.PORT)
     lan_ips = get_lan_ips()
     for ip in lan_ips:
-        print(f"  家庭内网访问: http://{ip}:{settings.PORT}")
-    print("  退出请按 Ctrl + C")
-    uvicorn.run("backend.app.main:app", host="0.0.0.0", port=settings.PORT, reload=False)
+        _log.info("  家庭内网访问: http://%s:%s", ip, settings.PORT)
+    _log.info("  退出请按 Ctrl + C")
+    uvicorn.run(
+        "backend.app.main:app",
+        host="0.0.0.0",
+        port=settings.PORT,
+        reload=False,
+        log_config=LOGGING_CONFIG,
+    )
 
 
 def run_dev():
@@ -104,37 +153,51 @@ def run_dev():
     check_node_version()
     ensure_database_migrated()
     if not (FRONTEND_DIR / "node_modules").exists():
-        print("[StudyTrace] 检测到前端依赖未安装，正在自动执行 npm install...")
+        _log.info("检测到前端依赖未安装，正在自动执行 npm install...")
         subprocess.run(["npm", "install"], cwd=str(FRONTEND_DIR), check=True, shell=True)
-    print("[StudyTrace] 正在启动开发调试模式...")
-    print("  前端 Vite HMR 运行在: http://127.0.0.1:5173")
-    print(f"  后端 API 运行在: http://127.0.0.1:{settings.DEV_PORT} (支持 --reload)")
+    _log.info("正在启动开发调试模式...")
+    _log.info("  前端 Vite HMR 运行在: http://127.0.0.1:5173")
+    _log.info("  后端 API 运行在: http://127.0.0.1:%s (支持 --reload)", settings.DEV_PORT)
 
-    import subprocess
+    import subprocess as _sp
     import signal
 
     dev_env = os.environ.copy()
     dev_env["VITE_BACKEND_PORT"] = str(settings.DEV_PORT)
-    vite_proc = subprocess.Popen(["npm", "run", "dev"], cwd=str(FRONTEND_DIR), shell=True, env=dev_env)
+    vite_proc = _sp.Popen(["npm", "run", "dev"], cwd=str(FRONTEND_DIR), shell=True, env=dev_env)
 
     try:
         import uvicorn
-        uvicorn.run("backend.app.main:app", host="0.0.0.0", port=settings.DEV_PORT, reload=True)
+        uvicorn.run(
+            "backend.app.main:app",
+            host="0.0.0.0",
+            port=settings.DEV_PORT,
+            reload=True,
+            log_config=LOGGING_CONFIG,
+        )
     finally:
-        print("\n[StudyTrace] 正在停止开发服务器...")
+        _log.info("正在停止开发服务器...")
         vite_proc.terminate()
 
 
 def main():
-    check_python_version()
-    parser = argparse.ArgumentParser(description="智学迹 StudyTrace 启动程序")
-    parser.add_argument("--dev", action="store_true", help="以开发模式启动（支持前端 HMR 热更新）")
-    args = parser.parse_args()
+    setup_logging()
+    try:
+        check_python_version()
+        parser = argparse.ArgumentParser(description="智学迹 StudyTrace 启动程序")
+        parser.add_argument("--dev", action="store_true", help="以开发模式启动（支持前端 HMR 热更新）")
+        args = parser.parse_args()
 
-    if args.dev:
-        run_dev()
-    else:
-        run_prod()
+        if args.dev:
+            run_dev()
+        else:
+            run_prod()
+    except SystemExit:
+        # 版本/环境守卫主动退出，原样上抛退出码
+        raise
+    except Exception:
+        _log.error("服务启动失败（未捕获异常），详见下方堆栈：", exc_info=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
