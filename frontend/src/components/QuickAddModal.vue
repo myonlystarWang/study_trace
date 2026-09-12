@@ -82,7 +82,7 @@
       <div class="smart-parsed-section" v-if="isSmartMode">
         <div class="smart-header">
           <div class="smart-header-left">
-            <span class="st-icon-badge st-icon-badge--success" style="width: 22px; height: 22px; font-size: 11px;">
+            <span class="st-icon-badge st-icon-badge--success" style="width: 22px; height: 22px; font-size: var(--st-font-xs);">
               <van-icon name="passed" />
             </span>
             <span class="smart-header-title">
@@ -175,11 +175,14 @@
     </div>
   </van-popup>
 
-  <!-- 作业拍照框选裁剪弹窗 -->
+  <!-- 作业拍照框选裁剪弹窗（与错题录入共用 ImageCropper，这里覆盖为作业场景文案） -->
   <ImageCropper
     v-if="showCropper"
     v-model:show="showCropper"
     :image-url="cropperImageUrl"
+    title="框选作业内容"
+    tip="拖拽四周框选要识别的作业区域，排除桌面与无关背景"
+    confirm-text="确认并识别作业"
     @crop="onCropConfirm"
     @skip="onCropSkip"
     @cancel="onCropCancel"
@@ -701,9 +704,9 @@ const handleSubmit = () => {
   text-align: center;
   padding: 6px 12px;
   border-radius: var(--st-radius-sm, 6px);
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 500;
-  color: var(--st-text-secondary, #64748b);
+  color: var(--st-text-secondary);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -714,7 +717,7 @@ const handleSubmit = () => {
 
 .mode-tab.active {
   background: #ffffff;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
   font-weight: 600;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
 }
@@ -730,9 +733,9 @@ const handleSubmit = () => {
 }
 
 .uploader-hint {
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.4;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
+  line-height: var(--st-leading-tight);
 }
 
 .ocr-loading {
@@ -740,8 +743,8 @@ const handleSubmit = () => {
 }
 
 .ocr-tip {
-  font-size: 12px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
   margin-top: 0.5rem;
 }
 
@@ -750,9 +753,9 @@ const handleSubmit = () => {
 }
 
 .chips-label {
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
-  color: var(--st-text-secondary, #64748b);
+  color: var(--st-text-secondary);
   margin-bottom: 6px;
 }
 
@@ -767,7 +770,7 @@ const handleSubmit = () => {
   border: 1px solid var(--st-border, #e2e8f0);
   border-radius: var(--st-radius-sm, 8px);
   padding: 8px 10px;
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   margin-bottom: 12px;
 }
 
@@ -796,16 +799,16 @@ const handleSubmit = () => {
 }
 
 .smart-header-title {
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 700;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
 }
 
 .clear-text-btn {
   background: transparent;
   border: none;
-  font-size: 11px;
-  color: var(--st-text-muted, #94a3b8);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-muted);
   cursor: pointer;
   padding: 2px 4px;
 }
@@ -848,7 +851,7 @@ const handleSubmit = () => {
 }
 
 .group-subject-tag {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   font-weight: 700;
   color: #ffffff;
   background: var(--st-primary, #2563eb);
@@ -861,9 +864,9 @@ const handleSubmit = () => {
 }
 
 .group-item-count {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
-  color: var(--st-text-secondary, #64748b);
+  color: var(--st-text-secondary);
 }
 
 .assign-dropdown-wrap {
@@ -873,12 +876,12 @@ const handleSubmit = () => {
 }
 
 .assign-label {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   color: #b45309;
 }
 
 .assign-select {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   padding: 2px 6px;
   border-radius: 4px;
   border: 1px solid #fcd34d;
@@ -896,9 +899,9 @@ const handleSubmit = () => {
   display: flex;
   align-items: flex-start;
   gap: 6px;
-  font-size: 12px;
-  color: var(--st-text-primary, #0f172a);
-  line-height: 1.4;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-primary);
+  line-height: var(--st-leading-tight);
   padding: 2px 0;
 }
 
@@ -923,7 +926,7 @@ const handleSubmit = () => {
 .smart-item-del {
   background: transparent;
   border: none;
-  color: var(--st-text-muted, #94a3b8);
+  color: var(--st-text-muted);
   cursor: pointer;
   padding: 2px;
   line-height: 1;
@@ -945,9 +948,9 @@ const handleSubmit = () => {
 }
 
 .split-head {
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
-  color: var(--st-text-secondary, #64748b);
+  color: var(--st-text-secondary);
   margin-bottom: 4px;
 }
 
@@ -957,8 +960,8 @@ const handleSubmit = () => {
 }
 
 .split-item {
-  font-size: 12px;
-  color: var(--st-text-primary, #0f172a);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-primary);
   padding: 2px 0;
 }
 
