@@ -111,9 +111,11 @@
                   </span>
                 </div>
 
-                <!-- 题目文本内容 -->
+                <!-- 题目文本内容（数学片段走 KaTeX：17/2 → 真分式、x^2 → 上标） -->
                 <div class="card-body">
-                  <p class="question-text">{{ item.extracted_text || '暂无文字题干，请查看配图' }}</p>
+                  <p class="question-text">
+                    <MathText :text="item.extracted_text || '暂无文字题干，请查看配图'" />
+                  </p>
                   <div class="tags-row" v-if="item.error_type">
                     <span class="error-tag">
                       <van-icon name="warning-o" /> {{ item.error_type }}
@@ -619,6 +621,7 @@ import { showToast, showConfirmDialog, closeToast } from 'vant';
 import { mistakeApi, settingsApi, ocrApi } from '../api';
 import { compressImage } from '../utils/imageCompress';
 import ImageCropper from '../components/ImageCropper.vue';
+import MathText from '../components/MathText.vue';
 
 const router = useRouter();
 
@@ -1561,6 +1564,9 @@ onBeforeUnmount(() => {
   color: var(--st-text-primary);
   line-height: var(--st-leading-normal);
   margin: 0 0 6px 0;
+  /* 保留题干录入/OCR 时的换行结构（选项各占一行），不再被压平成一团 */
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .tags-row {

@@ -5,6 +5,9 @@ import router from './router';
 
 // 引入 Vant 样式与全量常用移动端组件
 import 'vant/lib/index.css';
+// KaTeX 样式（数学公式渲染，方案C）：仅 CSS 全局引入（含字体，Vite 自动打包 woff2），
+// JS 主体在 MathText 里按需动态 import，不占主包体积
+import 'katex/dist/katex.min.css';
 import './assets/design-tokens.css';
 import './assets/print.css';
 import {
