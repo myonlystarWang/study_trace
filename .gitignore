@@ -23,8 +23,9 @@ data/.env
 *.local
 
 # Project data
-data/study_trace.db
 data/study_trace.db-journal
+data/study_trace.db-wal
+data/study_trace.db-shm
 data/uploads/
 data/backups/
 data/exports/
