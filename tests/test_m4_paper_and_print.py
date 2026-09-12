@@ -185,7 +185,9 @@ def test_paper_compose_endpoint_and_assets():
         assert q1["original_image_path"] is None
         # 只输出配图
         assert q1["diagram_image_path"] == diagram_url
-        assert q1["space_mm"] == 45  # standard 默认 45mm >= 40mm
+        # 留白已改为按题型分级：本题是数学 + 带配图 -> 解答类基线 48mm（standard 系数 1.0）
+        assert q1["space_mm"] == 48
+        assert q1["blank_tier"] == "solution"
 
         # 验证配图 HTTP GET 契约
         img_res = client.get(q1["diagram_image_path"])
@@ -201,7 +203,11 @@ def test_paper_compose_endpoint_and_assets():
 
 
 def test_paper_estimate_pages_rough():
-    """验证粗略页数估算公式：max(1, round(total/4) + ceil(img/6))"""
+    """验证按逐题实际高度（mm 求和）估算页数
+
+    留白改为按题型分级后，题高差异很大，旧口径 round(题数/4)+ceil(图数/6)
+    已与真实排版脱节，故改为：ceil((Σ 逐题高度 + 首页抬头) / A4 可用高度)。
+    """
     _clean_db()
     db = SessionLocal()
     try:
@@ -223,7 +229,8 @@ def test_paper_estimate_pages_rough():
         db.add_all(records)
         db.commit()
 
-        # 20 题 6 图 -> round(20/4)=5 + ceil(6/6)=1 -> 6 页
+        # 20 题 6 图：带图题判为 solution(48mm)，题高 12+5.5+55+48=120.5；其余 short(32mm) 题高 49.5
+        # -> (6*120.5 + 14*49.5 + 首页 90) / 261 = 5.77 -> 6 页
         res = client.post("/api/paper/compose", json={"mistake_ids": [r.id for r in records]})
         assert res.status_code == 200
         assert res.json()["estimated_pages"] == 6
@@ -233,7 +240,8 @@ def test_paper_estimate_pages_rough():
         assert res_empty.status_code == 200
         assert res_empty.json()["estimated_pages"] == 1
 
-        # 100 题无图 -> round(100/4) = 25 页
+        # 100 题无图：均为 short(32mm)，题高 49.5
+        # -> (100*49.5 + 90) / 261 = 19.31 -> 20 页
         bulk_100 = [
             MistakeRecord(
                 student_id=1,
@@ -249,7 +257,7 @@ def test_paper_estimate_pages_rough():
             "/api/paper/compose", json={"mistake_ids": [r.id for r in bulk_100]}
         )
         assert res_100.status_code == 200
-        assert res_100.json()["estimated_pages"] == 25
+        assert res_100.json()["estimated_pages"] == 20
     finally:
         db.close()
 
@@ -710,6 +718,126 @@ def test_paper_include_all_subjects():
         )
         assert res_compose.status_code == 200
         assert res_compose.json()["questions"][0]["subject_name"] == "综合"
+    finally:
+        db.close()
+
+
+def test_paper_blank_tier_inference():
+    """验证按题型分级留白：判定优先级、8mm 网格对齐、整卷松紧系数与安全区间
+
+    关键回归点：选择题必须优先于简答判定 —— 否则生物题选项「A．解剖和分析」
+    里的「分析」二字会把只需写个字母的选择题误判成需成段作答的简答题。
+    """
+    from backend.app.routers.paper import BLANK_TIER_BASE_MM, _calc_space_mm, _infer_blank_tier
+
+    # 选择题：选项里含「分析」「判断」等词也不能被误判
+    assert (
+        _infer_blank_tier(
+            "生物科学研究中最基本的方法是（）\nA．解剖和分析\nB．探究和实践\nC．观察和实验",
+            "生物",
+        )
+        == "choice"
+    )
+    assert (
+        _infer_blank_tier(
+            "下列各项中，不属于科学观察的是（）A. 观察菜豆种子萌发过程，记录分析 B. 在树林中偶遇",
+            "生物",
+        )
+        == "choice"
+    )
+    # 默写 / 听写
+    assert _infer_blank_tier("铃铛 默写", "语文") == "recite"
+    assert _infer_blank_tier("听写英语单词：裤子；铅笔", "英语") == "recite"
+    # 简答 / 说明理由 / 材料分析
+    assert _infer_blank_tier("请你分析小明产生这一困惑的原因并为他支招。", "道法") == "essay"
+    assert (
+        _infer_blank_tier("(4)根据材料，判断火星是否适合人类居住，并说明理由。", "地理") == "essay"
+    )
+    # 判断题
+    assert _infer_blank_tier("下列说法是否正确（ ）", "生物") == "judge"
+    # 解答类
+    assert _infer_blank_tier("解方程 2x + 1 = 5", "数学") == "solution"
+    # 兜底
+    assert _infer_blank_tier("一段没有任何题型特征的题干", "历史") == "short"
+    assert _infer_blank_tier(None, "历史") == "short"
+    # 带配图的读图/作图题按解答类处理（即便学科是语文）
+    assert _infer_blank_tier("如图，求阴影部分面积", "语文", has_image=True) == "solution"
+
+    # 题型基线全部对齐 8mm 方格底纹
+    assert all(mm % 8 == 0 for mm in BLANK_TIER_BASE_MM.values())
+    assert _calc_space_mm("choice", "standard") == 16
+    assert _calc_space_mm("recite", "standard") == 24
+    assert _calc_space_mm("essay", "standard") == 48
+    assert _calc_space_mm("solution", "spacious") == 64
+    # 选择题再紧凑也不低于下限：写不下的留白没有意义
+    assert _calc_space_mm("choice", "compact") == 16
+    assert _calc_space_mm("essay", "compact") == 32
+    # 全档位都必须落在安全区间且对齐网格
+    for tier in BLANK_TIER_BASE_MM:
+        for level in ("compact", "standard", "spacious"):
+            mm = _calc_space_mm(tier, level)
+            assert mm % 8 == 0 and 16 <= mm <= 64, f"{tier}/{level} -> {mm}"
+
+
+def test_paper_estimate_endpoint_matches_compose():
+    """验证页数预估接口：不与 /{paper_id} 抢路由、与真实出卷同口径、入参容错"""
+    _clean_db()
+    db = SessionLocal()
+    try:
+        math_sub = db.query(Subject).filter(Subject.name == "数学").first()
+        chi_sub = db.query(Subject).filter(Subject.name == "语文").first()
+
+        r_choice = MistakeRecord(
+            student_id=1,
+            subject_id=math_sub.id,
+            extracted_text="下列四个数中，既是分数又是正有理数的是 A.+2 B.-3/5 C.0 D.2.026",
+            mastery_status="未掌握",
+        )
+        r_recite = MistakeRecord(
+            student_id=1,
+            subject_id=chi_sub.id,
+            extracted_text="咄咄逼人 默写",
+            mastery_status="未掌握",
+        )
+        r_essay = MistakeRecord(
+            student_id=1,
+            subject_id=chi_sub.id,
+            extracted_text="请简述你对这句话的理解并说明理由。",
+            mastery_status="未掌握",
+        )
+        db.add_all([r_choice, r_recite, r_essay])
+        db.commit()
+        ids = [r_choice.id, r_recite.id, r_essay.id]
+
+        # 1) 不得被 /{paper_id} 抢路由（"estimate" 被当成 int 会返回 422）
+        res = client.get(
+            "/api/paper/estimate",
+            params={"ids": ",".join(str(i) for i in ids), "space_level": "standard"},
+        )
+        assert res.status_code == 200
+        assert res.json()["total_questions"] == 3
+
+        # 2) 与真实出卷口径一致
+        composed = client.post(
+            "/api/paper/compose", json={"mistake_ids": ids, "space_level": "standard"}
+        )
+        assert composed.status_code == 200
+        assert res.json()["estimated_pages"] == composed.json()["estimated_pages"]
+
+        # 3) 逐题留白确实按题型分级
+        qs = composed.json()["questions"]
+        assert [q["blank_tier"] for q in qs] == ["choice", "recite", "essay"]
+        assert [q["space_mm"] for q in qs] == [16, 24, 48]
+
+        # 4) 空 ids -> 1 页，不报错；非法 ids -> 422，不是 500
+        assert client.get("/api/paper/estimate", params={"ids": ""}).json()["estimated_pages"] == 1
+        assert client.get("/api/paper/estimate", params={"ids": "a,b"}).status_code == 422
+
+        # 5) 未知 id 不计入题数
+        res_ghost = client.get("/api/paper/estimate", params={"ids": "999999"})
+        assert res_ghost.status_code == 200
+        assert res_ghost.json()["total_questions"] == 0
+        assert res_ghost.json()["estimated_pages"] == 1
     finally:
         db.close()
 

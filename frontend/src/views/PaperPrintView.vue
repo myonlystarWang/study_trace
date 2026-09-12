@@ -129,7 +129,7 @@
                     :class="'paper-answer-area--' + (paper.style_mode || 'grid')"
                     :style="{ height: q.space_mm + 'mm' }"
                   >
-                    <div class="answer-placeholder no-print">答题留白区 ({{ q.space_mm }}mm)</div>
+                    <div class="answer-placeholder no-print">答题留白区 {{ q.space_mm }}mm<template v-if="tierLabel(q.blank_tier)"> · {{ tierLabel(q.blank_tier) }}</template></div>
                   </div>
                 </div>
               </div>
@@ -255,6 +255,18 @@ const getSnippet = (text) => {
   if (!text) return '（图题）';
   return text.length > 18 ? text.slice(0, 18) + '...' : text;
 };
+
+// 题型档位中文名：与后端 BLANK_TIER_LABEL 保持一致。
+// 仅用于屏幕端标注留白依据（便于核对自动判定是否合理），不参与打印。
+const BLANK_TIER_LABEL = {
+  choice: '选择题',
+  judge: '判断题',
+  recite: '默写/听写',
+  short: '常规',
+  essay: '简答/说明',
+  solution: '解答/计算',
+};
+const tierLabel = (tier) => BLANK_TIER_LABEL[tier] || '';
 
 const getSubjectTagClass = (name) => {
   if (!name) return 'st-subject-tag--neutral';
@@ -523,7 +535,7 @@ onMounted(async () => {
   border-radius: 4px;
   font-size: 8.5pt;
   color: #475569;
-  line-height: 1.5;
+  line-height: var(--st-leading-normal);
 }
 
 .notice-title {
@@ -576,13 +588,13 @@ onMounted(async () => {
 }
 
 .page-break-btn {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   cursor: pointer;
   user-select: none;
 }
 
 .break-idle {
-  color: #94a3b8;
+  color: var(--st-text-muted);
   padding: 2px 6px;
   border: 1px dashed #cbd5e1;
   border-radius: 4px;
@@ -604,7 +616,7 @@ onMounted(async () => {
 
 .question-text {
   font-size: 10.5pt;
-  line-height: 1.6;
+  line-height: var(--st-leading-loose);
   color: #0f172a;
   white-space: pre-wrap;
   text-align: justify;
@@ -612,7 +624,7 @@ onMounted(async () => {
 
 .answer-placeholder {
   font-size: 9pt;
-  color: #cbd5e1;
+  color: var(--st-text-muted);
   padding: 6px 10px;
   user-select: none;
 }
@@ -620,9 +632,9 @@ onMounted(async () => {
 /* 打印提示弹窗内容 */
 .print-tip-content {
   padding: 12px;
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   color: #334155;
-  line-height: 1.6;
+  line-height: var(--st-leading-loose);
 }
 
 .print-tip-content ol {
@@ -637,7 +649,7 @@ onMounted(async () => {
 .paper-warning-bar {
   margin-bottom: 8px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: var(--st-font-sm);
 }
 
 /* 打卡弹窗 */
@@ -655,7 +667,7 @@ onMounted(async () => {
   padding: 8px 10px;
   border-radius: 6px;
   margin-bottom: 8px;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
 }
 
 .review-progress strong {
@@ -683,8 +695,8 @@ onMounted(async () => {
 }
 
 .review-tip {
-  font-size: 12px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
   margin-bottom: 10px;
 }
 
@@ -707,7 +719,7 @@ onMounted(async () => {
 
 .review-q-title {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   color: #1e293b;
   min-width: 0;
   margin-right: 8px;
@@ -726,7 +738,7 @@ onMounted(async () => {
 }
 
 .q-snippet {
-  color: #64748b;
+  color: var(--st-text-secondary);
 }
 
 .review-toggles {
@@ -739,7 +751,7 @@ onMounted(async () => {
   border-radius: var(--st-radius-full, 9999px);
   border: 1px solid var(--st-border, #e2e8f0);
   background: #ffffff;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap !important;

@@ -86,7 +86,11 @@ export const paperApi = {
   getPaper: (id) => api.get(`/paper/${id}`),
   markPrinted: (id) => api.post(`/paper/${id}/mark_printed`),
   batchReview: (id, reviews) => api.post(`/paper/${id}/batch_review`, { reviews }),
-  getHistory: (params) => api.get('/paper/history', { params })
+  getHistory: (params) => api.get('/paper/history', { params }),
+  deletePaper: (id) => api.delete(`/paper/${id}`),
+  // 页数预估统一走后端，避免前端自持一份留白公式后口径漂移
+  estimatePages: (ids, spaceLevel) =>
+    api.get('/paper/estimate', { params: { ids: (ids || []).join(','), space_level: spaceLevel } })
 };
 
 export const examApi = {

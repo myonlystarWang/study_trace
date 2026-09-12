@@ -1,6 +1,7 @@
 import json
 import math
 import random
+import re
 from datetime import datetime, date, time, timedelta
 from typing import List, Optional
 from zoneinfo import ZoneInfo
@@ -19,6 +20,7 @@ from backend.app.schemas import (
     PaperBatchReviewOut,
     PaperBatchReviewFailedItem,
     PaperHistoryOut,
+    PaperEstimateOut,
 )
 
 router = APIRouter(prefix="/api/paper", tags=["A4 周末重练卷"])
@@ -27,18 +29,121 @@ router = APIRouter(prefix="/api/paper", tags=["A4 周末重练卷"])
 CORE_7_SUBJECTS = ["数学", "语文", "英语", "道法", "历史", "地理", "生物"]
 
 
-def _calc_space_mm(space_level: str) -> int:
-    if space_level == "compact":
-        return 30
-    elif space_level == "spacious":
-        return 60
-    return 45  # standard (默认 >= 40mm)
+# ---------------------------------------------------------------------------
+# 答题留白分级（按题型）
+#
+# 背景：早期实现把「紧凑/标准/宽敞」当成整卷唯一常量（30/45/60mm）套给每一题，
+# 于是选择题、默写题这类只需写几个字的题目也白占 45mm，整卷留白浪费过半。
+# 现在改为两步：先按题干特征判定题型基线，再乘以整卷松紧系数。
+#
+# 刻意不使用 MistakeRecord.answer 的字数作为信号 —— 实测 18 条错题里仅 8 条有答案，
+# 且选择题答案为 "A"（1 字）、默写答案为 8~11 字，字数与所需书写量完全不成正比。
+# 答案字段本身也不得进入任何打印输出（见 compose_paper 中的说明）。
+# ---------------------------------------------------------------------------
+
+# 题型基线留白（mm）。全部取 8mm 整数倍，正好对齐 print.css 的 8mm 方格底纹，
+# 避免出现半行网格（旧的固定 45mm = 5.6 行，末行即被切掉一半）。
+BLANK_TIER_BASE_MM = {
+    "choice": 16,    # 选择题：只需写选项字母
+    "judge": 24,     # 判断题：写「对/错」，常需补一句说明
+    "recite": 24,    # 默写 / 听写 / 填空：2~3 行书写
+    "short": 32,     # 无明确特征：保守兜底
+    "essay": 48,     # 简答 / 说明理由 / 材料分析：需成段作答
+    "solution": 48,  # 解答 / 计算 / 证明：需写过程
+}
+
+BLANK_TIER_LABEL = {
+    "choice": "选择题",
+    "judge": "判断题",
+    "recite": "默写/听写",
+    "short": "常规",
+    "essay": "简答/说明",
+    "solution": "解答/计算",
+}
+
+# 整卷松紧：三档由「固定值」改为「整体系数」，保住整卷统一调松紧的能力
+SPACE_LEVEL_FACTOR = {"compact": 0.7, "standard": 1.0, "spacious": 1.35}
+BLANK_MIN_MM = 16
+BLANK_MAX_MM = 64
+BLANK_STEP_MM = 8  # 与 8mm 方格底纹对齐
+
+_RE_OPTION_MARK = re.compile(r"[A-DＡ-Ｄ]\s*[．.、]")
+_RE_EMPTY_BRACKET = re.compile(r"[（(]\s*[)）]")
+_RE_RECITE = re.compile(r"默写|听写|填空|填写|写出")
+_RE_ESSAY = re.compile(r"说明理由|简述|谈谈|你的看法|有何意义|分析|为什么|原因")
+_RE_JUDGE = re.compile(r"判断|是否正确|说法正确|说法错误")
+_RE_SOLVE = re.compile(r"计算|解方程|解不等式|求证|证明|求")
+_SOLVE_SUBJECTS = {"数学", "物理", "化学"}
 
 
-def _calc_estimated_pages(total_questions: int, image_count: int) -> int:
-    if total_questions <= 0:
+def _infer_blank_tier(
+    text: Optional[str], subject_name: Optional[str], has_image: bool = False
+) -> str:
+    """按题干特征判定题型，用于决定该题答题留白高度。
+
+    判定顺序即优先级：选择题放在最前，因为它的选项文本里常出现「分析」「判断」
+    这类会被后续规则误命中的词（如生物题选项「A．解剖和分析」）。
+    """
+    content = text or ""
+
+    # 1) 选择题：两处以上选项标记，或「（）」配合至少一处选项标记
+    option_count = len(_RE_OPTION_MARK.findall(content))
+    if option_count >= 2 or (option_count >= 1 and _RE_EMPTY_BRACKET.search(content)):
+        return "choice"
+    # 2) 默写 / 听写 / 填空
+    if _RE_RECITE.search(content):
+        return "recite"
+    # 3) 简答 / 说明理由 / 材料分析
+    if _RE_ESSAY.search(content):
+        return "essay"
+    # 4) 判断题
+    if _RE_JUDGE.search(content):
+        return "judge"
+    # 5) 解答 / 计算类，或带配图的作图/读图题
+    if (subject_name in _SOLVE_SUBJECTS and _RE_SOLVE.search(content)) or has_image:
+        return "solution"
+    # 6) 兜底
+    return "short"
+
+
+def _calc_space_mm(tier: str, space_level: str) -> int:
+    """题型基线 × 整卷松紧系数，对齐 8mm 网格并夹取到安全区间。"""
+    base = BLANK_TIER_BASE_MM.get(tier, BLANK_TIER_BASE_MM["short"])
+    factor = SPACE_LEVEL_FACTOR.get(space_level, 1.0)
+    stepped = int(math.floor(base * factor / BLANK_STEP_MM + 0.5)) * BLANK_STEP_MM
+    return max(BLANK_MIN_MM, min(BLANK_MAX_MM, stepped))
+
+
+# A4 版式常量：与 frontend/src/assets/print.css 的 @page 边距/图片 max-height 同口径
+PAGE_CONTENT_MM = 261.0      # A4 高 297mm - 上下各 18mm 页边距
+FIRST_PAGE_HEADER_MM = 90.0  # 大标题 + 考生信息 + 得分表 + 考生须知
+QUESTION_CHROME_MM = 12.0    # 题号行 + 题间距（print.css 中 margin-bottom: 22px）
+TEXT_LINE_MM = 5.5           # 题干行高（10.5pt × 1.6）
+TEXT_CHARS_PER_LINE = 40
+DIAGRAM_RESERVED_MM = 55.0   # 与 print.css 的 max-height: 55mm 同口径
+
+
+def _question_height_mm(text: Optional[str], space_mm: int, has_image: bool) -> float:
+    """单题在纸面上的估算占地高度（mm）：题号行 + 题干 + 配图 + 留白。"""
+    content = text or ""
+    if content:
+        lines = math.ceil(len(content) / TEXT_CHARS_PER_LINE)
+        text_h = max(TEXT_LINE_MM, lines * TEXT_LINE_MM)
+    else:
+        text_h = 0.0
+    return QUESTION_CHROME_MM + text_h + (DIAGRAM_RESERVED_MM if has_image else 0.0) + space_mm
+
+
+def _calc_estimated_pages(question_heights_mm: List[float]) -> int:
+    """按逐题实际高度估算页数。
+
+    旧版是 round(题数/4) + ceil(图数/6)，与真实排版脱节：留白分级后题高差异很大，
+    按题数取平均会明显偏离。此处改为按 mm 求和后与 A4 可用高度相除。
+    """
+    total = sum(question_heights_mm)
+    if total <= 0:
         return 1
-    return max(1, round(total_questions / 4) + math.ceil(image_count / 6))
+    return max(1, math.ceil((total + FIRST_PAGE_HEADER_MM) / PAGE_CONTENT_MM))
 
 
 def _check_oversized(text: Optional[str], space_level: str, has_image: bool = False) -> bool:
@@ -203,10 +308,9 @@ def compose_paper(body: PaperComposeIn, db: Session = Depends(get_db)):
         # "order" 或默认：保持用户勾选/传入顺序
         ordered_records = [record_map[mid] for mid in body.mistake_ids if mid in record_map]
 
-    space_mm = _calc_space_mm(body.space_level)
     questions = []
     warnings = []
-    image_count = 0
+    question_heights: List[float] = []
 
     for idx, r in enumerate(ordered_records):
         # 打印只使用"题目配图"（数轴/几何图等图形）。
@@ -214,14 +318,18 @@ def compose_paper(body: PaperComposeIn, db: Session = Depends(get_db)):
         # 印到复习卷上等于直接给答案，故一律不输出。
         diagram_url = r.cropped_diagram_path
         has_img = bool(diagram_url)
-        if has_img:
-            image_count += 1
 
         is_oversized = _check_oversized(r.extracted_text, body.space_level, has_image=has_img)
         if is_oversized:
             warnings.append(f"第 {idx + 1} 题题干内容较长，可能跨页显示")
 
-        sub_display = _resolve_subject_display(r.subject.name if r.subject else None)
+        subject_name = r.subject.name if r.subject else None
+        sub_display = _resolve_subject_display(subject_name)
+
+        # 逐题判定题型并换算留白：选择题 16mm、默写 24mm、解答/简答 48mm…
+        blank_tier = _infer_blank_tier(r.extracted_text, subject_name, has_image=has_img)
+        space_mm = _calc_space_mm(blank_tier, body.space_level)
+        question_heights.append(_question_height_mm(r.extracted_text, space_mm, has_img))
 
         questions.append(
             PaperQuestionOut(
@@ -234,12 +342,13 @@ def compose_paper(body: PaperComposeIn, db: Session = Depends(get_db)):
                 diagram_image_path=diagram_url,
                 error_type=r.error_type if body.show_error_type else None,
                 space_mm=space_mm,
+                blank_tier=blank_tier,
                 is_oversized=is_oversized,
             )
         )
 
     total_q = len(questions)
-    estimated_pages = _calc_estimated_pages(total_q, image_count)
+    estimated_pages = _calc_estimated_pages(question_heights)
 
     # 落 papers 表
     ordered_ids = [q.id for q in questions]
@@ -279,7 +388,8 @@ def compose_paper(body: PaperComposeIn, db: Session = Depends(get_db)):
 
 
 # --------------------------------------------------------------------------
-# 路由匹配关键顺序守卫：静态具体路由 /history 必须注册在动态参数路由 /{paper_id} 之前！
+# 路由匹配关键顺序守卫：静态具体路由 /history、/estimate 必须注册在
+# 动态参数路由 /{paper_id} 之前！否则会被当成 paper_id 解析为 int 报 422。
 # --------------------------------------------------------------------------
 @router.get("/history", response_model=List[PaperHistoryOut])
 def get_paper_history(
@@ -316,6 +426,47 @@ def get_paper_history(
     return history
 
 
+@router.get("/estimate", response_model=PaperEstimateOut)
+def estimate_paper_pages(
+    ids: str = Query("", description="逗号分隔的错题 ID，如 1,2,3"),
+    space_level: str = Query("standard", description="compact / standard / spacious"),
+    db: Session = Depends(get_db),
+):
+    """
+    组卷前的页数预估（只读，不落库）。
+
+    抽成接口是为了让配置页的「预计 X 页」和真实出卷共用同一套留白与页数规则。
+    此前前端自带一份 round(题数/4)+ceil(图数/6) 的副本，留白改为逐题分级后
+    两者必然漂移，故统一到此处。
+    """
+    try:
+        mistake_ids = [int(x) for x in ids.split(",") if x.strip()]
+    except ValueError:
+        raise HTTPException(status_code=422, detail="ids 需为逗号分隔的整数")
+
+    if not mistake_ids:
+        return PaperEstimateOut(estimated_pages=1, total_questions=0)
+
+    records = db.query(MistakeRecord).filter(MistakeRecord.id.in_(mistake_ids)).all()
+
+    heights: List[float] = []
+    for r in records:
+        has_img = bool(r.cropped_diagram_path)
+        tier = _infer_blank_tier(
+            r.extracted_text, r.subject.name if r.subject else None, has_image=has_img
+        )
+        heights.append(
+            _question_height_mm(
+                r.extracted_text, _calc_space_mm(tier, space_level), has_img
+            )
+        )
+
+    return PaperEstimateOut(
+        estimated_pages=_calc_estimated_pages(heights),
+        total_questions=len(records),
+    )
+
+
 @router.get("/{paper_id}", response_model=PaperComposeOut)
 def get_paper_by_id(paper_id: int, db: Session = Depends(get_db)):
     """
@@ -329,7 +480,7 @@ def get_paper_by_id(paper_id: int, db: Session = Depends(get_db)):
     records = db.query(MistakeRecord).filter(MistakeRecord.id.in_(mistake_ids)).all()
     record_map = {r.id: r for r in records}
 
-    space_mm = _calc_space_mm(paper.space_level or "standard")
+    space_level = paper.space_level or "standard"
     questions = []
     warnings = json.loads(paper.warnings or "[]")
 
@@ -340,10 +491,13 @@ def get_paper_by_id(paper_id: int, db: Session = Depends(get_db)):
         # 同 compose：打印只输出题目配图，绝不输出可能带订正笔迹的题干整图
         diagram_url = r.cropped_diagram_path
         has_img = bool(diagram_url)
-        is_oversized = _check_oversized(
-            r.extracted_text, paper.space_level or "standard", has_image=has_img
-        )
-        sub_display = _resolve_subject_display(r.subject.name if r.subject else None)
+        is_oversized = _check_oversized(r.extracted_text, space_level, has_image=has_img)
+        subject_name = r.subject.name if r.subject else None
+        sub_display = _resolve_subject_display(subject_name)
+
+        # 与 compose 走同一套分级规则，保证复看时留白与出卷当时完全一致
+        blank_tier = _infer_blank_tier(r.extracted_text, subject_name, has_image=has_img)
+        space_mm = _calc_space_mm(blank_tier, space_level)
 
         questions.append(
             PaperQuestionOut(
@@ -356,6 +510,7 @@ def get_paper_by_id(paper_id: int, db: Session = Depends(get_db)):
                 diagram_image_path=diagram_url,
                 error_type=r.error_type if paper.show_error_type else None,
                 space_mm=space_mm,
+                blank_tier=blank_tier,
                 is_oversized=is_oversized,
             )
         )
@@ -467,3 +622,22 @@ def batch_review_paper(paper_id: int, body: PaperBatchReviewIn, db: Session = De
         failed=failed_items,
         message=f"批量打卡完成：成功 {len(success_ids)} 题，失败 {len(failed_items)} 题",
     )
+
+
+@router.delete("/{paper_id}")
+def delete_paper(paper_id: int, db: Session = Depends(get_db)):
+    """
+    删除一条历史组卷记录（不可恢复）。
+
+    安全性说明：papers 表只持有 mistake_ids 的 JSON 快照，不持有任何外键；
+    重练打卡流水落在独立的 mistake_reviews 表并已推进 MistakeRecord 的复习轮次。
+    因此删除试卷不会影响错题本身，也不会回退艾宾浩斯进度。
+    """
+    paper = db.query(Paper).filter(Paper.id == paper_id).first()
+    if not paper:
+        raise HTTPException(status_code=404, detail=f"试卷不存在 (id={paper_id})")
+
+    db.delete(paper)
+    db.commit()
+
+    return {"paper_id": paper_id, "deleted": True}
