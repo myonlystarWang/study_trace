@@ -112,9 +112,9 @@
                     </div>
                   </div>
 
-                  <!-- 题干文本 -->
+                  <!-- 题干文本（数学片段走 KaTeX，A4 打印与屏显同一渲染） -->
                   <div class="question-text">
-                    {{ q.extracted_text }}
+                    <MathText :text="q.extracted_text" />
                   </div>
 
                   <!-- 题目插图 (max-height: 55mm 自适应) -->
@@ -212,6 +212,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { showToast } from 'vant';
 import { paperApi } from '../api';
+import MathText from '../components/MathText.vue';
 
 const route = useRoute();
 const router = useRouter();
