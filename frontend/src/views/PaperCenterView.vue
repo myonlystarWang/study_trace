@@ -262,7 +262,6 @@
                   size="mini"
                   type="warning"
                   plain
-                  style="margin-left: 6px;"
                   @click.stop="router.push(`/paper/print?id=${item.id}&action=review`)"
                 >
                   去打卡
@@ -973,7 +972,15 @@ onMounted(async () => {
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
   padding-top: 6px;
   border-top: 1px dashed #e2e8f0;
+}
+
+/* 窄屏下按钮文字不竖排；真放不下就整体换行 */
+.history-card-footer :deep(.van-button) {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 </style>

@@ -907,6 +907,8 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 2px 8px;
   margin-bottom: 10px;
   padding: 0 4px;
 }
@@ -929,6 +931,9 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  /* 窄屏下不许被标题挤到换行（「左滑操作」竖排很难看），放不下就整行下移 */
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .homework-list-wrapper {
@@ -961,6 +966,7 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  white-space: nowrap;
 }
 
 .rollover-origin-tag {

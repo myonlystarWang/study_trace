@@ -1602,6 +1602,9 @@ onUnmounted(() => {
   padding: 0 10px;
   font-size: var(--st-font-xs);
   border-radius: var(--st-radius-sm, 6px);
+  /* 弹性行内不许把按钮文字挤成竖排（「全员广播测试」逐字换行） */
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* 微信家庭成员结构化管理列表样式 */
@@ -1627,6 +1630,11 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 5px;
+  /* 给右侧「全员广播测试」按钮让位：放不下时标题省略号，而不是按钮文字竖排 */
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .wechat-member-card {
@@ -1693,6 +1701,9 @@ onUnmounted(() => {
   padding: 0 8px;
   font-size: var(--st-font-xs);
   border-radius: 4px;
+  /* 同上：卡片行内按钮文字禁止竖排换行 */
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .member-del-btn {
