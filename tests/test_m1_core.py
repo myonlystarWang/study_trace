@@ -147,9 +147,9 @@ def test_image_compression_and_deduplication():
     assert orig1.startswith("/uploads/originals/")
     assert thumb1.startswith("/uploads/thumbnails/")
 
-    # 验证物理文件生成且缩略图尺寸 <= 320px
-    orig_path = DATA_DIR / orig1.lstrip("/")
-    thumb_path = DATA_DIR / thumb1.lstrip("/")
+    # 验证物理文件生成且缩略图尺寸 <= 320px（上传根目录已被 conftest 重定向到 data/temp/uploads）
+    orig_path = UPLOADS_DIR / orig1.removeprefix("/uploads/")
+    thumb_path = UPLOADS_DIR / thumb1.removeprefix("/uploads/")
     assert orig_path.exists()
     assert thumb_path.exists()
 

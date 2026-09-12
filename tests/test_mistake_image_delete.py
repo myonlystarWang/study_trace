@@ -8,7 +8,7 @@ import io
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from backend.app.config import DATA_DIR
+from backend.app.config import UPLOADS_DIR
 from backend.app.main import app
 from backend.app.database import SessionLocal
 from backend.app.models import MistakeRecord
@@ -32,7 +32,9 @@ def _upload(color: str) -> dict:
 
 
 def _abs(rel_url: str):
-    return DATA_DIR / rel_url.lstrip("/")
+    # conftest 已把上传根目录重定向到 data/temp/uploads，这里必须跟随，
+    # 不能再拼 DATA_DIR（那会去生产 uploads 里找文件，永远找不到）
+    return UPLOADS_DIR / rel_url.lstrip("/").removeprefix("uploads/")
 
 
 def _create(**overrides) -> int:
