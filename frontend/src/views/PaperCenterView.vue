@@ -151,11 +151,14 @@
         </div>
 
         <div class="config-row">
-          <div class="config-label">答题留白高度</div>
+          <div class="config-label">答题留白整体松紧</div>
+          <div class="config-sublabel">
+            已按题型自动分级：选择 16mm / 默写 24mm / 简答·解答 48mm，此处用于整卷统一缩放
+          </div>
           <van-radio-group v-model="paperConfig.space_level" direction="horizontal">
-            <van-radio name="compact">紧凑 (30mm)</van-radio>
-            <van-radio name="standard">标准 (45mm)</van-radio>
-            <van-radio name="spacious">宽敞 (60mm)</van-radio>
+            <van-radio name="compact">紧凑 ×0.7</van-radio>
+            <van-radio name="standard">标准 ×1</van-radio>
+            <van-radio name="spacious">宽松 ×1.35</van-radio>
           </van-radio-group>
         </div>
 
@@ -222,7 +225,7 @@
           <span class="st-icon-badge st-icon-badge--neutral">
             <van-icon name="records-o" />
           </span>
-          <h3 class="section-title" style="margin: 0; font-size: 16px;">历史组卷记录</h3>
+          <h3 class="section-title history-sheet-title">历史组卷记录</h3>
         </div>
         <span class="history-sheet-subtitle">已生成的周末重练卷可重新预览、补打或打卡</span>
       </div>
@@ -230,41 +233,53 @@
         <van-loading v-if="historyLoading" size="24px" vertical style="padding: 30px 0;">加载中...</van-loading>
         <van-empty v-else-if="historyList.length === 0" description="暂无历史组卷记录" />
         <div v-else class="history-sheet-list">
-          <div
+          <van-swipe-cell
             v-for="item in historyList"
             :key="item.id"
-            class="history-card"
-            @click="router.push(`/paper/print?id=${item.id}`)"
+            :ref="(el) => setSwipeRef(item.id, el)"
+            class="history-swipe-cell"
           >
-            <div class="history-card-header">
-              <span class="history-card-title">{{ item.title || '初一错题周末重练卷' }}</span>
-              <van-tag v-if="item.status === 'reviewed'" type="success" size="medium">已打卡完成</van-tag>
-              <van-tag v-else-if="item.status === 'printed'" color="#d97706" plain size="medium">已打印·待打卡</van-tag>
-              <van-tag v-else type="primary" plain size="medium">未打印·草稿</van-tag>
+            <div class="history-card" @click="onHistoryCardClick(item)">
+              <div class="history-card-header">
+                <span class="history-card-title">{{ item.title || '初一错题周末重练卷' }}</span>
+                <van-tag v-if="item.status === 'reviewed'" type="success" size="medium">已打卡完成</van-tag>
+                <van-tag v-else-if="item.status === 'printed'" color="#d97706" plain size="medium">已打印·待打卡</van-tag>
+                <van-tag v-else type="primary" plain size="medium">未打印·草稿</van-tag>
+              </div>
+              <div class="history-card-desc">
+                <span>共 {{ item.total_questions }} 题</span>
+                <span class="dot">·</span>
+                <span>预估 {{ item.estimated_pages }} 页</span>
+                <span class="dot">·</span>
+                <span>{{ formatHistoryTime(item.created_at) }}</span>
+              </div>
+              <div class="history-card-footer">
+                <van-button size="mini" type="primary" plain @click.stop="router.push(`/paper/print?id=${item.id}`)">
+                  查看试卷 / 打印
+                </van-button>
+                <van-button
+                  v-if="item.status !== 'reviewed'"
+                  size="mini"
+                  type="warning"
+                  plain
+                  style="margin-left: 6px;"
+                  @click.stop="router.push(`/paper/print?id=${item.id}&action=review`)"
+                >
+                  去打卡
+                </van-button>
+              </div>
             </div>
-            <div class="history-card-desc">
-              <span>共 {{ item.total_questions }} 题</span>
-              <span class="dot">·</span>
-              <span>预估 {{ item.estimated_pages }} 页</span>
-              <span class="dot">·</span>
-              <span>{{ formatHistoryTime(item.created_at) }}</span>
-            </div>
-            <div class="history-card-footer">
-              <van-button size="mini" type="primary" plain @click.stop="router.push(`/paper/print?id=${item.id}`)">
-                查看试卷 / 打印
-              </van-button>
+            <template #right>
               <van-button
-                v-if="item.status !== 'reviewed'"
-                size="mini"
-                type="warning"
-                plain
-                style="margin-left: 6px;"
-                @click.stop="router.push(`/paper/print?id=${item.id}&action=review`)"
-              >
-                去打卡
-              </van-button>
-            </div>
-          </div>
+                square
+                type="danger"
+                class="history-delete-action"
+                icon="delete-o"
+                text="删除"
+                @click="confirmDeletePaper(item)"
+              />
+            </template>
+          </van-swipe-cell>
         </div>
       </div>
     </van-popup>
@@ -272,9 +287,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { showToast } from 'vant';
+import { showToast, showConfirmDialog } from 'vant';
 import { paperApi, settingsApi } from '../api';
 
 const router = useRouter();
@@ -301,7 +316,30 @@ const showHistorySheet = ref(false);
 const historyList = ref([]);
 const historyLoading = ref(false);
 
-const allCandidatesMap = ref({});
+// 函数式 ref 收集各 SwipeCell 实例：既能读滑动位移，也能主动 close()
+const swipeRefs = {};
+const setSwipeRef = (id, el) => {
+  if (el) {
+    swipeRefs[id] = el;
+  } else {
+    delete swipeRefs[id];
+  }
+};
+/**
+ * 判断某条记录的 SwipeCell 是否处于滑开状态。
+ * 直接读 wrapper 的 transform，而不依赖 @open/@close 事件：
+ * 点击右侧「删除」插槽时 Vant 会先派发 click、再自动收起并触发 @close
+ * （源码 getClickHandler → onClick → callInterceptor → close(position)），
+ * 事件时序会让外部维护的 openedId 提前失效。
+ * 注意 Vant 写入的是 translate3d(x px, 0, 0)，不是 translateX。
+ */
+const isSwipeOpen = (id) => {
+  const rootEl = swipeRefs[id] && swipeRefs[id].$el;
+  const wrapper = rootEl && rootEl.querySelector('.van-swipe-cell__wrapper');
+  if (!wrapper) return false;
+  const m = /(-?[\d.]+)px/.exec(wrapper.style.transform || '');
+  return Boolean(m) && Math.abs(parseFloat(m[1])) > 1;
+};
 
 const paperConfig = ref({
   title: '初一错题周末重练卷',
@@ -348,10 +386,6 @@ const fetchCandidates = async (isInitial = false) => {
       include_all_subjects: includeAllSubjects.value,
     });
     candidates.value = res.data;
-    // 缓存所有加载过的题目对象，以便跨预设计算图片与信息
-    res.data.forEach((c) => {
-      allCandidatesMap.value[c.id] = c;
-    });
 
     // 仅在首次进入且尚未选中任何题目时，默认勾选前 25 道
     if (isInitial && selectedIds.value.length === 0) {
@@ -380,6 +414,39 @@ const openHistorySheet = async () => {
     showToast('获取历史记录失败');
   } finally {
     historyLoading.value = false;
+  }
+};
+
+const onHistoryCardClick = (item) => {
+  // 已滑开时点击只收起删除按钮，避免误触跳转
+  if (isSwipeOpen(item.id)) {
+    swipeRefs[item.id]?.close?.();
+    return;
+  }
+  router.push(`/paper/print?id=${item.id}`);
+};
+
+const confirmDeletePaper = async (item) => {
+  try {
+    await showConfirmDialog({
+      title: '删除组卷记录',
+      message: `确认删除「${item.title || '初一错题周末重练卷'}」？\n共 ${item.total_questions} 题 · ${formatHistoryTime(
+        item.created_at
+      )}\n\n删除后无法恢复；错题原文与复习打卡进度不受影响。`,
+      confirmButtonText: '删除',
+      confirmButtonColor: '#dc2626',
+      cancelButtonText: '取消',
+    });
+  } catch (e) {
+    return; // 用户取消
+  }
+
+  try {
+    await paperApi.deletePaper(item.id);
+    historyList.value = historyList.value.filter((p) => p.id !== item.id);
+    showToast('已删除');
+  } catch (err) {
+    showToast(err.response?.data?.detail || '删除失败，请稍后重试');
   }
 };
 
@@ -431,17 +498,32 @@ const clearSelection = () => {
   selectedIds.value = [];
 };
 
-// 极简粗略估算公式：max(1, round(total/4) + ceil(img/6))，从全量已勾选池中计算
-const estimatedPages = computed(() => {
-  const count = selectedIds.value.length;
-  if (count <= 0) return 1;
-  const selectedItems = selectedIds.value
-    .map((id) => allCandidatesMap.value[id] || candidates.value.find((c) => c.id === id))
-    .filter(Boolean);
-  // 与后端出卷口径一致：只有"题目配图"才计入图片数（含订正的题干照不入卷）
-  const imgCount = selectedItems.filter((c) => c.cropped_diagram_path).length;
-  return Math.max(1, Math.round(count / 4) + Math.ceil(imgCount / 6));
-});
+// 页数预估：调后端 /api/paper/estimate，与真实出卷共用同一套留白与排版规则。
+// 此前前端自持一份 round(题数/4)+ceil(图数/6) 的副本；留白改为逐题分级后，
+// 同一张卷在两处会算出不同页数，故统一收敛到后端。
+const estimatedPages = ref(1);
+let estimateTimer = null;
+
+const refreshEstimatedPages = () => {
+  if (estimateTimer) clearTimeout(estimateTimer);
+  const ids = [...selectedIds.value];
+  if (ids.length === 0) {
+    estimatedPages.value = 1;
+    return;
+  }
+  // 连续勾选时防抖，只发最后一次；失败保留上次结果，不打断操作
+  estimateTimer = setTimeout(async () => {
+    try {
+      const res = await paperApi.estimatePages(ids, paperConfig.value.space_level);
+      estimatedPages.value = res.data.estimated_pages;
+    } catch (err) {
+      // 静默容错：保留上一次的预估页数
+    }
+  }, 250);
+};
+
+watch(selectedIds, refreshEstimatedPages, { deep: true });
+watch(() => paperConfig.value.space_level, refreshEstimatedPages);
 
 const previewImage = (url) => {
   if (!url) return;
@@ -496,20 +578,17 @@ onMounted(async () => {
 }
 
 .section-card {
-  background: var(--st-bg-card, #ffffff);
-  border-radius: var(--st-radius-md, 14px);
-  padding: 14px;
-  margin-bottom: 12px;
-  border: 1px solid var(--st-border, #f1f5f9);
+  background: var(--st-bg-card);
+  border-radius: var(--st-radius-md);
+  padding: var(--st-space-card);
+  margin-bottom: var(--st-space-4);
+  border: 1px solid var(--st-border);
   box-shadow: var(--st-shadow-card);
 }
 
-.section-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 10px;
-}
+/* .section-title 不再在此重复定义：design-tokens.css 已提供全局规范
+   （15px / 600 / --st-text-primary / margin 0 / leading-tight）。
+   原来此处写了 700 字重 + 10px 下边距，与全局冲突，是"同一标题在不同页面粗细不一"的根源。 */
 
 /* 预设卡片 */
 .preset-grid {
@@ -538,14 +617,14 @@ onMounted(async () => {
 }
 
 .preset-name {
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 600;
   color: #1e293b;
 }
 
 .preset-desc {
-  font-size: 11px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
   margin-top: 2px;
 }
 
@@ -557,7 +636,7 @@ onMounted(async () => {
 }
 
 .select-actions {
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   color: #2563eb;
 }
 
@@ -585,7 +664,7 @@ onMounted(async () => {
 .sub-chip {
   padding: 4px 12px;
   border-radius: 16px;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   background: #f1f5f9;
   color: #475569;
   white-space: nowrap;
@@ -606,15 +685,15 @@ onMounted(async () => {
 }
 
 .extra-sub-label {
-  font-size: 12px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
 }
 
 /* 错题列表 */
 
 .list-summary {
-  font-size: 12px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
   margin-bottom: 8px;
 }
 
@@ -658,9 +737,9 @@ onMounted(async () => {
 }
 
 .candidate-text {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   color: #1e293b;
-  line-height: 1.4;
+  line-height: var(--st-leading-tight);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -669,8 +748,8 @@ onMounted(async () => {
 }
 
 .candidate-meta {
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-muted);
 }
 
 .candidate-thumb {
@@ -688,9 +767,15 @@ onMounted(async () => {
   object-fit: cover;
 }
 
-/* 配置行 */
+/* 配置行
+   节奏铁律：标签→控件 6px（组内），控件→下一组 16px（组间），两者必须有明显落差，
+   否则整张卡片会糊成一片 —— 这是"看起来不舒服"的主要来源之一。 */
 .config-row {
-  margin-bottom: 12px;
+  margin-bottom: var(--st-space-5);
+}
+
+.config-row:last-child {
+  margin-bottom: 0;
 }
 
 .config-row.flex-between {
@@ -700,15 +785,49 @@ onMounted(async () => {
 }
 
 .config-label {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
-  color: #334155;
-  margin-bottom: 4px;
+  color: var(--st-text-regular);
+  margin-bottom: var(--st-space-2);
+  line-height: var(--st-leading-tight);
 }
 
 .config-sublabel {
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-muted);
+  line-height: var(--st-leading-normal);
+  margin-bottom: var(--st-space-2);
+}
+
+/* 配置卡片内的表单控件：去掉 Vant Cell 默认的 16px 横向内边距，
+   使输入文字与上方标签左对齐（否则会出现"标签在 x=0、输入框在 x=16"的错位）。 */
+.config-card :deep(.van-field) {
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 0;
+}
+
+.config-card :deep(.van-field::after) {
+  display: none;
+}
+
+/* 单选组：用 gap 统一间距，并去掉 Vant 默认的逐项 margin-right。
+   原因（实测）：336px 可用宽度下，「按科目分大题/连续统一编号/随机乱序」三项实际需要 344px，
+   而其中 12px 是**末项的右边距** —— flex 换行会把这项也计入行长，导致本可放下的三项被挤到第二行。
+   改用 column-gap 后行长 324px < 336px，三项回归一行。 */
+.config-card :deep(.van-radio-group--horizontal) {
+  column-gap: var(--st-space-3);
+  row-gap: var(--st-space-3);
+}
+
+.config-card :deep(.van-radio--horizontal) {
+  margin-right: 0;
+}
+
+.config-card :deep(.van-radio),
+.config-card :deep(.van-checkbox) {
+  font-size: var(--st-font-md);
+  color: var(--st-text-primary);
 }
 
 /* 底部常驻栏 */
@@ -739,14 +858,14 @@ onMounted(async () => {
 }
 
 .main-stat {
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 600;
   color: #0f172a;
 }
 
 .sub-stat {
-  font-size: 12px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
 }
 
 .highlight {
@@ -760,7 +879,7 @@ onMounted(async () => {
 
 .compose-submit-btn {
   height: 42px;
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 600;
   background: var(--st-primary, #2563eb);
   border: none;
@@ -773,15 +892,17 @@ onMounted(async () => {
   border-bottom: 1px solid #f1f5f9;
 }
 
-.history-sheet-header h3 {
-  margin: 0 0 4px;
-  font-size: 16px;
-  color: #0f172a;
+/* 抽屉内的页面级标题：比卡片区标题高一档（17px），用类名承载而不是写在模板 style 里，
+   避免出现"同一个 section-title 在模板里又被临时改字号"的第二处定义。 */
+.history-sheet-title {
+  margin: 0;
+  font-size: var(--st-font-xl);
+  color: var(--st-text-primary);
 }
 
 .history-sheet-subtitle {
-  font-size: 12px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
 }
 
 .history-sheet-content {
@@ -794,6 +915,19 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* 左滑删除：外层裁圆角，使删除按钮与卡片视觉一体 */
+.history-swipe-cell {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.history-delete-action {
+  height: 100%;
+  min-width: 76px;
+  font-size: var(--st-font-sm);
+  border-radius: 0;
 }
 
 .history-card {
@@ -817,14 +951,14 @@ onMounted(async () => {
 }
 
 .history-card-title {
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 600;
   color: #1e293b;
 }
 
 .history-card-desc {
-  font-size: 12px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
   margin-bottom: 8px;
   display: flex;
   align-items: center;

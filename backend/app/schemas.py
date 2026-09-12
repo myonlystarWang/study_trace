@@ -243,8 +243,18 @@ class PaperQuestionOut(BaseModel):
     # 题目配图（仅数轴/几何图等图形，不含含订正笔迹的整张题干照片），打印只用这张
     diagram_image_path: Optional[str] = None
     error_type: Optional[str] = None
-    space_mm: int = 45
+    space_mm: int = 32
+    # 该题被判定的题型档位（choice/judge/recite/short/essay/solution），
+    # 决定 space_mm 的基线，便于屏幕端标注与人工校对
+    blank_tier: Optional[str] = None
     is_oversized: bool = False
+
+
+class PaperEstimateOut(BaseModel):
+    """组卷前的页数预估（只读）"""
+
+    estimated_pages: int = 1
+    total_questions: int = 0
 
 
 class PaperComposeOut(BaseModel):
