@@ -46,10 +46,8 @@
             <div class="crop-grid-line line-v-1"></div>
             <div class="crop-grid-line line-v-2"></div>
 
-            <!-- 提示标签 -->
-            <div class="crop-drag-hint">拖动选区或调整边框</div>
-
             <!-- 8个调整锚点 (4角 + 4边中点) -->
+            <!-- 视觉上只有四角显示 L 形角标，边中点隐形但仍可拖拽（见 style 中 .handle 注释） -->
             <div class="handle handle-tl" @pointerdown="onHandlePointerDown($event, 'tl')"></div>
             <div class="handle handle-tr" @pointerdown="onHandlePointerDown($event, 'tr')"></div>
             <div class="handle handle-bl" @pointerdown="onHandlePointerDown($event, 'bl')"></div>
@@ -454,7 +452,7 @@ const handleCancel = () => {
 }
 
 .header-title {
-  font-size: 15px;
+  font-size: var(--st-font-lg);
   font-weight: 600;
   color: #e2e8f0;
 }
@@ -462,8 +460,8 @@ const handleCancel = () => {
 .header-action-btn {
   background: transparent;
   border: none;
-  color: #94a3b8;
-  font-size: 14px;
+  color: var(--st-text-muted);
+  font-size: var(--st-font-md);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -520,21 +518,6 @@ const handleCancel = () => {
   z-index: 2;
 }
 
-/* 选框内的居中轻微提示 */
-.crop-drag-hint {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.75);
-  background: rgba(0, 0, 0, 0.45);
-  padding: 2px 8px;
-  border-radius: 10px;
-  pointer-events: none;
-  white-space: nowrap;
-}
-
 /* 9宫格网格线 */
 .crop-grid-line {
   position: absolute;
@@ -570,6 +553,10 @@ const handleCancel = () => {
  * 四角与边缘手柄。
  * 手柄盒 36px、外扩仅 8px —— 这样即使选框贴到图片边缘（.canvas-container 是
  * overflow:hidden），仍有 28px 落在选框内侧可点，中间的点也不会被裁掉。
+ *
+ * 视觉与热区分离：.handle 是拖拽热区（8 个，一个都不能少），::after 只负责画四角的
+ * L 形角标。四个边中点故意不给 border 宽度 —— 于是视觉上完全隐形，但仍可拖拽。
+ * 若将来想恢复圆点，只需把下面这段 ::after 规则改回去，模板与脚本零改动。
  */
 .handle {
   position: absolute;
@@ -586,12 +573,30 @@ const handleCancel = () => {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 14px;
-  height: 14px;
-  background: #38bdf8;
-  border: 2px solid #ffffff;
-  border-radius: 50%;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 0 solid #ffffff;
+}
+
+.handle-tl::after {
+  border-top-width: 3px;
+  border-left-width: 3px;
+}
+
+.handle-tr::after {
+  border-top-width: 3px;
+  border-right-width: 3px;
+}
+
+.handle-bl::after {
+  border-bottom-width: 3px;
+  border-left-width: 3px;
+}
+
+.handle-br::after {
+  border-bottom-width: 3px;
+  border-right-width: 3px;
 }
 
 .handle-tl {
@@ -649,21 +654,21 @@ const handleCancel = () => {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  color: #94a3b8;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-muted);
   margin-bottom: 12px;
-  line-height: 1.4;
+  line-height: var(--st-leading-tight);
 }
 
 .footer-tip .van-icon {
-  font-size: 14px;
+  font-size: var(--st-font-md);
   color: #38bdf8;
   flex-shrink: 0;
 }
 
 .crop-confirm-btn {
   font-weight: 600;
-  font-size: 15px;
+  font-size: var(--st-font-lg);
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   border: none;
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
