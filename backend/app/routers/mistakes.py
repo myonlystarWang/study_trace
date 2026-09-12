@@ -4,7 +4,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-from backend.app.config import DATA_DIR
+from backend.app.config import UPLOADS_DIR
 from backend.app.database import get_db
 from backend.app.models import MistakeRecord, MistakeReview, Subject
 from backend.app.schemas import (
@@ -27,11 +27,15 @@ IMAGE_KIND_FIELDS = {
 
 
 def _resolve_upload_file(rel_path: Optional[str]) -> Optional[Path]:
-    """把 /uploads/... 形式的相对 URL 解析为磁盘绝对路径（越界路径一律拒绝）。"""
+    """把 /uploads/... 形式的相对 URL 解析为磁盘绝对路径（越界路径一律拒绝）。
+
+    以 UPLOADS_DIR 为根（它可被 STUDYTRACE_UPLOADS_DIR 重定向到测试目录），
+    不再硬拼 DATA_DIR/"uploads"，否则测试隔离下永远找不到文件。
+    """
     if not rel_path or not rel_path.startswith("/uploads/"):
         return None
-    candidate = (DATA_DIR / rel_path.lstrip("/")).resolve()
-    uploads_root = (DATA_DIR / "uploads").resolve()
+    candidate = (UPLOADS_DIR / rel_path[len("/uploads/"):]).resolve()
+    uploads_root = UPLOADS_DIR.resolve()
     if uploads_root not in candidate.parents:
         return None
     return candidate
@@ -75,7 +79,7 @@ def _purge_image_if_unreferenced(db: Session, rel_path: Optional[str]) -> bool:
             continue
         # 计算该文件的相对 URL，再用同样的引用检查兜一次
         try:
-            rel = "/" + path.relative_to(DATA_DIR).as_posix()
+            rel = "/uploads/" + path.relative_to(UPLOADS_DIR).as_posix()
         except ValueError:
             continue
         referenced = db.query(MistakeRecord).filter(

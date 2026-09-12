@@ -1,10 +1,14 @@
+import os
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # 根目录与关键路径定位
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = BASE_DIR / "data"
-UPLOADS_DIR = DATA_DIR / "uploads"
+# 图片业务目录允许被环境变量重定向（仅测试用：pytest 指向 data/temp/uploads，
+# 避免测试上传的 fixture 图落进生产 data/uploads —— 那会在生产库里留下孤儿文件）。
+# ORIGINALS_DIR / THUMBNAILS_DIR 派生自它，故一处重定向即全部隔离。
+UPLOADS_DIR = Path(os.getenv("STUDYTRACE_UPLOADS_DIR") or (DATA_DIR / "uploads"))
 ORIGINALS_DIR = UPLOADS_DIR / "originals"
 THUMBNAILS_DIR = UPLOADS_DIR / "thumbnails"
 EXPORTS_DIR = DATA_DIR / "exports"
