@@ -156,17 +156,17 @@ watch(
 }
 
 .current-month {
-  font-size: 16px;
+  font-size: var(--st-font-xl);
   font-weight: bold;
-  color: #1a1a1a;
+  color: var(--st-text-primary);
 }
 
 .weekdays-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   text-align: center;
-  font-size: 12px;
-  color: #888;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
   margin-bottom: 8px;
 }
 
@@ -216,7 +216,7 @@ watch(
 }
 
 .day-number {
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 500;
   color: #333;
 }
@@ -257,7 +257,7 @@ watch(
   justify-content: space-around;
   padding-top: 12px;
   border-top: 1px solid #f0f0f0;
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   color: #666;
 }
 

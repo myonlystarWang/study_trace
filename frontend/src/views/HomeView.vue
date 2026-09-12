@@ -103,16 +103,16 @@ onMounted(async () => {
 }
 
 .hero-card h2 {
-  font-size: 17px;
+  font-size: var(--st-font-xl);
   font-weight: 700;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
   margin-bottom: 6px;
 }
 
 .hero-card p {
-  font-size: 13px;
-  color: var(--st-text-secondary, #64748b);
-  line-height: 1.5;
+  font-size: var(--st-font-sm);
+  color: var(--st-text-secondary);
+  line-height: var(--st-leading-normal);
   margin-bottom: 12px;
 }
 </style>

@@ -125,7 +125,7 @@
                 <div class="review-action-bar" v-if="!isBatchMode && (activeTab === 'review' || item.mastery_status !== '已掌握')">
                   <div class="review-stat-row">
                     <div class="review-round-info">
-                      <span class="st-icon-badge st-icon-badge--purple" style="width: 20px; height: 20px; font-size: 11px;">
+                      <span class="st-icon-badge st-icon-badge--purple" style="width: 20px; height: 20px; font-size: var(--st-font-xs);">
                         <van-icon name="replay" />
                       </span>
                       <span>第 <b>{{ item.review_count || 0 }}</b> 轮复习</span>
@@ -179,7 +179,7 @@
                 <transition name="van-slide-down">
                   <div class="card-answer-panel" v-if="openedAnswerIds.includes(item.id)">
                     <div class="answer-header">
-                      <span class="st-icon-badge st-icon-badge--info" style="width: 18px; height: 18px; font-size: 10px;">
+                      <span class="st-icon-badge st-icon-badge--info" style="width: 18px; height: 18px; font-size: var(--st-font-xs);">
                         <van-icon name="notes-o" />
                       </span>
                       <span class="answer-title">参考答案与解析</span>
@@ -1348,7 +1348,7 @@ onBeforeUnmount(() => {
 
 .mistake-tabs :deep(.van-tab) {
   padding: 0 16px;
-  font-size: 15px;
+  font-size: var(--st-font-lg);
   font-weight: 500;
 }
 
@@ -1398,8 +1398,8 @@ onBeforeUnmount(() => {
 }
 
 .source-text {
-  font-size: 11px;
-  color: var(--st-text-secondary, #64748b);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
 }
 
 /* 略缩图容器 */
@@ -1428,7 +1428,7 @@ onBeforeUnmount(() => {
   bottom: 8px;
   background: rgba(15, 23, 42, 0.7);
   color: #ffffff;
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   padding: 2px 8px;
   border-radius: var(--st-radius-full, 9999px);
   backdrop-filter: blur(4px);
@@ -1492,8 +1492,8 @@ onBeforeUnmount(() => {
 .mini-btn {
   border: 1px solid var(--st-border, #e2e8f0);
   background: var(--st-bg-subtle, #f8fafc);
-  color: var(--st-text-primary, #334155);
-  font-size: 12px;
+  color: var(--st-text-primary);
+  font-size: var(--st-font-xs);
   padding: 3px 12px;
   border-radius: var(--st-radius-full, 9999px);
   cursor: pointer;
@@ -1540,14 +1540,14 @@ onBeforeUnmount(() => {
 }
 
 .edit-image-label {
-  font-size: 12px;
-  color: var(--st-text-muted, #64748b);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-muted);
   white-space: nowrap;
 }
 
 .edit-image-empty {
-  font-size: 12px;
-  color: var(--st-text-muted, #94a3b8);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-muted);
 }
 
 .edit-image-actions {
@@ -1557,9 +1557,9 @@ onBeforeUnmount(() => {
 }
 
 .question-text {
-  font-size: 14px;
-  color: var(--st-text-primary, #0f172a);
-  line-height: 1.5;
+  font-size: var(--st-font-md);
+  color: var(--st-text-primary);
+  line-height: var(--st-leading-normal);
   margin: 0 0 6px 0;
 }
 
@@ -1571,7 +1571,7 @@ onBeforeUnmount(() => {
 .error-tag {
   background: var(--st-warning-light, #fffbeb);
   color: var(--st-warning-dark, #d97706);
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   font-weight: 500;
   padding: 2px 6px;
   border-radius: var(--st-radius-sm, 6px);
@@ -1594,18 +1594,18 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
 }
 
 .review-round-info {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--st-text-secondary, #64748b);
+  color: var(--st-text-secondary);
 }
 
 .next-date-tag {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   color: var(--st-purple, #7c3aed);
   background: var(--st-purple-light, #f5f3ff);
   padding: 2px 6px;
@@ -1621,7 +1621,7 @@ onBeforeUnmount(() => {
 .rev-action-btn {
   flex: 1;
   font-weight: 600;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   padding: 0 4px;
   white-space: nowrap !important;
 }
@@ -1655,7 +1655,7 @@ onBeforeUnmount(() => {
 .action-btn-primary {
   flex: 1.5;
   height: 42px;
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 600;
   border-radius: var(--st-radius-full, 9999px);
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
@@ -1665,7 +1665,7 @@ onBeforeUnmount(() => {
 .action-btn-secondary {
   flex: 0.95;
   height: 42px;
-  font-size: 13.5px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
   color: #334155;
   background-color: #ffffff;
@@ -1759,8 +1759,8 @@ onBeforeUnmount(() => {
   border: none;
   background: transparent;
   padding: 2px;
-  font-size: 16px;
-  color: var(--st-text-muted, #94a3b8);
+  font-size: var(--st-font-xl);
+  color: var(--st-text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1789,7 +1789,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   gap: 4px;
   color: #ffffff;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 500;
   cursor: pointer;
 }
@@ -1820,15 +1820,15 @@ onBeforeUnmount(() => {
 }
 
 .answer-title {
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
 }
 
 .answer-body {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   color: #334155;
-  line-height: 1.5;
+  line-height: var(--st-leading-normal);
 }
 
 .answer-text {
@@ -1853,7 +1853,7 @@ onBeforeUnmount(() => {
   border: 1px solid #e2e8f0;
   background: #f8fafc;
   color: var(--st-primary, #2563eb);
-  font-size: 11.5px;
+  font-size: var(--st-font-xs);
   font-weight: 500;
   padding: 3px 10px;
   border-radius: var(--st-radius-full, 9999px);
@@ -1875,14 +1875,14 @@ onBeforeUnmount(() => {
 }
 
 .batch-left-info {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
 }
 
 .batch-left-info b {
   color: var(--st-primary, #2563eb);
-  font-size: 15px;
+  font-size: var(--st-font-lg);
 }
 
 .batch-right-actions {
@@ -1915,9 +1915,9 @@ onBeforeUnmount(() => {
 
 .form-label {
   display: block;
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
-  color: var(--st-text-regular, #334155);
+  color: var(--st-text-regular);
   margin-bottom: 8px;
 }
 
@@ -1936,9 +1936,9 @@ onBeforeUnmount(() => {
 
 .upload-hint {
   margin: 6px 0 0;
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: var(--st-text-muted, #94a3b8);
+  font-size: var(--st-font-xs);
+  line-height: var(--st-leading-normal);
+  color: var(--st-text-muted);
 }
 
 .modal-footer-btns {
