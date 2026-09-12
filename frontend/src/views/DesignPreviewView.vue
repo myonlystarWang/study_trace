@@ -394,10 +394,10 @@
         <div class="st-icon-badge st-icon-badge--primary" style="width: 42px; height: 42px; font-size: 20px; margin: 0 auto 12px;">
           <van-icon name="lock" />
         </div>
-        <h3 style="font-size: 17px; font-weight: 600; color: var(--st-text-primary); margin-bottom: 6px;">
+        <h3 style="font-size: var(--st-font-xl); font-weight: 600; color: var(--st-text-primary); margin-bottom: 6px;">
           家长身份安全验证
         </h3>
-        <p style="font-size: 13px; color: var(--st-text-secondary); margin-bottom: 20px;">
+        <p style="font-size: var(--st-font-sm); color: var(--st-text-secondary); margin-bottom: 20px;">
           设置与成绩管理已开启专属 PIN 保护，请输入 4~6 位安全码
         </p>
         <van-field 
@@ -435,7 +435,7 @@
           </span>
           <span class="section-title">录入新错题</span>
         </div>
-        <p style="font-size: 13px; color: var(--st-text-secondary); margin-bottom: 16px;">
+        <p style="font-size: var(--st-font-sm); color: var(--st-text-secondary); margin-bottom: 16px;">
           支持拍照识别（RapidOCR）或手动打字录入：
         </p>
         <div style="display: flex; gap: 12px;">
@@ -723,7 +723,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
   color: var(--st-primary);
   letter-spacing: 0.5px;
@@ -750,7 +750,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
   border: none;
   background: transparent;
   padding: 6px 12px;
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 500;
   color: var(--st-text-secondary);
   border-radius: var(--st-radius-sm);
@@ -786,7 +786,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
   color: var(--st-text-primary);
   background: var(--st-bg-card);
@@ -839,7 +839,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
 }
 
 .week-day-pill .day-label {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   color: var(--st-text-muted);
   margin-bottom: 2px;
 }
@@ -849,7 +849,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
 }
 
 .week-day-pill .day-number {
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 600;
   color: var(--st-text-primary);
 }
@@ -887,7 +887,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
 }
 
 .progress-stat-text {
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   color: var(--st-text-secondary);
 }
 
@@ -903,7 +903,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
   padding: 8px 12px;
   background-color: var(--st-success-light);
   border-radius: var(--st-radius-sm);
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 500;
   color: var(--st-success-dark);
 }
@@ -924,13 +924,13 @@ const getSubjectBadgeClass = getSubjectTagClass;
 }
 
 .list-title {
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 600;
   color: var(--st-text-primary);
 }
 
 .swipe-hint {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   color: var(--st-text-muted);
   display: inline-flex;
   align-items: center;
@@ -992,7 +992,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
 }
 
 .hw-due-time {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   color: var(--st-text-muted);
   display: inline-flex;
   align-items: center;
@@ -1000,10 +1000,10 @@ const getSubjectBadgeClass = getSubjectTagClass;
 }
 
 .hw-title {
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 500;
   color: var(--st-text-primary);
-  line-height: 1.4;
+  line-height: var(--st-leading-tight);
   word-break: break-all;
 }
 
@@ -1013,7 +1013,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
 }
 
 .hw-status-tag {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   font-weight: 500;
   color: var(--st-warning-dark);
   background-color: var(--st-warning-light);
@@ -1043,7 +1043,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
   justify-content: center;
   gap: 4px;
   color: #ffffff;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 500;
   cursor: pointer;
 }
@@ -1076,9 +1076,9 @@ const getSubjectBadgeClass = getSubjectTagClass;
 }
 
 .ebbinghaus-desc {
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   color: var(--st-text-secondary);
-  line-height: 1.5;
+  line-height: var(--st-leading-normal);
   margin: 0;
 }
 
@@ -1107,7 +1107,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
 }
 
 .stage-pill {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   color: var(--st-text-secondary);
   display: inline-flex;
   align-items: center;
@@ -1115,7 +1115,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
 }
 
 .retention-pill {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
   color: var(--st-purple);
   background-color: var(--st-purple-light);
@@ -1124,8 +1124,8 @@ const getSubjectBadgeClass = getSubjectTagClass;
 }
 
 .mistake-question-text {
-  font-size: 14px;
-  line-height: 1.55;
+  font-size: var(--st-font-md);
+  line-height: var(--st-leading-normal);
   color: var(--st-text-primary);
 }
 
@@ -1150,7 +1150,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
   bottom: 8px;
   background: rgba(15, 23, 42, 0.7);
   color: #ffffff;
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   padding: 2px 8px;
   border-radius: var(--st-radius-full);
   backdrop-filter: blur(4px);
@@ -1228,13 +1228,13 @@ const getSubjectBadgeClass = getSubjectTagClass;
 
 .form-label {
   display: block;
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
-  color: var(--st-text-regular, #334155);
+  color: var(--st-text-regular);
 }
 
 .add-custom-subject-btn {
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 500;
   color: var(--st-primary, #2563eb);
   cursor: pointer;

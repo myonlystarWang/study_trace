@@ -1,6 +1,12 @@
 /**
  * StudyTrace Design System Tokens
  * Based on baoyu-design & Modern Mobile Product Standards
+ *
+ * 使用约定（2026-09-12 确立）：
+ *  1. 业务页面/组件里**禁止再写裸数字**，字号一律取 --st-font-*，行高取 --st-leading-*，
+ *     间距取 --st-space-*，文字色取 --st-text-*。改一处即全站生效。
+ *  2. 印刷排版（print.css、PaperPrintView 的 pt 值）是**独立体系**，不并入本表。
+ *  3. 字号阶梯只有 5 档；12px 是移动端可读下限，不得再出现 10px/11px。
  */
 
 :root {
@@ -48,11 +54,35 @@
   --st-shadow-hover: 0 4px 12px rgba(15, 23, 42, 0.06);
   --st-shadow-float: 0 8px 24px rgba(15, 23, 42, 0.08);
 
-  /* 5. 字体层次 (Typography) */
-  --st-text-primary: #0f172a;
-  --st-text-regular: #334155;
-  --st-text-secondary: #64748b;
-  --st-text-muted: #94a3b8;
+  /* 5. 文字色（四档，全部通过 WCAG AA 4.5:1 @ #f8fafc 页面底）
+     实测对比度见括号，替换前请重新校验：
+     #94a3b8 只有 2.45:1，已从 muted 位降级淘汰。 */
+  --st-text-primary: #0f172a;    /* 17.06:1  正文主色 / 标题 */
+  --st-text-regular: #334155;    /*  9.90:1  正文 */
+  --st-text-secondary: #5b6b80;  /*  5.20:1  次要信息（原 #64748b 的位置） */
+  --st-text-muted: #64748b;      /*  4.55:1  辅助说明（原 #94a3b8 的位置，原值不达标） */
+
+  /* 5.1 排版阶梯（Typography Scale）—— 全站唯一字号来源 */
+  --st-font-xs: 12px;  /* 辅助说明 / 微标签（移动端可读下限，不得再小） */
+  --st-font-sm: 13px;  /* 字段标签 / 次要文本 */
+  --st-font-md: 14px;  /* 正文 / 表单 / 控件，与 Vant --van-font-size-md 同源 */
+  --st-font-lg: 15px;  /* 卡片区标题 */
+  --st-font-xl: 17px;  /* 页面标题 */
+
+  /* 5.2 行高阶梯 */
+  --st-leading-tight: 1.3;   /* 标题：大字号需收紧 */
+  --st-leading-normal: 1.5;  /* 正文默认 */
+  --st-leading-loose: 1.65;  /* 长段落 / 题干预留阅读余量 */
+  --st-control-line: 20px;   /* 单行控件固定行高，避免随父级字号漂移 */
+
+  /* 5.3 间距阶梯（组内 → 组间，必须有可感知落差） */
+  --st-space-1: 4px;   /* 图标与文字之间 */
+  --st-space-2: 6px;   /* 标签 → 控件 */
+  --st-space-3: 8px;   /* 同组内元素 */
+  --st-space-4: 12px;  /* 卡片内边距 */
+  --st-space-5: 16px;  /* 组与组之间 */
+  --st-space-6: 24px;  /* 区块之间 */
+  --st-space-card: 14px; /* 卡片内边距 */
 
   /* 6. 圆角体系 (Radii) */
   --st-radius-sm: 6px;
@@ -69,7 +99,38 @@
   --van-border-radius-max: var(--st-radius-lg);
   --van-button-border-radius: var(--st-radius-md);
   --van-cell-background: var(--st-bg-card);
+  /* 让组件库字号与业务页面同源：Vant 只有放进 .van-cell 的控件才会拿到 14px，
+     裸放在普通 div 里的 radio/checkbox 会继承 body 字号 —— 显式钉死这条链路。 */
+  --van-font-size-md: var(--st-font-md);
+  --van-cell-font-size: var(--st-font-md);
+  /* 逐组件映射"语义字号"，比整体改写 --van-font-size-* 更精准：
+     整体改写会连带把 action-sheet / picker / card 等未使用组件一起改，不好评估影响。 */
+  --van-nav-bar-title-font-size: var(--st-font-xl);   /* 默认 16px -> 页面标题档 17px */
+  --van-dialog-font-size: var(--st-font-xl);          /* 默认 16px -> 弹窗标题 */
+  --van-button-default-font-size: var(--st-font-md);  /* 默认 16px -> 与 .st-action-btn 的 14px 统一 */
+  --van-button-mini-font-size: var(--st-font-xs);     /* 默认 10px -> 抬到可读下限 12px */
+  --van-progress-pivot-font-size: var(--st-font-xs);  /* 默认 10px -> 同上 */
+  /* 占位符：Vant 默认 --van-gray-5(#c8c9cc) 在白底仅 1.6:1，提亮到可辨识 */
+  --van-text-color-3: #7c8ba1;
 }
+
+/* ==========================================================================
+   基础排版基线 (Base Typography Baseline)
+   浏览器 UA 自带的三个"隐形字号来源"，必须显式钉死，否则会凭空出现非设计值：
+     · <small>  默认 0.833em —— 在 12px 的父级上算出 10px（实测成绩页 "/120" 分母就是这个）
+     · <b>/<strong> 默认 bolder  —— 随父级字重漂移，同一处文字在不同上下文粗细不同
+   本项目 12px 已是可读下限，故 <small> 不再缩小，改用颜色表达层级。
+   ========================================================================== */
+small {
+  font-size: inherit;
+}
+
+b,
+strong {
+  font-weight: 600;
+}
+
+/* 打印排版（pt）是独立体系，屏幕端的字号令牌不得影响 @page 与 @media print */
 
 /* ==========================================================================
    通用原子级设计类 (Design Utility Classes)
@@ -80,7 +141,7 @@
   background-color: var(--st-bg-card);
   border: 1px solid var(--st-border);
   border-radius: var(--st-radius-lg);
-  padding: 14px 16px;
+  padding: var(--st-space-card) var(--st-space-5);
   box-shadow: var(--st-shadow-card);
   transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
@@ -100,7 +161,7 @@
 .st-section-header h3,
 .st-section-header .section-title,
 .st-section-header > span:not(.st-icon-badge):not(.header-action) {
-  font-size: 15px;
+  font-size: var(--st-font-lg);
   font-weight: 600;
   color: var(--st-text-primary, #0f172a);
   margin: 0;
@@ -108,7 +169,7 @@
 }
 
 .section-title {
-  font-size: 15px;
+  font-size: var(--st-font-lg);
   font-weight: 600;
   color: var(--st-text-primary, #0f172a);
   margin: 0;
@@ -117,7 +178,7 @@
 
 .st-section-header .header-action {
   margin-left: auto;
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   color: var(--st-text-secondary);
 }
 
@@ -129,7 +190,7 @@
   width: 26px;
   height: 26px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: var(--st-font-md);
   flex-shrink: 0;
 }
 
@@ -176,7 +237,7 @@
   padding: 2px 8px;
   height: 22px;
   border-radius: var(--st-radius-sm);
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
@@ -226,7 +287,7 @@
   padding: 2px 8px;
   height: 22px;
   border-radius: var(--st-radius-sm);
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
@@ -267,10 +328,11 @@
 .st-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--st-space-1);
   padding: 5px 12px;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 500;
+  line-height: var(--st-control-line);
   border-radius: var(--st-radius-full);
   border: 1px solid var(--st-border-bold);
   background-color: var(--st-bg-card);
@@ -357,7 +419,7 @@
 /* 统一移动端操作胶囊按钮规范 (42px 高度, 9999px 药丸圆角, 13.5~14px 字号) */
 .st-action-btn {
   height: 42px !important;
-  font-size: 14px !important;
+  font-size: var(--st-font-md) !important;
   font-weight: 600 !important;
   border-radius: var(--st-radius-full, 9999px) !important;
   display: inline-flex !important;
@@ -385,7 +447,7 @@
   background-color: #ffffff !important;
   border: 1px solid var(--st-border-bold, #cbd5e1) !important;
   color: var(--st-text-regular, #334155) !important;
-  font-size: 13.5px !important;
+  font-size: var(--st-font-sm) !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
 }
 .st-action-btn--secondary:active {
@@ -397,7 +459,7 @@
   background-color: var(--st-primary-light, #eff6ff) !important;
   border: 1px solid rgba(37, 99, 235, 0.25) !important;
   color: var(--st-primary, #2563eb) !important;
-  font-size: 13.5px !important;
+  font-size: var(--st-font-sm) !important;
 }
 .st-action-btn--accent:active {
   background-color: #dbeafe !important;

@@ -346,7 +346,7 @@
       @confirm="submitEditHomework"
     >
       <div style="padding: 1rem 1rem 0.5rem;">
-        <div style="margin-bottom: 8px; font-size: 12px; color: #64748b;">
+        <div style="margin-bottom: 8px; font-size: var(--st-font-xs); color: var(--st-text-secondary);">
           所属学科：<span class="st-subject-tag" :class="getSubjectTagClass(editingItem?.subject_name)">{{ editingItem?.subject_name }}</span>
         </div>
         <van-field
@@ -681,7 +681,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   color: #ffffff;
-  font-size: 16px;
+  font-size: var(--st-font-xl);
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
   flex-shrink: 0;
 }
@@ -693,15 +693,15 @@ onMounted(async () => {
 }
 
 .brand-title {
-  font-size: 15px;
+  font-size: var(--st-font-lg);
   font-weight: 700;
-  color: var(--st-text-primary, #0f172a);
-  line-height: 1.15;
+  color: var(--st-text-primary);
+  line-height: var(--st-leading-tight);
   letter-spacing: -0.2px;
 }
 
 .brand-subtitle {
-  font-size: 10px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
   color: var(--st-primary, #2563eb);
   letter-spacing: 0.5px;
@@ -714,7 +714,7 @@ onMounted(async () => {
   align-items: center;
   gap: 4px;
   height: 28px;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
   color: #c2410c;
   background: #fff7ed;
@@ -745,8 +745,8 @@ onMounted(async () => {
   border-radius: var(--st-radius-full, 9999px);
   background: var(--st-bg-card, #ffffff);
   border: 1px solid var(--st-border-bold, #e2e8f0);
-  color: var(--st-text-secondary, #475569);
-  font-size: 12px;
+  color: var(--st-text-secondary);
+  font-size: var(--st-font-xs);
   font-weight: 500;
   box-shadow: var(--st-shadow-card, 0 1px 3px rgba(15, 23, 42, 0.04));
   cursor: pointer;
@@ -788,9 +788,9 @@ onMounted(async () => {
 }
 
 .week-day-pill .day-label {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   line-height: 1;
-  color: var(--st-text-muted, #94a3b8);
+  color: var(--st-text-muted);
   margin-bottom: 3px;
 }
 
@@ -799,10 +799,10 @@ onMounted(async () => {
 }
 
 .week-day-pill .day-number {
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 700;
-  line-height: 1.1;
-  color: var(--st-text-primary, #0f172a);
+  line-height: var(--st-leading-tight);
+  color: var(--st-text-primary);
 }
 
 .week-day-pill.active .day-number {
@@ -867,8 +867,8 @@ onMounted(async () => {
 }
 
 .progress-stat-text {
-  font-size: 12px;
-  color: var(--st-text-secondary, #64748b);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
 }
 
 .progress-bar-wrapper {
@@ -883,7 +883,7 @@ onMounted(async () => {
   padding: 8px 12px;
   background-color: var(--st-success-light, #ecfdf5);
   border-radius: var(--st-radius-sm, 6px);
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 500;
   color: var(--st-success-dark, #059669);
 }
@@ -918,14 +918,14 @@ onMounted(async () => {
 }
 
 .list-title {
-  font-size: 15px;
+  font-size: var(--st-font-lg);
   font-weight: 600;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
 }
 
 .swipe-hint {
-  font-size: 11px;
-  color: var(--st-text-muted, #94a3b8);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-muted);
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -951,7 +951,7 @@ onMounted(async () => {
 }
 
 .rollover-badge-tag {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
   color: #7c3aed;
   background: #f5f3ff;
@@ -964,13 +964,13 @@ onMounted(async () => {
 }
 
 .rollover-origin-tag {
-  font-size: 10px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
   color: #7c3aed;
   background: #ede9fe;
   padding: 1px 6px;
   border-radius: 4px;
-  line-height: 1.3;
+  line-height: var(--st-leading-tight);
 }
 
 .hw-swipe-cell--rollover .hw-card-face {
@@ -1036,28 +1036,28 @@ onMounted(async () => {
 }
 
 .hw-due-time {
-  font-size: 11px;
-  color: var(--st-text-muted, #94a3b8);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-muted);
   display: inline-flex;
   align-items: center;
   gap: 3px;
 }
 
 .hw-title {
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 500;
-  color: var(--st-text-primary, #0f172a);
-  line-height: 1.4;
+  color: var(--st-text-primary);
+  line-height: var(--st-leading-tight);
   word-break: break-all;
 }
 
 .hw-title.strike {
-  color: var(--st-text-muted, #94a3b8);
+  color: var(--st-text-muted);
   text-decoration: line-through;
 }
 
 .hw-status-tag {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   font-weight: 500;
   color: var(--st-warning-dark, #d97706);
   background-color: var(--st-warning-light, #fffbeb);
@@ -1087,7 +1087,7 @@ onMounted(async () => {
   justify-content: center;
   gap: 4px;
   color: #ffffff;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 500;
   cursor: pointer;
 }
@@ -1121,7 +1121,7 @@ onMounted(async () => {
   height: 44px;
   border: none;
   background: transparent;
-  color: var(--st-text-muted, #94a3b8);
+  color: var(--st-text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1170,7 +1170,7 @@ onMounted(async () => {
   flex: 1;
   font-weight: 600;
   height: 42px;
-  font-size: 14px;
+  font-size: var(--st-font-md);
   border-radius: var(--st-radius-full, 9999px);
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
 }
@@ -1179,12 +1179,12 @@ onMounted(async () => {
   flex-shrink: 0;
   padding: 0 14px;
   height: 42px;
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 600;
   border-radius: var(--st-radius-full, 9999px);
   border: 1px solid var(--st-border-bold, #cbd5e1);
   background: #ffffff;
-  color: var(--st-text-regular, #334155);
+  color: var(--st-text-regular);
   display: inline-flex;
   align-items: center;
   gap: 6px;

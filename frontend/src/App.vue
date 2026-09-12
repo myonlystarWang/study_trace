@@ -23,7 +23,8 @@
 </script>
 
 <style>
-@import './assets/design-tokens.css';
+/* 令牌由 main.js 统一引入（design-tokens.css），此处不再重复 @import，
+   避免同一份变量定义出现在两处造成漂移。 */
 
 * {
   box-sizing: border-box;
@@ -34,8 +35,12 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
+  /* 全站基准字号：14px（与 Vant --van-font-size-md 同源）。
+     这是"裸放的 Vant 控件继承 16px"问题的根治点 —— 见 design-tokens.css 第 7 节注释。 */
+  font-size: var(--st-font-md, 14px);
+  line-height: var(--st-leading-normal, 1.5);
   background-color: #f1f5f9;
-  color: #0f172a;
+  color: var(--st-text-primary);
   min-height: 100vh;
   min-height: 100dvh;
 }
@@ -50,12 +55,5 @@ body {
   position: relative;
   background-color: #f8fafc;
   box-shadow: 0 0 25px rgba(0, 0, 0, 0.05);
-}
-
-:root {
-  --van-primary-color: #2563eb;
-  --van-success-color: #10b981;
-  --van-warning-color: #f59e0b;
-  --van-danger-color: #ef4444;
 }
 </style>

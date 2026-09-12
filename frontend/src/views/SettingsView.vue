@@ -1320,10 +1320,10 @@ const renderMonthlyCharts = () => {
             const p = params[0];
             const item = monthlyData.value?.daily_trends?.[p.dataIndex];
             if (!item || item.total === 0) {
-              return `<b>${item?.date || ''}</b><br/><span style="color:#94a3b8;">当天无作业打卡安排</span>`;
+              return `<b>${item?.date || ''}</b><br/><span style="color: var(--st-text-muted);">当天无作业打卡安排</span>`;
             }
             return `
-              <div style="font-size:12px;font-weight:600;margin-bottom:4px;color:#0f172a;">${item.date}</div>
+              <div style="font-size: var(--st-font-xs);font-weight:600;margin-bottom:4px;color:#0f172a;">${item.date}</div>
               <div style="display:flex;align-items:center;gap:6px;margin:2px 0;">
                 <span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:#3b82f6;"></span>
                 <span>作业总量：<b>${item.total}</b> 项 (完成 ${item.completed} 项)</span>
@@ -1531,14 +1531,14 @@ onUnmounted(() => {
 
 .pin-gate-card h3 {
   margin: 0 0 0.5rem;
-  font-size: 17px;
+  font-size: var(--st-font-xl);
   font-weight: 700;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
 }
 
 .gate-tip {
-  font-size: 13px;
-  color: var(--st-text-secondary, #64748b);
+  font-size: var(--st-font-sm);
+  color: var(--st-text-secondary);
   margin-bottom: 1.5rem;
 }
 
@@ -1573,9 +1573,9 @@ onUnmounted(() => {
 }
 
 .channel-title {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
   white-space: nowrap;
 }
 
@@ -1586,21 +1586,21 @@ onUnmounted(() => {
 
 .channel-field :deep(.van-field__label) {
   width: 70px;
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
   margin-right: 8px;
 }
 
 .channel-field :deep(.van-field__control) {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
 }
 
 .channel-test-btn {
   height: 28px;
   min-width: 52px;
   padding: 0 10px;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   border-radius: var(--st-radius-sm, 6px);
 }
 
@@ -1621,9 +1621,9 @@ onUnmounted(() => {
 }
 
 .wechat-members-title {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
   display: flex;
   align-items: center;
   gap: 5px;
@@ -1657,7 +1657,7 @@ onUnmounted(() => {
 }
 
 .member-index-badge {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   font-weight: 700;
   color: var(--st-primary, #2563eb);
   background: var(--st-primary-light, #eff6ff);
@@ -1668,9 +1668,9 @@ onUnmounted(() => {
 .member-name-input {
   border: 1px solid transparent;
   background: transparent;
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
   padding: 2px 6px;
   border-radius: 4px;
   max-width: 130px;
@@ -1691,12 +1691,12 @@ onUnmounted(() => {
 .member-single-test-btn {
   height: 24px;
   padding: 0 8px;
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   border-radius: 4px;
 }
 
 .member-del-btn {
-  font-size: 16px;
+  font-size: var(--st-font-xl);
   color: #ef4444;
   cursor: pointer;
   padding: 2px;
@@ -1715,8 +1715,8 @@ onUnmounted(() => {
   border: 1px solid var(--st-border-light, #cbd5e1);
   background: #ffffff;
   font-family: monospace;
-  font-size: 12px;
-  color: var(--st-text-primary, #1e293b);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-primary);
   padding: 6px 8px;
   border-radius: 6px;
   outline: none;
@@ -1735,7 +1735,7 @@ onUnmounted(() => {
 .wechat-add-btn {
   border-style: dashed;
   height: 32px;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   border-radius: var(--st-radius-sm, 6px);
 }
 
@@ -1743,16 +1743,16 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
-  color: var(--st-text-muted, #94a3b8);
-  line-height: 1.4;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-muted);
+  line-height: var(--st-leading-tight);
   margin-top: 4px;
   padding: 0 2px;
 }
 
 .caption-icon {
-  font-size: 12px;
-  color: var(--st-text-muted, #94a3b8);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-muted);
   flex-shrink: 0;
 }
 
@@ -1769,20 +1769,20 @@ onUnmounted(() => {
 }
 
 .selector-title {
-  font-size: 13.5px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
 }
 
 .selector-count {
-  font-size: 11.5px;
+  font-size: var(--st-font-xs);
   color: var(--st-primary, #2563eb);
   font-weight: 500;
 }
 
 .selector-count-empty {
-  font-size: 11.5px;
-  color: var(--st-text-muted, #94a3b8);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-muted);
 }
 
 .channel-grid {
@@ -1817,14 +1817,14 @@ onUnmounted(() => {
 .channel-badge {
   width: 24px;
   height: 24px;
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   flex-shrink: 0;
 }
 
 .channel-card-text {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1840,8 +1840,8 @@ onUnmounted(() => {
   background-color: #f8fafc;
   border: 1px dashed #cbd5e1;
   border-radius: var(--st-radius-md, 10px);
-  color: var(--st-text-secondary, #64748b);
-  font-size: 12.5px;
+  color: var(--st-text-secondary);
+  font-size: var(--st-font-xs);
 }
 
 /* 底部操作按钮：同行并排双按钮 */
@@ -1854,7 +1854,7 @@ onUnmounted(() => {
 
 .notif-btn {
   height: 40px;
-  font-size: 13.5px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1869,9 +1869,9 @@ onUnmounted(() => {
 
 /* 学科管理卡片样式 */
 .card-hint-text {
-  font-size: 12px;
-  color: var(--st-text-secondary, #64748b);
-  line-height: 1.5;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
+  line-height: var(--st-leading-normal);
   margin-bottom: 10px;
   padding: 0 4px;
 }
@@ -1890,14 +1890,14 @@ onUnmounted(() => {
 }
 
 .subject-score-val {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
   color: var(--st-primary, #2563eb);
 }
 
 .subject-edit-icon {
-  font-size: 14px;
-  color: var(--st-text-muted, #94a3b8);
+  font-size: var(--st-font-md);
+  color: var(--st-text-muted);
 }
 
 .add-subject-cell {
@@ -1909,13 +1909,13 @@ onUnmounted(() => {
 }
 
 .edit-dialog-tip {
-  font-size: 11px;
-  color: var(--st-text-secondary, #64748b);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
   background: #f8fafc;
   border-radius: var(--st-radius-sm, 6px);
   padding: 8px 10px;
   margin-top: 10px;
-  line-height: 1.4;
+  line-height: var(--st-leading-tight);
 }
 
 /* 月度透视样式 */
@@ -1937,9 +1937,9 @@ onUnmounted(() => {
 }
 
 .monthly-title {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
 }
 
 .month-stepper {
@@ -1949,7 +1949,7 @@ onUnmounted(() => {
 }
 
 .current-month-text {
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
   color: var(--st-primary, #2563eb);
 }
@@ -1974,9 +1974,9 @@ onUnmounted(() => {
 }
 
 .m-stat-val {
-  font-size: 15px;
+  font-size: var(--st-font-lg);
   font-weight: 700;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
   height: 22px;
   line-height: 22px;
   display: flex;
@@ -1985,8 +1985,8 @@ onUnmounted(() => {
 }
 
 .m-stat-label {
-  font-size: 11px;
-  color: var(--st-text-secondary, #64748b);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
   height: 16px;
   line-height: 16px;
   margin-top: 4px;
@@ -2004,9 +2004,9 @@ onUnmounted(() => {
 }
 
 .monthly-chart-title {
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
-  color: var(--st-text-secondary, #475569);
+  color: var(--st-text-secondary);
   margin-bottom: 4px;
 }
 
@@ -2020,7 +2020,7 @@ onUnmounted(() => {
 }
 
 .monthly-perfect-tip {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   color: #166534;
   background: #f0fdf4;
   padding: 10px 12px;
@@ -2054,9 +2054,9 @@ onUnmounted(() => {
 }
 
 .overview-title {
-  font-size: 15px;
+  font-size: var(--st-font-lg);
   font-weight: 700;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
 }
 
 .overview-quick-actions {
@@ -2068,7 +2068,7 @@ onUnmounted(() => {
 .quick-summary-btn {
   height: 32px;
   padding: 0 16px;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 500;
 }
 
@@ -2087,14 +2087,14 @@ onUnmounted(() => {
 }
 
 .section-toolbar-title {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
   color: #475569;
 }
 
 .section-toolbar-count {
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-muted);
   background: #f1f5f9;
   padding: 1px 6px;
   border-radius: 10px;
@@ -2103,7 +2103,7 @@ onUnmounted(() => {
 .section-toggle-all-btn {
   background: none;
   border: none;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   color: #2563eb;
   cursor: pointer;
   display: flex;
@@ -2169,15 +2169,15 @@ onUnmounted(() => {
 }
 
 .st-collapse-title {
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 600;
-  color: var(--st-text-primary, #0f172a);
-  line-height: 1.3;
+  color: var(--st-text-primary);
+  line-height: var(--st-leading-tight);
 }
 
 .st-collapse-summary {
-  font-size: 11px;
-  color: var(--st-text-secondary, #64748b);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2192,8 +2192,8 @@ onUnmounted(() => {
 }
 
 .st-collapse-arrow {
-  font-size: 14px;
-  color: #94a3b8;
+  font-size: var(--st-font-md);
+  color: var(--st-text-muted);
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s ease;
 }
 
@@ -2221,7 +2221,7 @@ onUnmounted(() => {
 
 .notif-save-btn {
   height: 38px;
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 600;
 }
 </style>

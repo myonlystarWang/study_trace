@@ -46,7 +46,7 @@
       <div v-if="weakSubjects.length > 0" class="weak-diagnostic-box">
         <div class="diagnostic-header">
           <div class="diag-title-row">
-            <span class="st-icon-badge st-icon-badge--danger" style="width: 22px; height: 22px; font-size: 12px;">
+            <span class="st-icon-badge st-icon-badge--danger" style="width: 22px; height: 22px; font-size: var(--st-font-xs);">
               <van-icon name="warning" />
             </span>
             <span class="diag-title">薄弱学科诊断建议 ({{ weakSubjects.length }} 门)</span>
@@ -72,7 +72,7 @@
         </div>
       </div>
       <div v-else class="weak-good-box">
-        <span class="st-icon-badge st-icon-badge--success" style="width: 22px; height: 22px; font-size: 12px; margin-right: 6px;">
+        <span class="st-icon-badge st-icon-badge--success" style="width: 22px; height: 22px; font-size: var(--st-font-xs); margin-right: 6px;">
           <van-icon name="passed" />
         </span>
         <span class="good-text">各科基础扎实，目前未触发薄弱预警，继续保持！</span>
@@ -269,11 +269,11 @@
           <span class="st-icon-badge st-icon-badge--warning">
             <van-icon name="lock" />
           </span>
-          <span style="font-size: 16px; font-weight: 600; color: #0f172a;">家长身份验证</span>
+          <span style="font-size: var(--st-font-xl); font-weight: 600; color: #0f172a;">家长身份验证</span>
         </div>
         <van-icon name="cross" size="18" color="#94a3b8" style="cursor: pointer;" @click="showPinModal = false" />
       </div>
-      <p style="font-size: 13px; color: #64748b; margin-bottom: 16px; line-height: 1.5;">
+      <p style="font-size: var(--st-font-sm); color: var(--st-text-secondary); margin-bottom: 16px; line-height: var(--st-leading-normal);">
         考试成绩录入与修改属于家长权限，请输入 6 位管理口令：
       </p>
       <van-field
@@ -1111,7 +1111,7 @@ const handleDeleteExam = (exam) => {
   background: var(--st-bg-card, #ffffff);
   border-radius: var(--st-radius-md, 14px);
   padding: 16px;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
   box-shadow: var(--st-shadow-card);
   border: 1px solid var(--st-border, #f1f5f9);
 }
@@ -1130,14 +1130,14 @@ const handleDeleteExam = (exam) => {
 }
 
 .student-name {
-  font-size: 16px;
+  font-size: var(--st-font-xl);
   font-weight: 600;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
 }
 
 .student-sub {
-  font-size: 11px;
-  color: var(--st-text-secondary, #64748b);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
   margin-top: 2px;
 }
 
@@ -1151,19 +1151,19 @@ const handleDeleteExam = (exam) => {
 
 .badge-label {
   display: block;
-  font-size: 10px;
+  font-size: var(--st-font-xs);
   color: var(--st-primary, #2563eb);
 }
 
 .badge-val {
-  font-size: 16px;
+  font-size: var(--st-font-xl);
   font-weight: 700;
   color: var(--st-primary, #2563eb);
 }
 
 .badge-val small {
-  font-size: 11px;
-  color: var(--st-text-secondary, #64748b);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
 }
 
 .summary-stats-grid {
@@ -1185,12 +1185,12 @@ const handleDeleteExam = (exam) => {
 .stat-num {
   font-size: 18px;
   font-weight: 700;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
 }
 
 .stat-tit {
-  font-size: 11px;
-  color: var(--st-text-secondary, #64748b);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
   margin-top: 2px;
 }
 
@@ -1217,25 +1217,31 @@ const handleDeleteExam = (exam) => {
 .diag-title-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--st-space-2);
+  flex: 0 0 auto;   /* 标题不参与压缩，否则 "(3 门)" 会被挤到第二行 */
 }
 
 .diagnostic-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  column-gap: var(--st-space-3);
+  row-gap: var(--st-space-2);
+  margin-bottom: var(--st-space-3);
 }
 
 .diag-title {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
   color: #b91c1c;
+  white-space: nowrap;
 }
 
 .diag-tip {
-  font-size: 10px;
-  color: #94a3b8;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-muted);
+  line-height: var(--st-leading-normal);
 }
 
 .weak-tags-list {
@@ -1258,19 +1264,19 @@ const handleDeleteExam = (exam) => {
 }
 
 .weak-sub-name {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
   color: #991b1b;
 }
 
 .weak-card-desc {
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   color: #dc2626;
   margin: 4px 0;
 }
 
 .weak-card-action {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   color: #2563eb;
   text-align: right;
   font-weight: 500;
@@ -1291,7 +1297,7 @@ const handleDeleteExam = (exam) => {
 }
 
 .good-text {
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   color: #166534;
   font-weight: 500;
 }
@@ -1318,19 +1324,19 @@ const handleDeleteExam = (exam) => {
 }
 
 .card-icon {
-  font-size: 16px;
+  font-size: var(--st-font-xl);
 }
 
 .card-title {
-  font-size: 15px;
+  font-size: var(--st-font-lg);
   font-weight: 600;
   color: #0f172a;
   white-space: nowrap !important;
 }
 
 .card-sub {
-  font-size: 11px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
 }
 
 /* 科目滚动切换 Pills */
@@ -1350,7 +1356,7 @@ const handleDeleteExam = (exam) => {
 .pill-btn {
   white-space: nowrap;
   padding: 4px 10px;
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   border-radius: 16px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
@@ -1376,8 +1382,8 @@ const handleDeleteExam = (exam) => {
 }
 
 .chart-footnote {
-  font-size: 11px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
   background: #f1f5f9;
   padding: 6px 10px;
   border-radius: 8px;
@@ -1387,12 +1393,12 @@ const handleDeleteExam = (exam) => {
 .chart-empty-tip {
   text-align: center;
   padding: 40px 0;
-  font-size: 13px;
-  color: #94a3b8;
+  font-size: var(--st-font-sm);
+  color: var(--st-text-muted);
 }
 
 .custom-select {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   padding: 4px 8px;
   border-radius: 6px;
   border: 1px solid #cbd5e1;
@@ -1410,7 +1416,7 @@ const handleDeleteExam = (exam) => {
   background: #fffbeb;
   border: 1px solid #fde68a;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   color: #b45309;
   display: flex;
   align-items: center;
@@ -1430,15 +1436,15 @@ const handleDeleteExam = (exam) => {
 }
 
 .fallback-title {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
   color: #475569;
   margin: 6px 0 2px;
 }
 
 .fallback-sub {
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-muted);
 }
 
 /* 考试历史台账 */
@@ -1456,8 +1462,8 @@ const handleDeleteExam = (exam) => {
 }
 
 .ledger-count {
-  font-size: 12px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
 }
 
 .ledger-list {
@@ -1486,7 +1492,7 @@ const handleDeleteExam = (exam) => {
 }
 
 .exam-type-badge {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
   background: #eff6ff;
   color: #2563eb;
@@ -1495,14 +1501,14 @@ const handleDeleteExam = (exam) => {
 }
 
 .exam-title {
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 600;
   color: #0f172a;
 }
 
 .exam-date-row {
-  font-size: 11px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
   margin: 6px 0;
   display: flex;
   align-items: center;
@@ -1514,7 +1520,7 @@ const handleDeleteExam = (exam) => {
   color: #475569;
   padding: 1px 6px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: var(--st-font-xs);
 }
 
 .exam-score-banner {
@@ -1528,19 +1534,19 @@ const handleDeleteExam = (exam) => {
 }
 
 .total-label {
-  font-size: 12px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
 }
 
 .total-num {
-  font-size: 16px;
+  font-size: var(--st-font-xl);
   font-weight: 700;
   color: #0f172a;
 }
 
 .total-full {
-  font-size: 12px;
-  color: #94a3b8;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-muted);
 }
 
 .subject-chips-grid {
@@ -1556,7 +1562,7 @@ const handleDeleteExam = (exam) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 11px;
+  font-size: var(--st-font-xs);
 }
 
 .sub-score-chip.chip-absent {
@@ -1572,7 +1578,7 @@ const handleDeleteExam = (exam) => {
 }
 
 .chip-score small {
-  color: #94a3b8;
+  color: var(--st-text-muted);
 }
 
 .absent-text {
@@ -1601,7 +1607,7 @@ const handleDeleteExam = (exam) => {
 }
 
 .popup-title {
-  font-size: 16px;
+  font-size: var(--st-font-xl);
   font-weight: 600;
   color: #0f172a;
 }
@@ -1633,7 +1639,7 @@ const handleDeleteExam = (exam) => {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
   color: #1e293b;
 }
@@ -1647,11 +1653,11 @@ const handleDeleteExam = (exam) => {
   border-radius: 6px;
   background: #2563eb;
   color: #ffffff;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
 }
 
 .smart-parse-tag {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   color: #2563eb;
   background: #dbeafe;
   padding: 2px 8px;
@@ -1668,8 +1674,8 @@ const handleDeleteExam = (exam) => {
 }
 
 .smart-parse-textarea {
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--st-font-sm);
+  line-height: var(--st-leading-normal);
   padding: 8px 10px;
 }
 
@@ -1682,8 +1688,8 @@ const handleDeleteExam = (exam) => {
 .sample-btn {
   background: transparent;
   border: 1px dashed #94a3b8;
-  color: #64748b;
-  font-size: 11px;
+  color: var(--st-text-secondary);
+  font-size: var(--st-font-xs);
   border-radius: 14px;
   padding: 3px 10px;
   cursor: pointer;
@@ -1707,14 +1713,14 @@ const handleDeleteExam = (exam) => {
 .clear-text-btn {
   background: transparent;
   border: none;
-  color: #94a3b8;
-  font-size: 12px;
+  color: var(--st-text-muted);
+  font-size: var(--st-font-xs);
   cursor: pointer;
   padding: 4px 6px;
 }
 
 .clear-text-btn:active {
-  color: #64748b;
+  color: var(--st-text-secondary);
 }
 
 .parse-submit-btn {
@@ -1731,7 +1737,7 @@ const handleDeleteExam = (exam) => {
 }
 
 .calc-label {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   color: #1d4ed8;
   font-weight: 500;
 }
@@ -1744,7 +1750,7 @@ const handleDeleteExam = (exam) => {
 }
 
 .calc-main {
-  font-size: 15px;
+  font-size: var(--st-font-lg);
   color: #1e3a8a;
 }
 
@@ -1754,7 +1760,7 @@ const handleDeleteExam = (exam) => {
 }
 
 .calc-sub {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   color: #3b82f6;
 }
 
@@ -1771,7 +1777,7 @@ const handleDeleteExam = (exam) => {
 }
 
 .sub-name-tag {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
   color: #1e293b;
 }
@@ -1783,8 +1789,8 @@ const handleDeleteExam = (exam) => {
 }
 
 .toggle-label {
-  font-size: 11px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
 }
 
 .sub-inputs-row {
@@ -1832,7 +1838,7 @@ const handleDeleteExam = (exam) => {
   justify-content: center;
   gap: 4px;
   color: #ffffff;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 500;
   cursor: pointer;
 }
@@ -1862,7 +1868,7 @@ const handleDeleteExam = (exam) => {
 .add-score-btn {
   font-weight: 600;
   height: 42px;
-  font-size: 14px;
+  font-size: var(--st-font-md);
   border-radius: var(--st-radius-full, 9999px);
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
 }

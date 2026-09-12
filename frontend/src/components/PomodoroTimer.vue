@@ -249,7 +249,7 @@ onUnmounted(() => {
 }
 
 .ball-timer {
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: bold;
   font-variant-numeric: tabular-nums;
 }
@@ -263,13 +263,13 @@ onUnmounted(() => {
 .pomodoro-title {
   margin: 0 0 4px;
   font-size: 20px;
-  color: #1a1a1a;
+  color: var(--st-text-primary);
 }
 
 .pomodoro-subtitle {
   margin: 0 0 24px;
-  font-size: 13px;
-  color: #888;
+  font-size: var(--st-font-sm);
+  color: var(--st-text-secondary);
 }
 
 .timer-dial-wrapper {
@@ -305,7 +305,7 @@ onUnmounted(() => {
 }
 
 .status-tip {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   color: #ef4444;
   margin-top: 4px;
 }
@@ -322,7 +322,7 @@ onUnmounted(() => {
   background: #f9fafb;
   padding: 6px 14px;
   border-radius: 20px;
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   color: #4b5563;
   cursor: pointer;
 }
@@ -346,7 +346,7 @@ onUnmounted(() => {
   max-width: 140px;
   padding: 12px 0;
   border-radius: 24px;
-  font-size: 16px;
+  font-size: var(--st-font-xl);
   font-weight: bold;
   border: none;
   cursor: pointer;
@@ -370,9 +370,9 @@ onUnmounted(() => {
 }
 
 .ios-audio-note {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   color: #9ca3af;
-  line-height: 1.5;
+  line-height: var(--st-leading-normal);
   text-align: left;
   background: #f9fafb;
   padding: 10px 14px;
