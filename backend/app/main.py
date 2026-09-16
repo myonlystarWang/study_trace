@@ -89,7 +89,13 @@ if FRONTEND_DIST.exists():
         file_path = FRONTEND_DIST / full_path
         if file_path.is_file():
             return FileResponse(file_path)
-        return FileResponse(FRONTEND_DIST / "index.html")
+        # index.html 必须每次回源校验：它引用的是带内容 hash 的 assets 文件名，
+        # 若被浏览器启发式缓存（无 Cache-Control 时默认行为），前端发新版后用户仍会
+        # 去加载已被 vite 清空的旧 chunk（404 白屏）或继续跑旧代码。
+        return FileResponse(
+            FRONTEND_DIST / "index.html",
+            headers={"Cache-Control": "no-cache, must-revalidate"},
+        )
 else:
     @app.get("/")
     async def index_placeholder():
