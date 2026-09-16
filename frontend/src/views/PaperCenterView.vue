@@ -97,8 +97,8 @@
             :class="{ selected: selectedIds.includes(item.id) }"
             @click="toggleSelect(item.id)"
           >
-            <div class="candidate-checkbox" @click.stop>
-              <van-checkbox :model-value="selectedIds.includes(item.id)" @change="toggleSelect(item.id)" />
+            <div class="candidate-checkbox" @click.stop="toggleSelect(item.id)">
+              <van-checkbox :model-value="selectedIds.includes(item.id)" />
             </div>
             <div class="candidate-info">
               <div class="candidate-tags" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
