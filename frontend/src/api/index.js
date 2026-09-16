@@ -62,9 +62,12 @@ export const backupApi = {
 
 export const ocrApi = {
   upload: (formData) => mistakeApi.uploadImage(formData),
+  // 识别要连带上传图片：默认 10s 超时在蜂窝网络下会把「图片还没传完」误判成失败，
+  // 这里单独放宽到 60s，仅影响本接口，不动全局配置。
   createTask: (formData) =>
     api.post('/ocr/tasks', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000
     }),
   getTask: (taskId) => api.get(`/ocr/tasks/${taskId}`),
   getEngines: () => api.get('/ocr/engines')
