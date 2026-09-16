@@ -11,8 +11,16 @@ from backend.app.schemas import (
     MistakeRecordCreate, MistakeRecordOut, MistakeReviewCreate, MistakeReviewOut, MistakeBatchDeleteIn
 )
 from backend.app.utils.image_handler import save_image_bytes
+from backend.app.utils.math_text import normalize_math_text
 
 router = APIRouter(prefix="/api/mistakes", tags=["错题本"])
+
+
+def _clean_math_text(value: Optional[str]) -> Optional[str]:
+    """入库前清洗题干/答案里的 LaTeX 定界符；None 保持 None（区分"没填"与"填了空串"）。"""
+    if value is None:
+        return None
+    return normalize_math_text(value)
 
 # 错题记录上所有指向图片的三列，删除错题或删图时据此判断文件是否还被引用
 IMAGE_FIELDS = ("original_image_path", "thumbnail_path", "cropped_diagram_path")
@@ -24,6 +32,9 @@ IMAGE_KIND_FIELDS = {
     "question": ("original_image_path", "thumbnail_path"),
     "diagram": ("cropped_diagram_path",),
 }
+
+# 需要做数学文本清洗的文本字段
+MATH_TEXT_FIELDS = ("extracted_text", "answer")
 
 
 def _resolve_upload_file(rel_path: Optional[str]) -> Optional[Path]:
@@ -189,8 +200,8 @@ def create_mistake(item: MistakeRecordCreate, db: Session = Depends(get_db)):
         original_image_path=item.original_image_path,
         thumbnail_path=item.thumbnail_path or item.original_image_path,
         cropped_diagram_path=item.cropped_diagram_path,
-        extracted_text=item.extracted_text,
-        answer=item.answer,
+        extracted_text=_clean_math_text(item.extracted_text),
+        answer=_clean_math_text(item.answer),
         error_type=item.error_type,
         mastery_status=item.mastery_status or "未掌握",
         next_review_date=next_date,
@@ -262,7 +273,10 @@ def update_mistake(mistake_id: int, item_in: dict, db: Session = Depends(get_db)
             continue
         if item_in[field] is None and field not in NULLABLE_IMAGE_FIELDS:
             continue
-        setattr(r, field, item_in[field])
+        value = item_in[field]
+        if field in MATH_TEXT_FIELDS and value is not None:
+            value = normalize_math_text(value)
+        setattr(r, field, value)
 
     db.commit()
     db.refresh(r)

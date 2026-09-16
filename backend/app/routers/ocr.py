@@ -20,6 +20,7 @@ from pydantic import BaseModel
 from backend.app.config import UPLOADS_DIR, OCR_TEMP_DIR
 from backend.app.schemas import OcrEnginesOut, OcrResultOut, OcrTaskOut
 from backend.app.utils import ocr_service
+from backend.app.utils.math_text import normalize_math_text
 from backend.app.utils.ocr_service import OcrResult
 
 router = APIRouter(prefix="/api/ocr", tags=["ocr"])
@@ -67,6 +68,13 @@ def _run_task(task_id: str, image_path: str, mode: str, is_temp: bool = False) -
             task["engine"] = engine.name
             task["progress"] = 50
         result = engine.recognize(image_path)
+        # 统一清洗数学文本：剥掉 $…$ / \( \) 这类定界符与裸反斜杠，
+        # 否则它们会作为可见字符出现在题干、编辑框和打印卷面上。
+        cleaned = normalize_math_text(result.text)
+        if cleaned != result.text:
+            result.text = cleaned
+            if len(result.lines) == 1:
+                result.lines[0].text = cleaned
         # 成功路径：先删除临时输入文件，确保 status 置为 succeeded 时文件已不在磁盘，
         # 即使客户端在轮询到成功的瞬间断开也不会残留孤儿文件（杜绝磁盘泄漏）。
         if is_temp:

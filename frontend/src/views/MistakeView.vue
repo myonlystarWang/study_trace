@@ -347,6 +347,18 @@
             preview-size="80px"
           />
           <p class="upload-hint">拍完会自动进入框选裁剪，确认后立即识别题干</p>
+          <div class="keep-image-row">
+            <span class="keep-image-state">
+              {{ questionImageKept ? '已保留原图，卡片上可放大对照' : '照片仅用于识别，不会存进错题本' }}
+            </span>
+            <button
+              class="mini-btn"
+              :disabled="!ocrSourceFile || questionImageKept"
+              @click="preserveQuestionImage"
+            >
+              保留原图
+            </button>
+          </div>
         </div>
 
         <div class="form-group">
@@ -391,7 +403,7 @@
               icon="scan"
               :loading="ocrLoading"
               loading-text="识别中..."
-              :disabled="!newMistake.original_image_path"
+              :disabled="!canReExtract"
               class="ocr-extract-btn"
               @click="extractText"
             >
@@ -406,6 +418,12 @@
             placeholder="填写、粘贴，或先上传图片后点「智能提取题干」"
             class="sheet-input-field"
           />
+          <div class="math-preview" v-if="newMistake.extracted_text && newMistake.extracted_text.trim()">
+            <span class="math-preview-label">渲染效果</span>
+            <p class="math-preview-body">
+              <MathText :text="newMistake.extracted_text" />
+            </p>
+          </div>
         </div>
 
         <div class="form-group">
@@ -572,6 +590,12 @@
             placeholder="题干文字内容"
             class="sheet-input-field"
           />
+          <div class="math-preview" v-if="editingMistake.extracted_text && editingMistake.extracted_text.trim()">
+            <span class="math-preview-label">渲染效果</span>
+            <p class="math-preview-body">
+              <MathText :text="editingMistake.extracted_text" />
+            </p>
+          </div>
         </div>
 
         <div class="form-group">
@@ -738,6 +762,9 @@ const showCropper = ref(false);
 const cropperImageUrl = ref('');
 const cropperMode = ref('question');
 const pendingUploadFile = ref(null);
+// 本轮识别所用的题干图（前端本地文件）。识别走临时通道，用完即弃，
+// 只有用户主动点「保留原图」才会真正上传入库 —— 避免错题本被整页照片淹没。
+const ocrSourceFile = ref(null);
 // 编辑态裁剪：非 null 时表示本次裁剪是给某条已存记录换图
 const editCropKind = ref(null);
 
@@ -908,6 +935,13 @@ const newMistake = ref({
   storage_key: null
 });
 
+// 能不能重新识别：要么手上还有本地题干图，要么已经主动保留了原图（服务端有底图）
+const canReExtract = computed(() =>
+  Boolean(ocrSourceFile.value || newMistake.value.storage_key)
+);
+// 用户是否主动保留了题干原图（决定提示文案与按钮态）
+const questionImageKept = computed(() => Boolean(newMistake.value.original_image_path));
+
 const onTabChange = () => {
   isBatchMode.value = false;
   selectedIds.value = [];
@@ -1018,9 +1052,15 @@ const submitReview = async (id, result) => {
 
 const handleUpload = (file) => {
   pendingUploadFile.value = file;
-  cropperImageUrl.value = file.content || (file.file ? URL.createObjectURL(file.file) : '');
+  // 预览一律用 Vant 生成好的 objectUrl（blob）。过去的 content 是整张图的
+  // base64 dataUrl（数 MB 字符串），既占内存又让 <img> 解码变慢。
+  const preview = file.objectUrl || (file.file ? URL.createObjectURL(file.file) : '');
+  cropperImageUrl.value = preview;
   cropperMode.value = 'question';
   editCropKind.value = null;
+  // max-count=1 对「单文件拍照」不生效（Vant 单文件分支不做 remainCount 裁剪），
+  // 新 item 会被追加到数组里越攒越多 —— 这里强制只保留本次这一张。
+  fileList.value = [{ file: file.file, objectUrl: preview, status: '', message: '' }];
   showCropper.value = true;
 };
 
@@ -1042,7 +1082,7 @@ const uploadQuestionImage = async (rawFile, previewBlobUrl = null) => {
     newMistake.value.thumbnail_path = data.thumbnail_url;
     newMistake.value.storage_key = data.storage_key;
     if (previewBlobUrl) {
-      fileList.value = [{ url: previewBlobUrl }];
+      fileList.value = [{ file: rawFile, objectUrl: previewBlobUrl, status: '', message: '' }];
     }
     closeToast();
     return true;
@@ -1051,6 +1091,34 @@ const uploadQuestionImage = async (rawFile, previewBlobUrl = null) => {
     showToast('图片上传失败，请重试');
     return false;
   }
+};
+
+/** 清空「已入库的题干图」三件套（不删磁盘，因为此时还没有记录引用它） */
+const clearPendingQuestionImage = () => {
+  newMistake.value.original_image_path = null;
+  newMistake.value.thumbnail_path = null;
+  newMistake.value.storage_key = null;
+};
+
+/**
+ * 主动保留题干原图。
+ *
+ * 默认流程下照片只用于识别、不入库；只有点了这个按钮才会真正上传，
+ * 卡片上才会出现可放大的底图（用于对照批改与订正笔迹）。
+ */
+const preserveQuestionImage = async () => {
+  const raw = ocrSourceFile.value;
+  if (!raw) {
+    showToast('请先拍照或上传错题图片');
+    return;
+  }
+  if (newMistake.value.original_image_path) {
+    showToast('原图已保留');
+    return;
+  }
+  const preview = fileList.value[0]?.objectUrl || fileList.value[0]?.url || null;
+  const ok = await uploadQuestionImage(raw, preview);
+  if (ok) showToast({ message: '已保留原图，卡片上可放大对照', icon: 'success' });
 };
 
 /** 上传题目配图（数轴/几何图），落到 newMistake.cropped_diagram_path */
@@ -1072,7 +1140,7 @@ const uploadDiagramImage = async (rawFile) => {
 /** 用同一张原图二次框选，只保留图形区域 */
 const openDiagramCropper = () => {
   const pending = pendingUploadFile.value;
-  const url = pending?.content
+  const url = pending?.objectUrl
     || (pending?.file ? URL.createObjectURL(pending.file) : '')
     || cropperImageUrl.value;
   if (!url) {
@@ -1120,16 +1188,28 @@ const onCropConfirm = async (cropData) => {
     return;
   }
 
-  const ok = await uploadQuestionImage(cropData.file, cropData.blobUrl);
+  const wasKept = questionImageKept.value;
+  // 默认不落盘：题干图只留在前端，识别走临时通道，用完即弃。
+  // 想要底图对照批改笔迹，请点「保留原图」。
+  ocrSourceFile.value = cropData.file;
+  clearPendingQuestionImage();
+  if (cropData.blobUrl) {
+    fileList.value = [{ file: cropData.file, objectUrl: cropData.blobUrl, status: '', message: '' }];
+  }
+  // 之前主动保留过原图 → 重新裁剪视为换图，直接覆盖保存，避免留下过期底图
+  if (wasKept) await uploadQuestionImage(cropData.file, cropData.blobUrl);
+
+  // 识别失败就直接停：过去这里无视返回值继续弹「题目里有图形吗？」，
+  // 失败提示被弹窗挡住，用户会误以为是点了配图选项才报错。
+  const ok = await extractText();
   if (!ok) return;
-  await extractText();
   await askForDiagramAfterQuestion();
 };
 
 const onCropSkip = async () => {
   showCropper.value = false;
 
-  // 配图流程里「跳过」= 不添加配图，不影响已上传的题干图
+  // 配图流程里「跳过」= 不添加配图，不影响已有的题干图
   if (cropperMode.value === 'diagram') {
     cropperMode.value = 'question';
     return;
@@ -1138,11 +1218,11 @@ const onCropSkip = async () => {
   const pending = pendingUploadFile.value;
   if (!pending?.file) return;
 
-  // 整张照片通常带批改痕迹与订正答案，先明确告知风险再决定
+  // 整张照片通常带批改痕迹与订正答案，先明确告知再决定（图片本身仍不会入库）
   try {
     await showConfirmDialog({
       title: '确认不裁剪？',
-      message: '将直接使用整张照片，照片里的批改痕迹和订正答案会一并保存，并可能随复习卷打印出来。',
+      message: '将用整张照片做识别，批改痕迹和订正答案可能干扰识别结果。照片只用于识别，不会存进错题本。',
       confirmButtonText: '仍用整张',
       cancelButtonText: '返回裁剪'
     });
@@ -1151,14 +1231,16 @@ const onCropSkip = async () => {
     return;
   }
 
-  const ok = await uploadQuestionImage(
-    pending.file,
-    pending.content || URL.createObjectURL(pending.file)
-  );
-  if (ok) {
-    await extractText();
-    await askForDiagramAfterQuestion();
-  }
+  const preview = pending.objectUrl || URL.createObjectURL(pending.file);
+  const wasKept = questionImageKept.value;
+  ocrSourceFile.value = pending.file;
+  clearPendingQuestionImage();
+  fileList.value = [{ file: pending.file, objectUrl: preview, status: '', message: '' }];
+  if (wasKept) await uploadQuestionImage(pending.file, preview);
+
+  const ok = await extractText();
+  if (!ok) return;
+  await askForDiagramAfterQuestion();
 };
 
 const onCropCancel = () => {
@@ -1170,6 +1252,7 @@ const onCropCancel = () => {
   if (wasDiagram) return;
   fileList.value = [];
   pendingUploadFile.value = null;
+  ocrSourceFile.value = null;
 };
 
 const finishOcr = (ok, message) => {
@@ -1179,23 +1262,87 @@ const finishOcr = (ok, message) => {
   }
   ocrLoading.value = false;
   closeToast();
-  showToast({ message, icon: ok ? 'success' : 'warning-o', duration: ok ? 2000 : 2600 });
+  showToast({ message, icon: ok ? 'success' : 'warning-o', duration: ok ? 2000 : 3200 });
+};
+
+// 识别上传最多重试 1 次：移动网络下首次建连/丢包失败很常见，重试一次基本能过。
+const OCR_UPLOAD_RETRIES = 1;
+
+/**
+ * 识别用图必须先压缩。
+ *
+ * 拍照原图 3~5MB，裁剪结果也是 canvas 原尺寸 JPEG（q=0.9，动辄 1~2MB），
+ * 蜂窝网络下上传常常超过接口超时，表现为「识别失败」，重试一下又能过。
+ * 压到长边 2000 / q0.85（约 300~600KB）对题干文字识别精度无影响。
+ */
+const buildOcrFormData = async (localFile) => {
+  let source = localFile instanceof File
+    ? localFile
+    : new File([localFile], 'question.png', { type: localFile?.type || 'image/png' });
+  if (!source.name) {
+    source = new File([source], 'question.jpg', { type: source.type || 'image/jpeg' });
+  }
+
+  let uploadFile = source;
+  try {
+    const compressed = await compressImage(source, 2000, 0.85);
+    if (compressed?.file) uploadFile = compressed.file;
+  } catch (e) {
+    // 极端格式（如 HEIC 解码失败）压缩不了 → 直接传原图，交给后端引擎兜底
+  }
+
+  const fd = new FormData();
+  fd.append('file', uploadFile);
+  fd.append('mode', 'auto');
+  return fd;
+};
+
+/** 提交识别任务；仅网络类瞬态错误重试（服务端已应答的错误重试无意义） */
+const startOcrTask = async (fd) => {
+  let lastErr = null;
+  for (let attempt = 0; attempt <= OCR_UPLOAD_RETRIES; attempt += 1) {
+    try {
+      return await ocrApi.createTask(fd);
+    } catch (e) {
+      lastErr = e;
+      if (e?.response) throw e;
+    }
+  }
+  throw lastErr;
+};
+
+/** 把上传/识别异常翻译成一句能指导下一步动作的话 */
+const describeOcrFailure = (e) => {
+  const status = e?.response?.status;
+  if (status) return `识别服务异常（${status}），请稍后重试`;
+  const code = e?.code || '';
+  const msg = String(e?.message || '');
+  if (code === 'ECONNABORTED' || /timeout/i.test(msg)) return '图片上传超时，请确认网络后重试';
+  if (code === 'ERR_NETWORK' || /Network Error/i.test(msg)) return '网络中断，图片没传上去，请重试';
+  return '识别请求失败，请重试';
 };
 
 const extractText = async () => {
   if (ocrLoading.value) return false;
-  if (!newMistake.value.storage_key) {
-    showToast('请先上传错题图片');
+  const localFile = ocrSourceFile.value;
+  if (!localFile && !newMistake.value.storage_key) {
+    showToast('请先拍照或上传错题图片');
     return false;
   }
 
   ocrLoading.value = true;
   showToast({ type: 'loading', message: '正在识别题干…', duration: 0 });
   try {
-    const fd = new FormData();
-    fd.append('image_path', newMistake.value.storage_key);
-    fd.append('mode', 'auto');
-    const res = await ocrApi.createTask(fd);
+    let fd;
+    if (localFile) {
+      // 识别走临时通道：先压缩再上传，后端识别完即销毁图片，照片不会留在错题本里
+      fd = await buildOcrFormData(localFile);
+    } else {
+      fd = new FormData();
+      fd.append('image_path', newMistake.value.storage_key);
+      fd.append('mode', 'auto');
+    }
+    const res = await startOcrTask(fd);
     const taskId = res.data.task_id;
     if (pollTimerM) clearInterval(pollTimerM);
     ocrPollCount = 0;
@@ -1236,7 +1383,7 @@ const extractText = async () => {
       }, 500);
     });
   } catch (e) {
-    finishOcr(false, '发起识别任务失败');
+    finishOcr(false, describeOcrFailure(e));
     return false;
   }
 };
@@ -1247,7 +1394,7 @@ const submitAddMistake = async () => {
     return;
   }
   if (!newMistake.value.extracted_text && !newMistake.value.thumbnail_path) {
-    showToast('请至少填写题干文字或上传错题图片');
+    showToast('请填写题干文字或图片；只想要图片记录就点「保留原图」');
     return;
   }
 
@@ -1278,6 +1425,7 @@ const closeAddModal = () => {
   showAddModal.value = false;
   fileList.value = [];
   pendingUploadFile.value = null;
+  ocrSourceFile.value = null;
   cropperMode.value = 'question';
   editCropKind.value = null;
   if (pollTimerM) {
@@ -1945,6 +2093,45 @@ onBeforeUnmount(() => {
   font-size: var(--st-font-xs);
   line-height: var(--st-leading-normal);
   color: var(--st-text-muted);
+}
+
+/* 「照片是否入库」的状态行 + 保留原图入口 */
+.keep-image-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.keep-image-state {
+  font-size: var(--st-font-xs);
+  line-height: var(--st-leading-normal);
+  color: var(--st-text-muted);
+}
+
+/* 题干文字的实时渲染预览：让人看到最终效果，而不是 LaTeX 源码 */
+.math-preview {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: var(--st-radius-md, 10px);
+  border: 1px dashed var(--st-border-bold, #e2e8f0);
+  background: var(--st-bg-card, #ffffff);
+}
+
+.math-preview-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
+}
+
+.math-preview-body {
+  margin: 0;
+  font-size: var(--st-font-md, 14px);
+  line-height: var(--st-leading-normal);
+  color: var(--st-text-regular);
+  word-break: break-word;
 }
 
 .modal-footer-btns {
