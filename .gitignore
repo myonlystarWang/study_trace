@@ -23,7 +23,8 @@ data/.env
 *.local
 
 # Project data
-data/study_trace.db
+# 注意：data/study_trace.db 有意纳入版本控制（保留数据快照），不要在此重新忽略它。
+# 下面 wal/journal/shm 是 SQLite 运行时附属文件，仍保持忽略，避免提交不一致状态。
 data/study_trace.db-journal
 data/study_trace.db-wal
 data/study_trace.db-shm
