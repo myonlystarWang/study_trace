@@ -1,27 +1,29 @@
 <template>
   <div class="paper-print-view">
-    <!-- 顶部操作工具栏（仅屏幕展示，打印时彻底隐藏） -->
-    <van-nav-bar
-      :title="paper.title || '初一错题周末重练卷'"
-      left-arrow
-      @click-left="goBack"
-      class="no-print paper-nav-bar"
-    >
-      <template #right>
-        <span
-          class="st-status-tag"
-          :class="paper.status === 'reviewed' ? 'st-status-tag--success' : (paper.status === 'printed' ? 'st-status-tag--warning' : 'st-status-tag--primary')"
-        >
-          {{ paper.status === 'reviewed' ? '已完成打卡' : (paper.status === 'printed' ? '已打印·待打卡' : '未打印·待重练') }}
-        </span>
-      </template>
-    </van-nav-bar>
+    <!-- 顶部吸顶区：导航行 + 操作按钮条整体吸顶，避免滚动后返回按钮丢失（仅屏幕展示，打印时彻底隐藏） -->
+    <div class="paper-top-bar no-print">
+      <van-nav-bar
+        :title="paper.title || '初一错题周末重练卷'"
+        left-arrow
+        @click-left="goBack"
+        class="paper-nav-bar"
+      >
+        <template #right>
+          <span
+            class="st-status-tag"
+            :class="paper.status === 'reviewed' ? 'st-status-tag--success' : (paper.status === 'printed' ? 'st-status-tag--warning' : 'st-status-tag--primary')"
+          >
+            {{ paper.status === 'reviewed' ? '已完成打卡' : (paper.status === 'printed' ? '已打印·待打卡' : '未打印·待重练') }}
+          </span>
+        </template>
+      </van-nav-bar>
 
-    <div class="paper-action-bar no-print">
-      <div class="action-bar-inner">
-        <van-button size="small" icon="info-o" class="paper-bar-btn" @click="showPrintTip = true">打印指南</van-button>
-        <van-button size="small" type="primary" plain icon="passed" class="paper-bar-btn" @click="openReviewModal">重练打卡</van-button>
-        <van-button size="small" type="primary" icon="printer" class="paper-bar-btn" @click="handlePrint">打印 / 存PDF</van-button>
+      <div class="paper-action-bar">
+        <div class="action-bar-inner">
+          <van-button size="small" icon="info-o" class="paper-bar-btn" @click="showPrintTip = true">打印指南</van-button>
+          <van-button size="small" type="primary" plain icon="passed" class="paper-bar-btn" @click="openReviewModal">重练打卡</van-button>
+          <van-button size="small" type="primary" icon="printer" class="paper-bar-btn" @click="handlePrint">打印 / 存PDF</van-button>
+        </div>
       </div>
     </div>
 
@@ -429,6 +431,13 @@ onMounted(async () => {
 
 <style scoped>
 /* 顶部导航与工具栏样式 */
+.paper-top-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #ffffff;
+}
+
 .paper-nav-bar {
   background: #ffffff;
   border-bottom: 1px solid var(--st-border, #f1f5f9);
@@ -439,9 +448,6 @@ onMounted(async () => {
   padding: 8px 12px;
   border-bottom: 1px solid var(--st-border, #e2e8f0);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  position: sticky;
-  top: 0;
-  z-index: 100;
 }
 
 .action-bar-inner {
