@@ -16,6 +16,16 @@ from backend.app.utils.wechat_intent import (
 
 client = TestClient(app)
 
+# 测试自持的假 OpenID（不依赖 data/.env 里的真实家庭成员 OpenID）
+DAD_OPENID = "OTESTDAD0000000000000000000DAD1"
+MOM_OPENID = "OTESTMOM0000000000000000000MOM1"
+
+
+@pytest.fixture(autouse=True)
+def _seed_authorized_openids(monkeypatch):
+    """把授权名单注入 settings，使上行消息测试不依赖真实凭据"""
+    monkeypatch.setattr(settings, "WECHAT_OPEN_IDS", f"{DAD_OPENID},{MOM_OPENID}")
+
 
 @pytest.fixture
 def db_session():
@@ -65,7 +75,7 @@ def test_wechat_callback_verify_invalid_signature():
 async def test_wechat_inbound_help_command():
     """测试发送【帮助】返回使用指南"""
     # 爸爸的合法 OpenID
-    from_user = "XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    from_user = DAD_OPENID
     to_user = "gh_test"
     msg_id = f"msg_{int(time.time())}_help"
     xml_data = f"""<xml>
@@ -92,7 +102,7 @@ async def test_wechat_inbound_help_command():
 @pytest.mark.anyio
 async def test_wechat_inbound_checkin_and_query(db_session: Session):
     """测试通过微信发消息自动打卡与查询今日作业清单"""
-    from_user = "XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    from_user = DAD_OPENID
     to_user = "gh_test"
     today = date.today()
 
@@ -154,7 +164,7 @@ async def test_wechat_inbound_checkin_and_query(db_session: Session):
 @pytest.mark.anyio
 async def test_wechat_inbound_add_homework(db_session: Session):
     """测试通过微信发消息快速录入新作业"""
-    from_user = "XXXXXXXXXXXXXXXXXXXXXXXXXXXX"  # 妈妈的 OpenID
+    from_user = MOM_OPENID  # 妈妈的 OpenID
     to_user = "gh_test"
     today = date.today()
 
@@ -203,7 +213,7 @@ async def test_wechat_inbound_unauthorized_openid():
 @pytest.mark.anyio
 async def test_wechat_inbound_duplicate_msg_id():
     """测试 5 秒内重复推送相同 MsgId 返回 success 免重复处理"""
-    from_user = "XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    from_user = DAD_OPENID
     dup_id = f"msg_dup_{int(time.time())}"
     xml_data = f"""<xml>
 <ToUserName><![CDATA[gh_test]]></ToUserName>
@@ -257,7 +267,7 @@ def test_parse_batch_homework_text():
 @pytest.mark.anyio
 async def test_wechat_inbound_batch_homework(db_session: Session):
     """端到端测试：微信上行批量作业通知，写入数据库并即时清理测试脏数据"""
-    from_user = "XXXXXXXXXXXXXXXXXXXXXXXXXXXX"  # 妈妈的合法 OpenID
+    from_user = MOM_OPENID  # 妈妈的合法 OpenID
     today = date.today()
 
     batch_content = """语文：
