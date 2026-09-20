@@ -63,11 +63,12 @@ class Settings(BaseSettings):
     DEFAULT_PIN: str = "888888"
 
     # 微信公众平台接口测试号 (Sandbox 官方直推与双向交互通道)
-    WECHAT_APP_ID: str = "XXXXXXXXXXXXXXXXXX"
-    WECHAT_APP_SECRET: str = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-    WECHAT_TEMPLATE_ID: str = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-    WECHAT_OPEN_IDS: str = "XXXXXXXXXXXXXXXXXXXXXXXXXXXX,XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-    WECHAT_CALLBACK_TOKEN: str = "studytrace2026"
+    # 敏感凭据只从 data/.env 读取，代码中不留字面量（历史泄露治理）
+    WECHAT_APP_ID: str = ""
+    WECHAT_APP_SECRET: str = ""
+    WECHAT_TEMPLATE_ID: str = ""
+    WECHAT_OPEN_IDS: str = ""
+    WECHAT_CALLBACK_TOKEN: str = ""
 
     # CORS 域名白名单（收紧生产暴露面）
     ALLOWED_ORIGINS: list[str] = [

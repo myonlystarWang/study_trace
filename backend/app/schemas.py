@@ -162,8 +162,6 @@ class NotificationConfig(BaseModel):
     wechat_app_secret: Optional[str] = ""
     wechat_template_id: Optional[str] = ""
     wechat_open_ids: Optional[str] = ""
-    wxpusher_app_token: Optional[str] = ""
-    wxpusher_topic_id: Optional[str] = ""
     pushplus_token: Optional[str] = ""
     serverchan_key: Optional[str] = ""
     bark_key: Optional[str] = ""
@@ -172,7 +170,7 @@ class NotificationConfig(BaseModel):
 
 
 class NotificationTestIn(BaseModel):
-    channel: str  # wechat_sandbox, wxpusher, pushplus, serverchan, bark, webhook
+    channel: str  # wechat_sandbox, pushplus, serverchan, bark, webhook
     target: Optional[str] = None
     extra: Optional[dict] = None
 

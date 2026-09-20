@@ -13,7 +13,7 @@ from backend.app.schemas import (
     NotificationConfig, NotificationResultOut, NotificationSendOut
 )
 from backend.app.utils.notifier import (
-    send_wechat_sandbox, send_wxpusher, send_pushplus, send_serverchan, send_bark, send_webhook, send_webpush,
+    send_wechat_sandbox, send_pushplus, send_serverchan, send_bark, send_webhook, send_webpush,
     dispatch_notification, build_summary_message
 )
 from backend.app.routers.homework import calculate_streak
@@ -28,20 +28,23 @@ router = APIRouter(
 )
 SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
 
+# 敏感凭据（app_id/app_secret/template_id/open_ids）只存 data/.env，
+# 不在代码里留字面量；DB 行加载后由 load_notification_config 从 settings 自动回填。
 DEFAULT_CONFIG = {
     "enabled_channels": ["wechat_sandbox"],
-    "wechat_app_id": getattr(settings, "WECHAT_APP_ID", "") or "XXXXXXXXXXXXXXXXXX",
-    "wechat_app_secret": getattr(settings, "WECHAT_APP_SECRET", "") or "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-    "wechat_template_id": getattr(settings, "WECHAT_TEMPLATE_ID", "") or "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-    "wechat_open_ids": getattr(settings, "WECHAT_OPEN_IDS", "") or "XXXXXXXXXXXXXXXXXXXXXXXXXXXX,XXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-    "wxpusher_app_token": getattr(settings, "WXPUSHER_APP_TOKEN", "") or "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-    "wxpusher_topic_id": getattr(settings, "WXPUSHER_TOPIC_ID", "") or "46425",
+    "wechat_app_id": getattr(settings, "WECHAT_APP_ID", "") or "",
+    "wechat_app_secret": getattr(settings, "WECHAT_APP_SECRET", "") or "",
+    "wechat_template_id": getattr(settings, "WECHAT_TEMPLATE_ID", "") or "",
+    "wechat_open_ids": getattr(settings, "WECHAT_OPEN_IDS", "") or "",
     "pushplus_token": "",
     "serverchan_key": "",
     "bark_key": "",
     "webhook_url": "",
     "reminder_slots": ["20:10", "21:10", "21:50"]
 }
+
+# 持久化到 DB 时剥离的敏感字段（读取时从 env 回填，DB 快照不入 git 泄露面）
+SENSITIVE_CONFIG_KEYS = {"wechat_app_id", "wechat_app_secret", "wechat_template_id", "wechat_open_ids"}
 
 
 def load_notification_config(db: Session) -> dict:
@@ -53,7 +56,10 @@ def load_notification_config(db: Session) -> dict:
         data = json.loads(setting.value)
         merged = DEFAULT_CONFIG.copy()
         merged.update(data)
-        # 自动补全默认的官方测试号凭据
+        # 清理已下线渠道的历史残留字段
+        for k in [k for k in merged if k.startswith("wxpusher")]:
+            merged.pop(k, None)
+        # 自动补全敏感凭据（来自 data/.env）
         for k in ["wechat_app_id", "wechat_app_secret", "wechat_template_id", "wechat_open_ids"]:
             if not merged.get(k) and DEFAULT_CONFIG.get(k):
                 merged[k] = DEFAULT_CONFIG[k]
@@ -64,9 +70,10 @@ def load_notification_config(db: Session) -> dict:
 
 
 def save_notification_config(config_data: dict, db: Session) -> None:
-    """持久化通知配置到 Settings 表"""
+    """持久化通知配置到 Settings 表（敏感凭据不入库，读取时由 env 回填）"""
+    persist_data = {k: v for k, v in config_data.items() if k not in SENSITIVE_CONFIG_KEYS}
     setting = db.query(Setting).filter(Setting.key == "notification_config").first()
-    json_val = json.dumps(config_data, ensure_ascii=False)
+    json_val = json.dumps(persist_data, ensure_ascii=False)
     if setting:
         setting.value = json_val
     else:
@@ -102,7 +109,7 @@ async def test_notification_channel(
     """
     cfg = load_notification_config(db)
     title = "🔔【智学迹】微信推送通道测试"
-    content = "恭喜！智学迹通知服务 WxPusher 微信通道连通成功！\n\n- 服务名称：智学迹 StudyTrace\n- 运行状态：服务连接正常\n- 推送渠道：WxPusher 家庭主题群\n- 每日作业提醒与晚间复习汇总将准时送达。"
+    content = "恭喜！智学迹通知服务微信通道连通成功！\n\n- 服务名称：智学迹 StudyTrace\n- 运行状态：服务连接正常\n- 推送渠道：微信测试号模板消息\n- 每日作业提醒与晚间复习汇总将准时送达。"
 
     target = None
     topic_id = None
@@ -118,10 +125,6 @@ async def test_notification_channel(
         template_id = payload.get("template_id") if isinstance(payload, dict) and payload.get("template_id") else cfg.get("wechat_template_id", "")
         open_ids = target if (target and target.strip()) else cfg.get("wechat_open_ids", "")
         success, msg = await send_wechat_sandbox(app_id, app_secret, template_id, open_ids, title, content)
-    elif ch == "wxpusher":
-        app_token = target if (target and target.strip()) else cfg.get("wxpusher_app_token", "")
-        top_id = topic_id if (topic_id and str(topic_id).strip()) else cfg.get("wxpusher_topic_id", "")
-        success, msg = await send_wxpusher(app_token, str(top_id), title, content)
     elif ch == "pushplus":
         token = target if (target and target.strip()) else cfg.get("pushplus_token", "")
         success, msg = await send_pushplus(token, title, content)

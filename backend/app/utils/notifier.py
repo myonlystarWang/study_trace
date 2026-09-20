@@ -296,77 +296,6 @@ async def send_wechat_sandbox(
         return False, f"微信测试号发送失败: {err_detail}"
 
 
-async def send_wxpusher(
-    app_token: str,
-    topic_id: str,
-    title: str,
-    content: str,
-    uids: Optional[List[str]] = None
-) -> Tuple[bool, str]:
-    """
-    WxPusher 微信服务号消息推送 (推荐首选)
-    - 完全免费 (每天 1000 条免费额度，0 认证费，全家可关注主题)
-    - contentType: 3 (Markdown 渲染)
-    """
-    if not app_token or not app_token.strip():
-        return False, "WxPusher AppToken 不能为空"
-
-    url = "https://wxpusher.zjiecode.com/api/send/message"
-
-    # 解析 topicIds
-    topic_ids = []
-    if topic_id:
-        for tid in str(topic_id).replace("，", ",").split(","):
-            tid_s = tid.strip()
-            if tid_s.isdigit():
-                topic_ids.append(int(tid_s))
-
-    target_uids = uids or []
-    if not topic_ids and not target_uids:
-        return False, "WxPusher 必须指定 TopicId 或 UID 至少一项"
-
-    summary = title[:90] if title else "智学迹通知"
-    full_content = f"## {title}\n\n{content}"
-
-    payload = {
-        "appToken": app_token.strip(),
-        "content": full_content,
-        "summary": summary,
-        "contentType": 3,
-        "topicIds": topic_ids,
-        "uids": target_uids
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-            resp = await client.post(url, json=payload)
-            data = resp.json()
-            code = data.get("code")
-            msg = data.get("msg", "")
-            success = data.get("success", False)
-
-            if code == 1000 and success:
-                # 检查 data 数组明细中是否有未订阅应用或发送失败等具体原因
-                data_list = data.get("data") or []
-                errors = []
-                for item in data_list:
-                    item_code = item.get("code")
-                    if item_code is not None and item_code != 1000:
-                        status_msg = item.get("status") or f"错误码 {item_code}"
-                        errors.append(status_msg)
-
-                if errors:
-                    return False, f"WxPusher 未能送达微信: {'; '.join(errors)}"
-                return True, f"发送成功 (WxPusher: {msg})"
-            else:
-                return False, f"WxPusher 错误 [{code}]: {msg}"
-    except httpx.TimeoutException:
-        return False, "WxPusher 请求超时 (5s)"
-    except Exception as e:
-        logger.error(f"WxPusher send error: {e}")
-        return False, f"网络请求失败: {str(e)}"
-
-
 async def send_pushplus(token: str, title: str, content: str) -> Tuple[bool, str]:
     """
     PushPlus 微信服务号中转推送 (首选)
@@ -579,10 +508,6 @@ async def dispatch_notification(
                 template_id = config.get("wechat_template_id", "")
                 open_ids = config.get("wechat_open_ids", "")
                 success, msg = await send_wechat_sandbox(app_id, app_secret, template_id, open_ids, title, content)
-            elif ch == "wxpusher":
-                app_token = config.get("wxpusher_app_token", "")
-                topic_id = config.get("wxpusher_topic_id", "")
-                success, msg = await send_wxpusher(app_token, topic_id, title, content)
             elif ch == "pushplus":
                 token = config.get("pushplus_token", "")
                 success, msg = await send_pushplus(token, title, content)

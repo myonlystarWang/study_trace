@@ -812,15 +812,13 @@ const ocrConfig = ref({
 const ocrKeyInput = ref('');
 const savingOcr = ref(false);
 
-// 通知配置状态
+// 通知配置状态（敏感凭据不硬编码：页面加载时由 GET /api/notifications/config 整体覆盖）
 const notifConfig = ref({
   enabled_channels: ['wechat_sandbox'],
-  wechat_app_id: 'XXXXXXXXXXXXXXXXXX',
-  wechat_app_secret: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-  wechat_template_id: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+  wechat_app_id: '',
+  wechat_app_secret: '',
+  wechat_template_id: '',
   wechat_open_ids: '',
-  wxpusher_app_token: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-  wxpusher_topic_id: '46425',
   pushplus_token: '',
   serverchan_key: '',
   bark_key: '',
@@ -828,10 +826,9 @@ const notifConfig = ref({
   reminder_slots: ['20:10', '21:10', '21:50']
 });
 
-// 结构化家庭成员 OpenID 列表
+// 结构化家庭成员 OpenID 列表（真实值由后端配置返回后解析填充）
 const wechatMemberList = ref([
-  { name: '爸爸', openid: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXX' },
-  { name: '妈妈', openid: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXX' }
+  { name: '爸爸', openid: '' }
 ]);
 
 const parseWechatMembersFromConfig = (raw) => {
