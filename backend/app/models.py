@@ -9,7 +9,7 @@ class Student(Base):
     __tablename__ = "students"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String(50), nullable=False, default="王昱轩同学")
+    name = Column(String(50), nullable=False, default="同学")
     grade = Column(String(20), default="初一")
     avatar = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.now)

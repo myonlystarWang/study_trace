@@ -79,9 +79,8 @@
               <div class="card-inner-content">
                 <div class="card-header">
                   <div class="header-left">
-                    <span class="st-subject-tag" :class="getSubjectTagClass(item.subject_name)">
-                      {{ item.subject_name }}
-                    </span>
+                    <SubjectBadge :name="item.subject_name" size="sm" />
+                    <span class="mistake-subject-name">{{ item.subject_name }}</span>
                     <span class="source-text" v-if="item.source_reference">
                       {{ item.source_reference }}
                     </span>
@@ -646,6 +645,7 @@ import { mistakeApi, settingsApi, ocrApi } from '../api';
 import { compressImage } from '../utils/imageCompress';
 import ImageCropper from '../components/ImageCropper.vue';
 import MathText from '../components/MathText.vue';
+import SubjectBadge from '../components/SubjectBadge.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -1553,6 +1553,12 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.mistake-subject-name {
+  font-size: var(--st-font-sm, 13px);
+  font-weight: 700;
+  color: var(--st-text-primary, #0f172a);
 }
 
 .source-text {

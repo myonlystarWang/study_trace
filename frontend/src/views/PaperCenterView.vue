@@ -102,7 +102,8 @@
             </div>
             <div class="candidate-info">
               <div class="candidate-tags" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                <span class="st-subject-tag" :class="getSubjectTagClass(item.subject_name)">{{ item.subject_name }}</span>
+                <SubjectBadge :name="item.subject_name" size="sm" />
+                <span style="font-size: 13px; font-weight: 700; color: #0f172a;">{{ item.subject_name }}</span>
                 <span v-if="item.error_type" class="st-status-tag st-status-tag--warning">{{ item.error_type }}</span>
                 <span v-if="item.is_ebbinghaus" class="st-status-tag st-status-tag--purple">艾宾浩斯</span>
                 <span v-if="item.is_unmastered" class="st-status-tag st-status-tag--danger">高频未掌握</span>
@@ -290,6 +291,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { showToast, showConfirmDialog } from 'vant';
 import { paperApi, settingsApi } from '../api';
+import SubjectBadge from '../components/SubjectBadge.vue';
 
 const router = useRouter();
 

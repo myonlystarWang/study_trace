@@ -3,13 +3,52 @@
     <van-nav-bar title="我的" fixed placeholder />
 
     <div class="settings-container">
+      <!-- 个人与系统成长名片 (无论是否解锁均展示，提升“我的”页面整体感) -->
+      <div class="st-card user-profile-card">
+        <div class="user-profile-main">
+          <div class="user-avatar-wrap">
+            <svg viewBox="0 0 64 64" fill="none" class="user-avatar-svg">
+              <circle cx="32" cy="32" r="30" fill="#eff6ff" />
+              <circle cx="32" cy="24" r="12" fill="#fed7aa" />
+              <path d="M20 20 C20 12, 44 12, 44 20 C44 23, 20 23, 20 20 Z" fill="#334155" />
+              <path d="M18 52 C18 38, 46 38, 46 52 Z" fill="#3b82f6" />
+              <rect x="23" y="44" width="18" height="12" rx="2" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+            </svg>
+          </div>
+          <div class="user-profile-info">
+            <div class="user-name-row">
+              <span class="user-name">初中成长档案</span>
+              <span class="user-grade-tag">初一</span>
+            </div>
+            <p class="user-motto">专注初中成长 · 记录每步轨迹</p>
+          </div>
+        </div>
+
+        <div class="user-nav-cells">
+          <div class="user-nav-item" @click="$router.push('/about')">
+            <span class="nav-item-left">
+              <van-icon name="info-o" color="#3b82f6" size="16" />
+              <span>系统运行自检与服务状态</span>
+            </span>
+            <van-icon name="arrow" class="nav-arrow" />
+          </div>
+          <div class="user-nav-item" @click="$router.push('/preview')">
+            <span class="nav-item-left">
+              <van-icon name="gem-o" color="#8b5cf6" size="16" />
+              <span>设计系统与组件规范预览</span>
+            </span>
+            <van-icon name="arrow" class="nav-arrow" />
+          </div>
+        </div>
+      </div>
+
       <!-- 门禁口令验证卡片 -->
       <div class="st-card pin-gate-card" v-if="!isUnlocked">
         <div class="gate-icon-circle">
-          <van-icon name="lock" size="32" color="#d97706" />
+          <van-icon name="lock" size="28" color="#d97706" />
         </div>
-        <h3>家长模式身份验证</h3>
-        <p class="gate-tip">初中生专注模式已开启。请输入管理口令进入：</p>
+        <h3>家长管理空间</h3>
+        <p class="gate-tip">提醒设置、学科分值与系统备份属于家长管理权限，请输入 6 位管理口令进入：</p>
         
         <van-field
           v-model="inputPin"
@@ -1502,6 +1541,100 @@ onUnmounted(() => {
 .settings-top-notice {
   margin-bottom: 14px;
   border-radius: var(--st-radius-sm, 8px);
+}
+
+.user-profile-card {
+  margin: 0 0 16px;
+  padding: 16px 14px 8px;
+  background: var(--st-bg-card, #ffffff);
+  border-radius: var(--st-radius-md, 14px);
+  border: 1px solid var(--st-border, #f1f5f9);
+  box-shadow: var(--st-shadow-card);
+}
+
+.user-profile-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.user-avatar-wrap {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+}
+
+.user-avatar-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.user-profile-info {
+  flex: 1;
+}
+
+.user-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.user-name {
+  font-size: var(--st-font-lg, 15px);
+  font-weight: 700;
+  color: var(--st-text-primary, #0f172a);
+}
+
+.user-grade-tag {
+  font-size: var(--st-font-xs, 12px);
+  background: #eff6ff;
+  color: #2563eb;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.user-motto {
+  font-size: var(--st-font-xs, 12px);
+  color: var(--st-text-secondary, #64748b);
+  margin: 0;
+}
+
+.user-nav-cells {
+  display: flex;
+  flex-direction: column;
+  padding-top: 4px;
+}
+
+.user-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 4px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.user-nav-item:active {
+  background: #f8fafc;
+}
+
+.nav-item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--st-font-sm, 13px);
+  color: #334155;
+  font-weight: 500;
+}
+
+.nav-arrow {
+  color: #cbd5e1;
+  font-size: 12px;
 }
 
 .pin-gate-card {

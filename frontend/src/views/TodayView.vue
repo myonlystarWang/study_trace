@@ -3,7 +3,7 @@
     <!-- 1. 顶部温和生活感问候区 -->
     <header class="greeting-header">
       <div class="greeting-text">
-        <h1 class="greeting-title">{{ timeGreeting }}，小明同学 👋</h1>
+        <h1 class="greeting-title">{{ timeGreeting }}，同学 👋</h1>
         <p class="greeting-date">{{ formattedDate }}</p>
       </div>
       <div class="greeting-illustration" @click="$router.push('/settings')">

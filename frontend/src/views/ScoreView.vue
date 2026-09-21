@@ -61,7 +61,10 @@
             @click="$router.push('/mistakes')"
           >
             <div class="weak-card-top">
-              <span class="weak-sub-name">{{ item.subject_name }}</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <SubjectBadge :name="item.subject_name" size="sm" />
+                <span class="weak-sub-name">{{ item.subject_name }}</span>
+              </div>
               <van-tag type="danger" plain size="medium">重点关注</van-tag>
             </div>
             <div class="weak-card-desc">{{ item.reason }}</div>
@@ -223,6 +226,7 @@
                   class="sub-score-chip"
                   :class="{ 'chip-absent': s.is_absent }"
                 >
+                  <SubjectBadge :name="s.subject_name" size="sm" />
                   <span class="chip-name">{{ s.subject_name }}</span>
                   <span v-if="s.is_absent" class="chip-score absent-text">缺考</span>
                   <span v-else class="chip-score">
@@ -482,6 +486,7 @@ import { showToast, showConfirmDialog } from 'vant';
 import { examApi, settingsApi } from '../api';
 import echarts from '../utils/echarts';
 import { parseScoreText } from '../utils/scoreParser';
+import SubjectBadge from '../components/SubjectBadge.vue';
 
 // 页面基础状态
 const examList = ref([]);
