@@ -297,14 +297,23 @@
       </section>
     </main>
 
-    <!-- 6. 底部双悬浮快速录入操作胶囊 -->
+    <!-- 6. 底部双悬浮快速录入操作胶囊 (精细复刻配图蓝色微质感胶囊与防漂移定位) -->
     <aside class="floating-quick-actions">
       <button class="quick-fab-btn" @click="showAddModal = true">
-        <van-icon name="photograph" size="18" color="#2563eb" />
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" class="fab-svg-icon">
+          <path d="M4 8C4 6.89543 4.89543 6 6 6H7.58579C8.11622 6 8.62493 5.78929 9 5.41421L9.58579 4.82843C9.96086 4.45336 10.4696 4.24264 11 4.24264H13C13.5304 4.24264 14.0391 4.45336 14.4142 4.82843L15 5.41421C15.3751 5.78929 15.8838 6 16.4142 6H18C19.1046 6 20 6.89543 20 8V17C20 18.1046 19.1046 19 18 19H6C4.89543 19 4 18.1046 4 17V8Z" fill="#2563eb" />
+          <circle cx="12" cy="12.5" r="3.2" fill="#ffffff" />
+          <circle cx="12" cy="12.5" r="1.6" fill="#2563eb" />
+        </svg>
         <span>录入作业</span>
       </button>
       <button class="quick-fab-btn" @click="$router.push('/mistakes?action=add')">
-        <van-icon name="records-o" size="18" color="#2563eb" />
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" class="fab-svg-icon">
+          <path d="M6 3C4.89543 3 4 3.89543 4 5V19C4 20.1046 4.89543 21 6 21H18C19.1046 21 20 20.1046 20 19V9L14 3H6Z" fill="#2563eb" />
+          <path d="M14 3V8C14 8.55228 14.4477 9 15 9H20" fill="#93c5fd" />
+          <line x1="8" y1="13" x2="16" y2="13" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" />
+          <line x1="8" y1="16.5" x2="13" y2="16.5" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
         <span>录入错题</span>
       </button>
     </aside>
@@ -716,11 +725,11 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* 根容器：边距由 14px 收敛为 12px，消除两侧过多空白，卡片饱满居中 */
+/* 根容器：边距由 14px 收敛为 12px，底部留足悬浮胶囊与 Tabbar 避让空间，绝不遮挡末尾内容 */
 .today-view {
   flex: 1;
   background-color: #f8fafc;
-  padding: 12px 12px 100px;
+  padding: 12px 12px calc(50px + env(safe-area-inset-bottom, 0px) + 75px);
   width: 100%;
   box-sizing: border-box;
   margin: 0 auto;
@@ -1315,10 +1324,11 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-/* 6. 底部双悬浮快速录入操作胶囊 */
+/* 6. 底部双悬浮快速录入操作胶囊 (精细复刻配图浅蓝质感胶囊 + 严密防漂移定位) */
 .floating-quick-actions {
   position: fixed;
-  bottom: 66px;
+  /* 严密动态锚定：精准位于底部 Tabbar (50px + 安全区) 之上 14px，绝不发生漂移重叠 */
+  bottom: calc(50px + env(safe-area-inset-bottom, 0px) + 14px);
   left: 0;
   right: 0;
   max-width: 500px;
@@ -1328,35 +1338,40 @@ onUnmounted(() => {
   justify-content: center;
   gap: 14px;
   pointer-events: none;
-  z-index: 90;
+  z-index: 95;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .quick-fab-btn {
   pointer-events: auto;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 38px;
-  padding: 0 18px;
-  background: #ffffff;
-  color: #1e293b;
-  border: 1px solid #e2e8f0;
+  justify-content: center;
+  gap: 7px;
+  height: 42px;
+  padding: 0 20px;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
   border-radius: 9999px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.12);
   cursor: pointer;
   transition: all 0.15s ease;
-}
-
-.quick-fab-btn:first-child {
-  color: #1e293b;
-  border-color: #e2e8f0;
-  background: #ffffff;
+  user-select: none;
 }
 
 .quick-fab-btn:active {
   transform: scale(0.96);
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+  background: #dbeafe;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+}
+
+.fab-svg-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 </style>
