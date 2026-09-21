@@ -15,7 +15,12 @@ api.interceptors.request.use((config) => {
 });
 
 export const homeworkApi = {
-  getList: (dateStr) => api.get('/homework', { params: { date: dateStr } }),
+  getList: (params) => {
+    if (typeof params === 'string') {
+      return api.get('/homework', { params: { date: params } });
+    }
+    return api.get('/homework', { params });
+  },
   getCalendar: (monthStr) => api.get('/homework/calendar', { params: { month: monthStr } }),
   create: (data) => api.post('/homework', data),
   update: (id, data) => api.put(`/homework/${id}`, data),

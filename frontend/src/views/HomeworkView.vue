@@ -35,8 +35,36 @@
       </div>
     </div>
 
-    <!-- 顶部 7 日横向胶囊日历条 (带上周/下周微纽与触屏切周手势) -->
-    <div class="week-strip-container">
+    <!-- iOS 风格三段式子标签栏：今日作业 | 全部作业 | 历史记录 (与 chatgpt.jpg 保持一致) -->
+    <div class="homework-sub-tabs">
+      <button
+        class="sub-tab-item"
+        :class="{ active: subTab === 'today' }"
+        @click="switchSubTab('today')"
+      >
+        <span>今日作业</span>
+        <div class="sub-tab-indicator" v-if="subTab === 'today'"></div>
+      </button>
+      <button
+        class="sub-tab-item"
+        :class="{ active: subTab === 'all' }"
+        @click="switchSubTab('all')"
+      >
+        <span>全部作业</span>
+        <div class="sub-tab-indicator" v-if="subTab === 'all'"></div>
+      </button>
+      <button
+        class="sub-tab-item"
+        :class="{ active: subTab === 'history' }"
+        @click="switchSubTab('history')"
+      >
+        <span>历史记录</span>
+        <div class="sub-tab-indicator" v-if="subTab === 'history'"></div>
+      </button>
+    </div>
+
+    <!-- 顶部 7 日横向胶囊日历条 (仅在「今日作业」视图展示) -->
+    <div class="week-strip-container" v-if="subTab === 'today'">
       <button class="week-nav-arrow" @click="changeWeek(-1)" title="上一周">
         <van-icon name="arrow-left" size="13" />
       </button>
@@ -68,7 +96,7 @@
     </div>
 
     <!-- 今日进度概览卡片 (含 100% 达成微反馈) -->
-    <div class="st-card progress-summary-card">
+    <div class="st-card progress-summary-card" v-if="subTab === 'today'">
       <div class="progress-header">
         <div class="st-section-header" style="margin-bottom: 0;">
           <span class="st-icon-badge st-icon-badge--primary">
@@ -99,6 +127,17 @@
           <span>太棒了！{{ weekendRollover ? '周末大作业与今日任务已全部完成' : '今日全部作业均已如期完成' }}</span>
         </div>
       </transition>
+    </div>
+
+    <!-- 全部/历史记录 顶部状态卡片 -->
+    <div class="st-card scope-summary-card" v-else>
+      <div class="scope-summary-left">
+        <span class="st-icon-badge" :class="subTab === 'all' ? 'st-icon-badge--warning' : 'st-icon-badge--success'">
+          <van-icon :name="subTab === 'all' ? 'todo-list-o' : 'passed'" />
+        </span>
+        <span class="section-title">{{ subTab === 'all' ? '全部待完成作业' : '历史打卡记录' }}</span>
+      </div>
+      <span class="scope-badge-count">共 {{ totalCount }} 项</span>
     </div>
 
     <!-- 学科快捷筛选胶囊栏 (Chips - 强制单行滑动) -->
@@ -147,39 +186,44 @@
               :key="'rollover-' + item.id"
               class="hw-swipe-cell hw-swipe-cell--rollover"
             >
-              <!-- 卡片正面：克制扁平、无多余平铺按钮 -->
+              <!-- 卡片正面：iOS 规范三行排版，点击打开详情，右侧胶囊直接打卡 -->
               <div
                 class="st-card hw-card-face"
                 :class="{ 'is-done': item.is_completed }"
-                @click="toggleComplete(item)"
+                @click="openDetail(item)"
               >
-                <!-- 大号圆形打勾微动效 -->
-                <div
-                  class="hw-check-circle"
-                  :class="{ checked: item.is_completed, 'st-animate-check': item.justToggled }"
-                  @click.stop="toggleComplete(item)"
-                >
-                  <van-icon v-if="item.is_completed" name="success" size="14" color="#ffffff" />
-                </div>
+                <!-- 学科徽标 -->
+                <SubjectBadge :name="item.subject_name" size="md" />
 
-                <!-- 标题与学科信息 -->
+                <!-- 标题与学科信息 (三行垂直流) -->
                 <div class="hw-content">
                   <div class="hw-meta-row">
-                    <SubjectBadge :name="item.subject_name" size="sm" />
                     <span class="hw-subject-text">{{ item.subject_name }}</span>
                     <span class="rollover-origin-tag">周五顺延</span>
-                    <span class="hw-due-time" v-if="item.completed_at">
-                      <van-icon name="clock-o" /> 已于 {{ item.completed_at.substring(11, 16) }} 打卡
-                    </span>
                   </div>
                   <div class="hw-title" :class="{ strike: item.is_completed }">
                     {{ item.content }}
                   </div>
+                  <div class="hw-time-meta">
+                    <span class="hw-time-text">
+                      <van-icon name="underway-o" size="11" />
+                      布置时间: {{ formatSimpleTime(item.created_at || item.date) }}
+                    </span>
+                    <span class="hw-done-time" v-if="item.completed_at">
+                      · {{ item.completed_at.substring(11, 16) }} 打卡
+                    </span>
+                  </div>
                 </div>
 
-                <!-- 状态微指示 -->
-                <div class="hw-status-tag" :class="{ done: item.is_completed }">
-                  {{ item.is_completed ? '已打卡' : '待完成' }}
+                <!-- 状态指示胶囊 -->
+                <div
+                  class="hw-status-pill"
+                  :class="{ 'is-done': item.is_completed }"
+                  @click.stop="toggleComplete(item)"
+                  title="点击快捷打卡"
+                >
+                  <van-icon v-if="item.is_completed" name="success" size="12" />
+                  <span>{{ item.is_completed ? '已完成' : '未完成' }}</span>
                 </div>
               </div>
 
@@ -212,7 +256,7 @@
                 <van-icon name="todo-list-o" />
               </span>
               <span class="section-title">
-                {{ filteredRolloverItems.length > 0 ? '今日独立任务' : '待办作业' }} ({{ filteredItems.length }} 项)
+                {{ filteredRolloverItems.length > 0 ? '今日独立任务' : (subTab === 'today' ? '待办作业' : (subTab === 'all' ? '全部任务' : '已完成任务')) }} ({{ filteredItems.length }} 项)
               </span>
             </div>
             <span class="swipe-hint" v-if="filteredRolloverItems.length === 0">
@@ -226,38 +270,44 @@
               :key="item.id"
               class="hw-swipe-cell"
             >
-              <!-- 卡片正面：克制扁平、无多余平铺按钮 -->
+              <!-- 卡片正面：iOS 规范三行排版，点击打开详情，右侧胶囊直接打卡 -->
               <div
                 class="st-card hw-card-face"
                 :class="{ 'is-done': item.is_completed }"
-                @click="toggleComplete(item)"
+                @click="openDetail(item)"
               >
-                <!-- 大号圆形打勾微动效 -->
-                <div
-                  class="hw-check-circle"
-                  :class="{ checked: item.is_completed, 'st-animate-check': item.justToggled }"
-                  @click.stop="toggleComplete(item)"
-                >
-                  <van-icon v-if="item.is_completed" name="success" size="14" color="#ffffff" />
-                </div>
+                <!-- 学科徽标 -->
+                <SubjectBadge :name="item.subject_name" size="md" />
 
-                <!-- 标题与学科信息 -->
+                <!-- 标题与学科信息 (三行垂直流) -->
                 <div class="hw-content">
                   <div class="hw-meta-row">
-                    <SubjectBadge :name="item.subject_name" size="sm" />
                     <span class="hw-subject-text">{{ item.subject_name }}</span>
-                    <span class="hw-due-time" v-if="item.completed_at">
-                      <van-icon name="clock-o" /> 已于 {{ item.completed_at.substring(11, 16) }} 打卡
-                    </span>
+                    <span class="rollover-origin-tag" v-if="item.is_weekend_rollover">周五顺延</span>
                   </div>
                   <div class="hw-title" :class="{ strike: item.is_completed }">
                     {{ item.content }}
                   </div>
+                  <div class="hw-time-meta">
+                    <span class="hw-time-text">
+                      <van-icon name="underway-o" size="11" />
+                      布置时间: {{ formatSimpleTime(item.created_at || item.date) }}
+                    </span>
+                    <span class="hw-done-time" v-if="item.completed_at">
+                      · {{ item.completed_at.substring(11, 16) }} 打卡
+                    </span>
+                  </div>
                 </div>
 
-                <!-- 状态微指示 -->
-                <div class="hw-status-tag" :class="{ done: item.is_completed }">
-                  {{ item.is_completed ? '已打卡' : '待完成' }}
+                <!-- 状态指示胶囊 -->
+                <div
+                  class="hw-status-pill"
+                  :class="{ 'is-done': item.is_completed }"
+                  @click.stop="toggleComplete(item)"
+                  title="点击快捷打卡"
+                >
+                  <van-icon v-if="item.is_completed" name="success" size="12" />
+                  <span>{{ item.is_completed ? '已完成' : '未完成' }}</span>
                 </div>
               </div>
 
@@ -285,35 +335,36 @@
 
       <!-- 清爽空状态 -->
       <div class="empty-box" v-else>
-        <van-empty description="今天没有待办作业，享受一下自由时光吧 ☀️" />
+        <van-empty :description="subTab === 'today' ? '今天没有待办作业，享受一下自由时光吧 ☀️' : (subTab === 'all' ? '太棒了，当前没有未完成的作业！' : '暂无历史打卡记录')" />
       </div>
     </van-pull-refresh>
 
-    <!-- 底部常驻磨砂悬浮录入栏 (录入新作业 + 专注计时并列排布，彻底消除重叠) -->
+    <!-- 底部常驻磨砂悬浮录入栏 (居中大胶囊录入 + 专注计时) -->
     <div class="floating-bottom-bar st-frosted-bar">
-      <van-button
-        type="primary"
-        round
-        icon="plus"
-        class="add-hw-btn"
-        @click="showAddModal = true"
-      >
-        录入新作业
-      </van-button>
-      <van-button
-        round
-        plain
-        :type="pomodoroRef?.isRunning ? 'danger' : 'default'"
-        class="pomodoro-entry-btn"
+      <button class="big-add-hw-btn" @click="showAddModal = true">
+        <van-icon name="plus" size="16" />
+        <span>录入作业</span>
+      </button>
+      <button
+        class="pomodoro-mini-btn"
         :class="{ 'is-running': pomodoroRef?.isRunning }"
         @click="pomodoroRef?.open()"
+        title="专注计时"
       >
-        <van-icon name="underway-o" :color="pomodoroRef?.isRunning ? '#ef4444' : '#475569'" size="16" />
-        <span class="pomodoro-btn-text">
-          {{ pomodoroRef?.isRunning ? pomodoroRef?.formattedTime : '专注' }}
-        </span>
-      </van-button>
+        <van-icon name="underway-o" size="16" />
+        <span v-if="pomodoroRef?.isRunning">{{ pomodoroRef?.formattedTime }}</span>
+      </button>
     </div>
+
+    <!-- iOS 规范作业详情底抽屉 -->
+    <HomeworkDetailSheet
+      v-model="showDetailSheet"
+      :homework="selectedHomework"
+      @toggle-complete="toggleComplete"
+      @edit="openEditModal"
+      @to-mistake="handleToMistake"
+      @delete="handleDelete"
+    />
 
     <!-- 录入作业底部半屏抽屉 (支持手动 / 拍照 OCR 识别批量录入) -->
     <QuickAddModal
@@ -374,6 +425,7 @@ import CalendarModal from '../components/CalendarModal.vue';
 import PomodoroTimer from '../components/PomodoroTimer.vue';
 import SubjectBadge from '../components/SubjectBadge.vue';
 import CheckinCelebrateModal from '../components/CheckinCelebrateModal.vue';
+import HomeworkDetailSheet from '../components/HomeworkDetailSheet.vue';
 
 const pomodoroRef = ref(null);
 const currentDate = ref(new Date().toISOString().split('T')[0]);
@@ -395,11 +447,79 @@ const editingItem = ref(null);
 const editContent = ref('');
 const calendarStatusMap = ref({});
 
+// 专属详情抽屉与子标签状态
+const subTab = ref('today'); // 'today' | 'all' | 'history'
+const selectedHomework = ref(null);
+const showDetailSheet = ref(false);
+
+const openDetail = (item) => {
+  selectedHomework.value = item;
+  showDetailSheet.value = true;
+};
+
+const formatSimpleTime = (t) => {
+  if (!t) return '--:--';
+  try {
+    const d = new Date(t);
+    if (isNaN(d.getTime())) return t;
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${m}-${day} ${h}:${min}`;
+  } catch (e) {
+    return t;
+  }
+};
+
+const switchSubTab = (tab) => {
+  subTab.value = tab;
+  if (tab === 'today') {
+    fetchHomework();
+  } else if (tab === 'all') {
+    fetchAllHomework();
+  } else if (tab === 'history') {
+    fetchHistoryHomework();
+  }
+};
+
+const fetchAllHomework = async () => {
+  refreshing.value = true;
+  try {
+    const res = await homeworkApi.getList({ scope: 'all' });
+    items.value = res.data.items || [];
+    totalCount.value = res.data.total || 0;
+    completedCount.value = 0;
+    rate.value = 0;
+    weekendRollover.value = null;
+  } catch (err) {
+    showToast('获取全部作业失败');
+  } finally {
+    refreshing.value = false;
+  }
+};
+
+const fetchHistoryHomework = async () => {
+  refreshing.value = true;
+  try {
+    const res = await homeworkApi.getList({ scope: 'history' });
+    items.value = res.data.items || [];
+    totalCount.value = res.data.total || 0;
+    completedCount.value = res.data.completed || 0;
+    rate.value = 100;
+    weekendRollover.value = null;
+  } catch (err) {
+    showToast('获取历史记录失败');
+  } finally {
+    refreshing.value = false;
+  }
+};
+
 const isToday = computed(() => {
   return currentDate.value === new Date().toISOString().split('T')[0];
 });
 
-// 计算以当前选中日期为锚点的周历条 (Mon ~ Sun)
+// 计算以当前选中日期为锚点的周历条 (Mon ~ Sun)，格式如 9/20 对齐 chatgpt.jpg
 const weekDays = computed(() => {
   const curr = new Date(currentDate.value);
   const dayOfWeek = curr.getDay(); // 0 是周日, 1~6 是周一~周六
@@ -418,7 +538,7 @@ const weekDays = computed(() => {
     list.push({
       dateStr,
       label: labels[i],
-      dateNumber: d.getDate().toString(),
+      dateNumber: `${d.getMonth() + 1}/${d.getDate()}`,
       isToday: dateStr === todayStr,
       isSelected: dateStr === currentDate.value,
       status: calendarStatusMap.value[dateStr] || 'gray'
@@ -558,6 +678,9 @@ const fetchSubjects = async () => {
 };
 
 const fetchHomework = async () => {
+  if (subTab.value === 'all') return fetchAllHomework();
+  if (subTab.value === 'history') return fetchHistoryHomework();
+
   refreshing.value = true;
   try {
     const res = await homeworkApi.getList(currentDate.value);
@@ -598,9 +721,19 @@ const toggleComplete = async (item) => {
     await homeworkApi.update(item.id, { is_completed: targetStatus });
     item.is_completed = targetStatus;
     if (targetStatus) {
+      item.completed_at = new Date().toISOString();
       isAllDone.value = (completedCount.value + 1 >= totalCount.value && totalCount.value > 0);
       showCelebrateModal.value = true;
+    } else {
+      item.completed_at = null;
     }
+
+    // 联动详情抽屉内部状态
+    if (selectedHomework.value && selectedHomework.value.id === item.id) {
+      selectedHomework.value.is_completed = targetStatus;
+      selectedHomework.value.completed_at = item.completed_at;
+    }
+
     fetchHomework();
   } catch (e) {
     showToast('更新失败');
@@ -718,25 +851,88 @@ onMounted(async () => {
 }
 
 .homework-top-title {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   color: var(--st-text-primary, #0f172a);
   margin: 0;
   letter-spacing: -0.5px;
 }
 
+/* iOS 规范子标签栏 */
+.homework-sub-tabs {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 0 4px 10px;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+  margin-bottom: 12px;
+}
+
+.sub-tab-item {
+  position: relative;
+  background: transparent;
+  border: none;
+  font-size: 15px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px 0 8px;
+  transition: all 0.2s ease;
+}
+
+.sub-tab-item.active {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sub-tab-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 22px;
+  height: 3px;
+  border-radius: 9999px;
+  background: #2563eb;
+}
+
+/* 全部/历史统计条 */
+.scope-summary-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+}
+
+.scope-summary-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scope-badge-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 3px 10px;
+  border-radius: 9999px;
+}
+
 .add-top-round-btn {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: var(--st-primary, #2563eb);
+  background: #2563eb;
   color: #ffffff;
   border: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
   transition: transform 0.15s ease;
   flex-shrink: 0;
 }
@@ -746,9 +942,9 @@ onMounted(async () => {
 }
 
 .hw-subject-text {
-  font-size: var(--st-font-sm, 13px);
+  font-size: 15px;
   font-weight: 700;
-  color: var(--st-text-primary, #0f172a);
+  color: #0f172a;
 }
 
 .streak-pill {
@@ -800,12 +996,12 @@ onMounted(async () => {
   color: var(--st-primary, #2563eb);
 }
 
-/* 顶部 7 日横向胶囊日历条 */
+/* 顶部 7 日横向胶囊日历条 (纯蓝实心白字胶囊，对齐 chatgpt.jpg) */
 .week-strip-box {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  margin-bottom: 14px;
+  gap: 5px;
+  margin-bottom: 12px;
 }
 
 .week-day-pill {
@@ -813,47 +1009,48 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 5px 2px 4px;
-  min-height: 48px;
-  background-color: var(--st-bg-card, #ffffff);
-  border: 1px solid var(--st-border, #f1f5f9);
-  border-radius: 9px;
-  box-shadow: var(--st-shadow-card, 0 1px 3px rgba(15, 23, 42, 0.04));
+  padding: 6px 2px 5px;
+  min-height: 52px;
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.18s ease;
 }
 
 .week-day-pill.active {
-  background-color: var(--st-primary, #2563eb);
-  border-color: var(--st-primary, #2563eb);
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+  background-color: #2563eb;
+  border-color: #2563eb;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
 }
 
 .week-day-pill .day-label {
-  font-size: var(--st-font-xs);
+  font-size: 11px;
   line-height: 1;
-  color: var(--st-text-muted);
-  margin-bottom: 3px;
+  color: #64748b;
+  margin-bottom: 4px;
 }
 
 .week-day-pill.active .day-label {
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
 }
 
 .week-day-pill .day-number {
-  font-size: var(--st-font-md);
-  font-weight: 700;
-  line-height: var(--st-leading-tight);
-  color: var(--st-text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: #1e293b;
 }
 
 .week-day-pill.active .day-number {
   color: #ffffff;
+  font-weight: 700;
 }
 
 .week-day-pill .day-dot {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
   margin-top: 3px;
   display: inline-block;
@@ -877,23 +1074,8 @@ onMounted(async () => {
 }
 
 /* 选中高亮状态下的状态指示点 */
-.week-day-pill.active .day-dot.dot-green {
-  background-color: #34d399;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
-}
-
-.week-day-pill.active .day-dot.dot-yellow {
-  background-color: #fde047;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
-}
-
-.week-day-pill.active .day-dot.dot-red {
-  background-color: #f87171;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
-}
-
-.week-day-pill.active .day-dot.dot-gray {
-  background-color: rgba(255, 255, 255, 0.45);
+.week-day-pill.active .day-dot {
+  background-color: #ffffff !important;
 }
 
 /* 进度概览卡片 */
@@ -1036,7 +1218,7 @@ onMounted(async () => {
 }
 
 .hw-swipe-cell {
-  border-radius: var(--st-radius-lg, 14px);
+  border-radius: 16px;
   overflow: hidden;
 }
 
@@ -1045,78 +1227,89 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   cursor: pointer;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.7);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  transition: transform 0.15s ease, background 0.15s ease;
+  background-color: #ffffff;
+}
+
+.hw-card-face:active {
+  transform: scale(0.985);
+  background-color: #f8fafc;
 }
 
 .hw-card-face.is-done {
   background-color: #fafbfc;
-  border-color: #f1f5f9;
-}
-
-/* 圆形打勾交互区 */
-.hw-check-circle {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 2px solid var(--st-border-bold, #cbd5e1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: all 0.15s ease;
-  background-color: #ffffff;
-}
-
-.hw-check-circle.checked {
-  background-color: var(--st-success, #10b981);
-  border-color: var(--st-success, #10b981);
+  opacity: 0.88;
 }
 
 .hw-content {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .hw-meta-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
 }
 
-.hw-due-time {
-  font-size: var(--st-font-xs);
-  color: var(--st-text-muted);
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
+.hw-subject-text {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .hw-title {
-  font-size: var(--st-font-md);
+  font-size: 13.5px;
   font-weight: 500;
-  color: var(--st-text-primary);
-  line-height: var(--st-leading-tight);
+  color: #334155;
+  line-height: 1.4;
   word-break: break-all;
 }
 
 .hw-title.strike {
-  color: var(--st-text-muted);
+  color: #94a3b8;
   text-decoration: line-through;
 }
 
-.hw-status-tag {
-  font-size: var(--st-font-xs);
-  font-weight: 500;
-  color: var(--st-warning-dark, #d97706);
-  background-color: var(--st-warning-light, #fffbeb);
-  padding: 2px 8px;
-  border-radius: var(--st-radius-full, 9999px);
-  flex-shrink: 0;
+.hw-time-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 1px;
 }
 
-.hw-status-tag.done {
-  color: var(--st-success-dark, #059669);
-  background-color: var(--st-success-light, #ecfdf5);
+.hw-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #f1f5f9;
+  color: #64748b;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.hw-status-pill:active {
+  transform: scale(0.95);
+}
+
+.hw-status-pill.is-done {
+  background: #ecfdf5;
+  color: #10b981;
+  font-weight: 600;
 }
 
 /* 左滑呼出的操作抽屉 */
@@ -1196,52 +1389,76 @@ onMounted(async () => {
   user-select: none;
 }
 
-/* 底部常驻悬浮栏 */
+/* 底部常驻悬浮栏 (居中大胶囊录入 + 专注圆钮，与 chatgpt.jpg 保持一致) */
 .floating-bottom-bar {
   position: fixed;
-  bottom: calc(50px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(52px + env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
   max-width: 500px;
   margin: 0 auto;
   padding: 8px 16px;
   background: linear-gradient(to top, rgba(248, 250, 252, 0.96) 80%, rgba(248, 250, 252, 0));
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   z-index: 40;
 }
 
-.add-hw-btn {
+.big-add-hw-btn {
   flex: 1;
-  font-weight: 600;
-  height: 42px;
-  font-size: var(--st-font-md);
-  border-radius: var(--st-radius-full, 9999px);
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
-}
-
-.pomodoro-entry-btn {
-  flex-shrink: 0;
-  padding: 0 14px;
-  height: 42px;
-  font-size: var(--st-font-md);
-  font-weight: 600;
-  border-radius: var(--st-radius-full, 9999px);
-  border: 1px solid var(--st-border-bold, #cbd5e1);
-  background: #ffffff;
-  color: var(--st-text-regular);
-  display: inline-flex;
+  height: 46px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.32);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.pomodoro-entry-btn.is-running {
-  border-color: var(--st-danger, #ef4444);
-  color: var(--st-danger, #ef4444);
-  background: var(--st-danger-light, #fef2f2);
+.big-add-hw-btn:active {
+  transform: scale(0.98);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+}
+
+.pomodoro-mini-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.pomodoro-mini-btn:active {
+  transform: scale(0.94);
+  background: #f1f5f9;
+}
+
+.pomodoro-mini-btn.is-running {
+  width: auto;
+  padding: 0 14px;
+  border-radius: 9999px;
+  border-color: #ef4444;
+  color: #ef4444;
+  background: #fef2f2;
 }
 </style>

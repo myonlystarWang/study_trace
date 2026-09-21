@@ -116,24 +116,25 @@
             :key="task.id"
             class="st-card task-card"
             :class="{ 'is-completed': task.is_completed }"
+            @click="openTaskDetail(task)"
           >
             <div class="task-left">
-              <SubjectBadge :name="task.subject_name" />
+              <SubjectBadge :name="task.subject_name" size="md" />
               <div class="task-details">
-                <div class="task-subject-and-title">
-                  <span class="task-subject-title">{{ task.subject_name }}</span>
-                  <span class="task-content-text">{{ task.content }}</span>
+                <div class="task-subject-title">{{ task.subject_name }}</div>
+                <div class="task-content-text" :class="{ strike: task.is_completed }">
+                  {{ task.content }}
                 </div>
                 <div class="task-meta">
                   <span v-if="task.is_weekend_rollover" class="weekend-tag">周末顺延</span>
                   <span class="task-time">
-                    {{ formatTaskTime(task.created_at) }}
+                    {{ formatTaskTime(task.created_at || task.date) }}
                   </span>
                 </div>
               </div>
             </div>
 
-            <!-- 右侧打卡勾选按钮 -->
+            <!-- 右侧打卡勾选按钮 (阻止冒泡，支持极速打卡) -->
             <button
               class="checkin-toggle-btn"
               :class="{ 'checked': task.is_completed }"
@@ -234,6 +235,16 @@
       :is-all-done="isAllDone"
       @confirm="onCelebrateConfirm"
     />
+
+    <!-- iOS 规范作业详情半屏抽屉 -->
+    <HomeworkDetailSheet
+      v-model="showDetailSheet"
+      :homework="selectedTask"
+      @toggle-complete="handleDetailToggle"
+      @edit="handleDetailEdit"
+      @to-mistake="handleDetailToMistake"
+      @delete="handleDetailDelete"
+    />
   </div>
 </template>
 
@@ -246,6 +257,7 @@ import SubjectBadge from '../components/SubjectBadge.vue';
 import QuickAddModal from '../components/QuickAddModal.vue';
 import PomodoroTimer from '../components/PomodoroTimer.vue';
 import CheckinCelebrateModal from '../components/CheckinCelebrateModal.vue';
+import HomeworkDetailSheet from '../components/HomeworkDetailSheet.vue';
 
 const router = useRouter();
 
@@ -260,11 +272,51 @@ const streakDays = ref(0);
 const reviewQueueCount = ref(0);
 const taskToggling = ref(null);
 
-// 弹窗状态
+// 弹窗与详情状态
 const showAddModal = ref(false);
 const showCelebrateModal = ref(false);
 const isAllDone = ref(false);
 const pomodoroRef = ref(null);
+const selectedTask = ref(null);
+const showDetailSheet = ref(false);
+
+const openTaskDetail = (task) => {
+  selectedTask.value = task;
+  showDetailSheet.value = true;
+};
+
+const handleDetailToggle = async (task) => {
+  await toggleTaskCheck(task);
+  if (selectedTask.value && selectedTask.value.id === task.id) {
+    selectedTask.value.is_completed = task.is_completed;
+    selectedTask.value.completed_at = task.completed_at;
+  }
+};
+
+const handleDetailEdit = (task) => {
+  showDetailSheet.value = false;
+  router.push('/homework');
+};
+
+const handleDetailToMistake = async (task) => {
+  try {
+    await homeworkApi.toMistake(task.id);
+    showToast({ message: '已归档至错题本草稿', icon: 'records-o' });
+  } catch (e) {
+    showToast('转错题失败');
+  }
+};
+
+const handleDetailDelete = async (task) => {
+  try {
+    await homeworkApi.delete(task.id);
+    showToast({ message: '作业已删除', position: 'bottom' });
+    showDetailSheet.value = false;
+    fetchTodayHomework();
+  } catch (e) {
+    showToast('删除失败');
+  }
+};
 
 // 日期处理
 const today = new Date();
@@ -707,9 +759,16 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   background: #ffffff;
-  border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.7);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
   transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.task-card:active {
+  transform: scale(0.985);
+  background: #f8fafc;
 }
 
 .task-card.is-completed {
@@ -733,23 +792,17 @@ onMounted(() => {
   min-width: 0;
 }
 
-.task-subject-and-title {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  overflow: hidden;
-}
-
 .task-subject-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: #0f172a;
-  flex-shrink: 0;
+  line-height: 1.2;
 }
 
 .task-content-text {
-  font-size: 13px;
+  font-size: 13.5px;
   color: #334155;
+  line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -764,6 +817,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-top: 1px;
 }
 
 .weekend-tag {
@@ -786,6 +840,23 @@ onMounted(() => {
   cursor: pointer;
   padding: 4px;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uncompleted-circle {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.8px solid #cbd5e1;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.uncompleted-circle:hover {
+  border-color: #3b82f6;
 }
 
 .completed-pill {

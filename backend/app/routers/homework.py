@@ -98,9 +98,92 @@ def calculate_streak(student_id: int, db: Session) -> int:
 @router.get("")
 def get_homework_list(
     target_date: Optional[date] = Query(default=None, alias="date"),
+    scope: Optional[str] = Query(default=None, description="all | history | None"),
     student_id: int = 1,
     db: Session = Depends(get_db)
 ):
+    streak = calculate_streak(student_id, db)
+
+    if scope == "all":
+        # 获取全部未完成/待办作业（跨日期，按日期倒序与学科顺序排列）
+        items = db.query(HomeworkItem).outerjoin(
+            Subject, HomeworkItem.subject_id == Subject.id
+        ).filter(
+            HomeworkItem.student_id == student_id,
+            HomeworkItem.is_completed == False
+        ).order_by(
+            HomeworkItem.date.desc(),
+            Subject.sort_order.asc(),
+            HomeworkItem.id.asc()
+        ).all()
+
+        items_out = []
+        for item in items:
+            items_out.append({
+                "id": item.id,
+                "student_id": item.student_id,
+                "subject_id": item.subject_id,
+                "subject_name": item.subject.name if item.subject else "",
+                "date": item.date,
+                "content": item.content,
+                "is_completed": item.is_completed,
+                "completed_at": item.completed_at.isoformat() if item.completed_at else None,
+                "source_image_path": item.source_image_path,
+                "created_at": item.created_at,
+                "is_weekend_rollover": False,
+            })
+        return {
+            "date": date.today(),
+            "total": len(items_out),
+            "completed": 0,
+            "rate": 0,
+            "streak": streak,
+            "items": items_out,
+            "today_total": len(items_out),
+            "today_completed": 0,
+            "weekend_rollover": None
+        }
+
+    if scope == "history":
+        # 获取历史已打卡完成记录（按完成时间与日期倒序排列，最新完成在前）
+        items = db.query(HomeworkItem).outerjoin(
+            Subject, HomeworkItem.subject_id == Subject.id
+        ).filter(
+            HomeworkItem.student_id == student_id,
+            HomeworkItem.is_completed == True
+        ).order_by(
+            HomeworkItem.date.desc(),
+            HomeworkItem.completed_at.desc(),
+            HomeworkItem.id.desc()
+        ).limit(100).all()
+
+        items_out = []
+        for item in items:
+            items_out.append({
+                "id": item.id,
+                "student_id": item.student_id,
+                "subject_id": item.subject_id,
+                "subject_name": item.subject.name if item.subject else "",
+                "date": item.date,
+                "content": item.content,
+                "is_completed": item.is_completed,
+                "completed_at": item.completed_at.isoformat() if item.completed_at else None,
+                "source_image_path": item.source_image_path,
+                "created_at": item.created_at,
+                "is_weekend_rollover": False,
+            })
+        return {
+            "date": date.today(),
+            "total": len(items_out),
+            "completed": len(items_out),
+            "rate": 100,
+            "streak": streak,
+            "items": items_out,
+            "today_total": len(items_out),
+            "today_completed": len(items_out),
+            "weekend_rollover": None
+        }
+
     query_date = target_date or date.today()
     items = db.query(HomeworkItem).outerjoin(
         Subject, HomeworkItem.subject_id == Subject.id

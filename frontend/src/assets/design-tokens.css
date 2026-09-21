@@ -314,6 +314,13 @@ strong {
   font-size: 13px;
 }
 
+.st-subject-badge--md {
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  font-size: 16px;
+}
+
 .st-subject-badge--lg {
   width: 48px;
   height: 48px;
