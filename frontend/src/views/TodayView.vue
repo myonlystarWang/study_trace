@@ -1,31 +1,74 @@
 <template>
   <div class="today-view">
-    <!-- 1. 顶部温和生活感问候区 -->
+    <!-- 1. 顶部温和生活感问候区 (像素级复刻 Image 2) -->
     <header class="greeting-header">
       <div class="greeting-text">
-        <h1 class="greeting-title">{{ timeGreeting }}，同学 👋</h1>
+        <h1 class="greeting-title">
+          <span class="greeting-row">{{ timeGreeting }}，</span>
+          <span class="greeting-row">同学 <span class="waving-hand">👋</span></span>
+        </h1>
         <p class="greeting-date">{{ formattedDate }}</p>
       </div>
       <div class="greeting-illustration" @click="$router.push('/settings')">
-        <!-- 课桌学习矢量插图 -->
-        <div class="avatar-illustration-badge">
-          <svg viewBox="0 0 64 64" fill="none" class="student-svg">
-            <circle cx="32" cy="32" r="30" fill="#eff6ff" />
-            <!-- 头像发型与脸 -->
-            <circle cx="32" cy="24" r="12" fill="#fed7aa" />
-            <path d="M20 20 C20 12, 44 12, 44 20 C44 23, 20 23, 20 20 Z" fill="#334155" />
-            <!-- 身体衣服 -->
-            <path d="M18 52 C18 38, 46 38, 46 52 Z" fill="#3b82f6" />
-            <!-- 书本 -->
-            <rect x="23" y="44" width="18" height="12" rx="2" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
-            <line x1="32" y1="44" x2="32" y2="56" stroke="#94a3b8" stroke-width="1.5" />
-          </svg>
-        </div>
+        <!-- 伏案学习男孩矢量插图 (高度复刻 Image 2 绿植、课桌、书本、写字学生) -->
+        <svg viewBox="0 0 160 110" fill="none" class="student-study-illustration">
+          <!-- 绿植与陶盆 (右侧后景) -->
+          <g class="plant-group">
+            <path d="M138 68 L152 68 L149 84 L141 84 Z" fill="#f97316" />
+            <rect x="136" y="65" width="18" height="3" rx="1.5" fill="#ea580c" />
+            <path d="M144 65 C140 50, 126 52, 132 40 C138 48, 146 54, 145 65 Z" fill="#22c55e" />
+            <path d="M147 65 C152 48, 162 48, 158 38 C150 45, 147 55, 147 65 Z" fill="#16a34a" />
+            <path d="M145 55 C143 38, 148 28, 145 22 C141 30, 142 42, 145 55 Z" fill="#4ade80" />
+          </g>
+
+          <!-- 木质暖色书桌 -->
+          <ellipse cx="115" cy="88" rx="45" ry="8" fill="#fde68a" />
+          <rect x="70" y="85" width="90" height="7" rx="3.5" fill="#fed7aa" />
+
+          <!-- 左侧立式蓝色收纳书立 -->
+          <path d="M78 85 L85 64 L93 67 L88 85 Z" fill="#60a5fa" />
+          <path d="M84 85 L88 66 L93 67 L88 85 Z" fill="#93c5fd" />
+
+          <!-- 桌面开敞笔记本 -->
+          <polygon points="98,82 128,82 125,87 95,87" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+          <line x1="102" y1="84" x2="122" y2="84" stroke="#93c5fd" stroke-width="0.8" />
+
+          <!-- 男孩身体 (蓝毛衣) -->
+          <path d="M96 90 C96 74, 134 74, 134 90 Z" fill="#2563eb" />
+          <!-- 白色衬衫领 -->
+          <path d="M111 73 L115 79 L119 73 Z" fill="#ffffff" />
+
+          <!-- 伏案写字手臂与铅笔 -->
+          <path d="M100 86 C105 82, 114 83, 118 84" stroke="#2563eb" stroke-width="5" stroke-linecap="round" />
+          <circle cx="119" cy="84" r="3" fill="#fed7aa" />
+          <line x1="117" y1="85" x2="114" y2="78" stroke="#1e293b" stroke-width="1.8" stroke-linecap="round" />
+
+          <!-- 颈部与脸蛋 -->
+          <rect x="112" y="65" width="6" height="8" fill="#fed7aa" />
+          <circle cx="115" cy="55" r="14" fill="#fed7aa" />
+
+          <!-- 腮红 -->
+          <ellipse cx="106" cy="59" rx="2.5" ry="1.5" fill="#fca5a5" opacity="0.8" />
+          <ellipse cx="124" cy="59" rx="2.5" ry="1.5" fill="#fca5a5" opacity="0.8" />
+
+          <!-- 弯弯黑眼与清澈高光 -->
+          <circle cx="108" cy="54" r="1.6" fill="#1e293b" />
+          <circle cx="122" cy="54" r="1.6" fill="#1e293b" />
+          <circle cx="108.6" cy="53.4" r="0.6" fill="#ffffff" />
+          <circle cx="122.6" cy="53.4" r="0.6" fill="#ffffff" />
+          <!-- 亲切微笑 -->
+          <path d="M112 60 Q115 63 118 60" stroke="#1e293b" stroke-width="1.2" stroke-linecap="round" fill="none" />
+
+          <!-- 柔和蓬松黑发 -->
+          <path d="M100 50 C98 38, 110 32, 122 34 C132 36, 132 46, 128 53 C126 46, 122 43, 116 43 C110 43, 106 46, 104 53 Z" fill="#1e293b" />
+          <path d="M102 46 C98 42, 97 34, 106 36 Z" fill="#1e293b" />
+          <path d="M125 40 C131 38, 134 44, 129 48 Z" fill="#1e293b" />
+        </svg>
       </div>
     </header>
 
     <main class="today-content">
-      <!-- 2. 数据概览 2 列网格 -->
+      <!-- 2. 数据概览 2 列网格 (严格复刻 Image 3 文字、数字比例、图标) -->
       <section class="overview-grid">
         <!-- 左侧：今日完成率 Donut 环形图卡片 -->
         <div class="st-card donut-card" @click="$router.push('/homework')">
@@ -35,24 +78,22 @@
               <defs>
                 <linearGradient id="donut-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="#06b6d4" />
-                  <stop offset="100%" stop-color="#3b82f6" />
+                  <stop offset="100%" stop-color="#2563eb" />
                 </linearGradient>
               </defs>
-              <!-- 底环 -->
               <circle
                 class="donut-bg"
                 cx="50"
                 cy="50"
                 r="38"
-                stroke-width="10"
+                stroke-width="9"
               />
-              <!-- 进度环 -->
               <circle
                 class="donut-fill"
                 cx="50"
                 cy="50"
                 r="38"
-                stroke-width="10"
+                stroke-width="9"
                 stroke-linecap="round"
                 :stroke-dasharray="circumference"
                 :stroke-dashoffset="progressOffset"
@@ -69,31 +110,67 @@
         <div class="stats-column">
           <!-- 连续学习卡片 -->
           <div class="st-card mini-stat-card" @click="$router.push('/homework')">
-            <div class="stat-header">
-              <span class="stat-icon-wrap stat-icon-fire">🔥</span>
-              <div class="stat-info">
-                <span class="stat-name">连续学习</span>
-                <span class="stat-value"><strong>{{ streakDays }}</strong> 天</span>
+            <div class="stat-card-inner">
+              <div class="stat-icon-box stat-icon-fire">
+                <svg viewBox="0 0 24 24" class="stat-svg-icon" fill="none">
+                  <path d="M12 2C10 5.5 12 8 10 11C8.5 9 8 7 8 7C5 10.5 4 14 6 18C8 22 16 22 18 18C20 14 17 8 12 2Z" fill="url(#fire-grad)" />
+                  <path d="M12 20C10.5 20 8.5 18.5 9 16C9.5 13.5 12 13 12 11C13 13 15 14.5 15 16C15 18.5 13.5 20 12 20Z" fill="#fed7aa" />
+                  <defs>
+                    <linearGradient id="fire-grad" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#f97316"/>
+                      <stop offset="1" stop-color="#ea580c"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
               </div>
-              <van-icon name="arrow" class="stat-arrow" />
+              <div class="stat-content">
+                <div class="stat-label-row">
+                  <span class="stat-label">连续学习</span>
+                  <van-icon name="arrow" class="stat-chevron" />
+                </div>
+                <div class="stat-value-row">
+                  <span class="stat-num">{{ streakDays }}</span>
+                  <span class="stat-unit">天</span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- 今日专注时长卡片 -->
+          <!-- 今日学习时长卡片 -->
           <div class="st-card mini-stat-card" @click="openPomodoro">
-            <div class="stat-header">
-              <span class="stat-icon-wrap stat-icon-time">🕒</span>
-              <div class="stat-info">
-                <span class="stat-name">今日学习时长</span>
-                <span class="stat-value">{{ formattedStudyDuration }}</span>
+            <div class="stat-card-inner">
+              <div class="stat-icon-box stat-icon-time">
+                <svg viewBox="0 0 24 24" class="stat-svg-icon" fill="none">
+                  <circle cx="12" cy="12" r="10" fill="#3b82f6"/>
+                  <path d="M12 7V12L15 14" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
               </div>
-              <van-icon name="arrow" class="stat-arrow" />
+              <div class="stat-content">
+                <div class="stat-label-row">
+                  <span class="stat-label">今日学习时长</span>
+                  <van-icon name="arrow" class="stat-chevron" />
+                </div>
+                <div class="stat-value-row">
+                  <template v-if="studyDurationParts.isZero">
+                    <span class="stat-num">0</span>
+                    <span class="stat-unit">分钟</span>
+                  </template>
+                  <template v-else>
+                    <template v-if="studyDurationParts.hasHours">
+                      <span class="stat-num">{{ studyDurationParts.hours }}</span>
+                      <span class="stat-unit">小时</span>
+                    </template>
+                    <span class="stat-num">{{ studyDurationParts.mins }}</span>
+                    <span class="stat-unit">分钟</span>
+                  </template>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- 3. 今日任务极简清单 -->
+      <!-- 3. 今日任务整体卡片容器 (严格复刻 Image 4 单一白底卡片 + 14px/12px 小巧精致字号) -->
       <section class="today-tasks-section">
         <div class="section-top-bar">
           <h2 class="section-title">今日任务</h2>
@@ -102,55 +179,68 @@
           </button>
         </div>
 
-        <!-- 任务列表为空状态 -->
-        <div v-if="tasks.length === 0 && !loading" class="st-card empty-tasks-card">
-          <div class="empty-icon-wrap">☀️</div>
-          <p class="empty-title">今天没有待办作业</p>
-          <p class="empty-subtitle">自由时光属于你，或是提前录入新作业吧！</p>
-        </div>
+        <!-- 整合到统一白底大卡片中 -->
+        <div class="st-card tasks-grouped-card">
+          <!-- 任务列表为空状态 -->
+          <div v-if="tasks.length === 0 && !loading" class="empty-tasks-box">
+            <div class="empty-icon-wrap">☀️</div>
+            <p class="empty-title">今天没有待办作业</p>
+            <p class="empty-subtitle">自由时光属于你，或是提前录入新作业吧！</p>
+          </div>
 
-        <!-- 任务列表 -->
-        <div v-else class="tasks-list">
-          <div
-            v-for="task in tasks"
-            :key="task.id"
-            class="st-card task-card"
-            :class="{ 'is-completed': task.is_completed }"
-            @click="openTaskDetail(task)"
-          >
-            <div class="task-left">
-              <SubjectBadge :name="task.subject_name" size="md" />
-              <div class="task-details">
-                <div class="task-subject-title">{{ task.subject_name }}</div>
-                <div class="task-content-text" :class="{ strike: task.is_completed }">
-                  {{ task.content }}
-                </div>
-                <div class="task-meta">
-                  <span v-if="task.is_weekend_rollover" class="weekend-tag">周末顺延</span>
-                  <span class="task-time">
-                    {{ formatTaskTime(task.created_at || task.date) }}
-                  </span>
+          <!-- 任务列表行 -->
+          <div v-else class="tasks-rows-list">
+            <div
+              v-for="(task, index) in displayedTasks"
+              :key="task.id"
+              class="task-row-item"
+              :class="{ 'is-completed': task.is_completed, 'is-last': index === displayedTasks.length - 1 }"
+              @click="openTaskDetail(task)"
+            >
+              <div class="task-left">
+                <SubjectBadge :name="task.subject_name" size="sm" />
+                <div class="task-details">
+                  <div class="task-subject-title">{{ task.subject_name }}</div>
+                  <div class="task-content-text" :class="{ 'is-done': task.is_completed }">
+                    {{ task.content }}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <!-- 右侧打卡勾选按钮 (阻止冒泡，支持极速打卡) -->
-            <button
-              class="checkin-toggle-btn"
-              :class="{ 'checked': task.is_completed }"
-              :disabled="taskToggling === task.id"
-              @click.stop="toggleTaskCheck(task)"
-              :aria-label="task.is_completed ? '已完成' : '打卡'"
-            >
-              <template v-if="task.is_completed">
-                <span class="completed-pill">
-                  <van-icon name="success" size="12" />
-                  已完成
-                </span>
-              </template>
-              <template v-else>
-                <span class="uncompleted-circle"></span>
-              </template>
+              <!-- 右侧打卡勾选按钮 (阻止冒泡) -->
+              <button
+                class="checkin-toggle-btn"
+                :class="{ 'checked': task.is_completed }"
+                :disabled="taskToggling === task.id"
+                @click.stop="toggleTaskCheck(task)"
+                :aria-label="task.is_completed ? '已完成' : '打卡'"
+              >
+                <template v-if="task.is_completed">
+                  <!-- 复刻 Image 4 绿色圆点勾勾 + 已完成文字 -->
+                  <span class="completed-pill">
+                    <svg viewBox="0 0 16 16" class="completed-check-dot" fill="none">
+                      <circle cx="8" cy="8" r="7" fill="#10b981" />
+                      <path d="M5 8.2L7 10.2L11 6" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <span>已完成</span>
+                  </span>
+                </template>
+                <template v-else>
+                  <!-- 18px 浅灰细圈 -->
+                  <span class="uncompleted-circle"></span>
+                </template>
+              </button>
+            </div>
+          </div>
+
+          <!-- 多作业防撑爆折叠/展开胶囊 (超过 5 项时显示) -->
+          <div v-if="tasks.length > 5" class="tasks-expand-wrapper">
+            <button class="tasks-expand-pill" @click="isTasksExpanded = !isTasksExpanded">
+              <span v-if="!isTasksExpanded">
+                展开更多 {{ uncompletedHiddenCount > 0 ? `(还有 ${uncompletedHiddenCount} 项待办)` : `(还有 ${tasks.length - 5} 项)` }}
+              </span>
+              <span v-else>收起任务</span>
+              <van-icon :name="isTasksExpanded ? 'arrow-up' : 'arrow-down'" size="11" />
             </button>
           </div>
         </div>
@@ -178,7 +268,7 @@
         </button>
       </section>
 
-      <!-- 5. 学习时长分布卡片 -->
+      <!-- 5. 学习时长分布卡片 (动态联动) -->
       <section class="study-distribution-card st-card">
         <div class="dist-header">
           <h3 class="dist-title">学习时长分布</h3>
@@ -210,11 +300,11 @@
     <!-- 6. 底部双悬浮快速录入操作胶囊 -->
     <aside class="floating-quick-actions">
       <button class="quick-fab-btn" @click="showAddModal = true">
-        <van-icon name="photograph" size="18" />
+        <van-icon name="photograph" size="18" color="#2563eb" />
         <span>录入作业</span>
       </button>
       <button class="quick-fab-btn" @click="$router.push('/mistakes?action=add')">
-        <van-icon name="records-o" size="18" />
+        <van-icon name="records-o" size="18" color="#2563eb" />
         <span>录入错题</span>
       </button>
     </aside>
@@ -249,7 +339,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { showToast } from 'vant';
 import { homeworkApi, mistakeApi, settingsApi } from '../api';
@@ -272,6 +362,9 @@ const streakDays = ref(0);
 const reviewQueueCount = ref(0);
 const taskToggling = ref(null);
 
+// 首页任务展示折叠状态
+const isTasksExpanded = ref(false);
+
 // 弹窗与详情状态
 const showAddModal = ref(false);
 const showCelebrateModal = ref(false);
@@ -293,7 +386,7 @@ const handleDetailToggle = async (task) => {
   }
 };
 
-const handleDetailEdit = (task) => {
+const handleDetailEdit = () => {
   showDetailSheet.value = false;
   router.push('/homework');
 };
@@ -322,7 +415,7 @@ const handleDetailDelete = async (task) => {
 const today = new Date();
 const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-// 动态时间段问候
+// 动态时间段问候 (Image 2)
 const timeGreeting = computed(() => {
   const hour = today.getHours();
   if (hour >= 5 && hour < 12) return '早上好';
@@ -331,7 +424,7 @@ const timeGreeting = computed(() => {
   return '晚上好';
 });
 
-// 中文日期格式化
+// 中文日期格式化 (Image 2)
 const formattedDate = computed(() => {
   const month = today.getMonth() + 1;
   const date = today.getDate();
@@ -348,43 +441,168 @@ const progressOffset = computed(() => {
   return circumference - (rate / 100) * circumference;
 });
 
-// 专注时长计算
-const totalFocusMinutes = ref(102); // 默认 1 小时 42 分钟（亦从 localStorage 动态增量累加）
+// 任务智能排序：未完成在前、已完成在后
+const sortedTasks = computed(() => {
+  return [...tasks.value].sort((a, b) => {
+    if (Boolean(a.is_completed) === Boolean(b.is_completed)) return 0;
+    return a.is_completed ? 1 : -1;
+  });
+});
+
+// 默认仅显示前 5 项，超出时通过折叠胶囊按需展开
+const displayedTasks = computed(() => {
+  if (isTasksExpanded.value || sortedTasks.value.length <= 5) {
+    return sortedTasks.value;
+  }
+  return sortedTasks.value.slice(0, 5);
+});
+
+// 计算隐藏的待办（未完成）作业数量
+const uncompletedHiddenCount = computed(() => {
+  if (isTasksExpanded.value || sortedTasks.value.length <= 5) return 0;
+  const hiddenTasks = sortedTasks.value.slice(5);
+  return hiddenTasks.filter(t => !t.is_completed).length;
+});
+
+// ==========================================
+// 学习时长与学科分布科学动态统计
+// ==========================================
+const SUBJECT_BASELINE_MINUTES = {
+  math: 35,      // 数学
+  chinese: 30,   // 语文
+  english: 25,   // 英语
+  physics: 25,   // 物理
+  chemistry: 25, // 化学
+  biology: 20,   // 生物
+  history: 20,   // 历史
+  geography: 20, // 地理
+  politics: 20,  // 道德与法治
+  daofa: 20,
+  other: 15      // 其他
+};
+
+const SUBJECT_COLORS = {
+  math: '#3b82f6',     // 蓝
+  chinese: '#10b981',  // 绿
+  english: '#8b5cf6',  // 紫
+  physics: '#f97316',  // 橙
+  chemistry: '#06b6d4',// 青
+  biology: '#84cc16',  // 黄绿
+  history: '#d97706',  // 琥珀
+  geography: '#0ea5e9',// 天蓝
+  politics: '#ef4444', // 红
+  daofa: '#ef4444',
+  other: '#94a3b8'     // 灰
+};
+
+const getSubjectKey = (name) => {
+  const n = (name || '').trim();
+  if (n.includes('数')) return 'math';
+  if (n.includes('语')) return 'chinese';
+  if (n.includes('英')) return 'english';
+  if (n.includes('物')) return 'physics';
+  if (n.includes('化')) return 'chemistry';
+  if (n.includes('生')) return 'biology';
+  if (n.includes('地')) return 'geography';
+  if (n.includes('历')) return 'history';
+  if (n.includes('道') || n.includes('法') || n.includes('政')) return 'politics';
+  return 'other';
+};
+
+// 本地番茄钟专注累计增量 (分钟)
+const pomodoroMinutes = ref(0);
+
+const loadPomodoroMinutes = () => {
+  try {
+    const key = `study_trace_pomodoro_${todayStr}`;
+    pomodoroMinutes.value = parseInt(localStorage.getItem(key) || '0', 10);
+  } catch (e) {
+    pomodoroMinutes.value = 0;
+  }
+};
+
+// 动态学习时长计算：打卡完成的作业学科基准用时 + 真实番茄专注用时
+const totalStudyMinutes = computed(() => {
+  let minutes = pomodoroMinutes.value;
+  tasks.value.forEach(t => {
+    if (t.is_completed) {
+      const key = getSubjectKey(t.subject_name);
+      minutes += (SUBJECT_BASELINE_MINUTES[key] || 15);
+    }
+  });
+  return minutes;
+});
+
+// 用于 Image 3 样式的突出大数字与小单位解构
+const studyDurationParts = computed(() => {
+  const m = totalStudyMinutes.value;
+  if (m <= 0) {
+    return { hasHours: false, hours: 0, mins: 0, isZero: true };
+  }
+  const hours = Math.floor(m / 60);
+  const mins = m % 60;
+  return {
+    hasHours: hours > 0,
+    hours,
+    mins,
+    isZero: false
+  };
+});
+
 const formattedStudyDuration = computed(() => {
-  const m = totalFocusMinutes.value;
+  const m = totalStudyMinutes.value;
   if (m <= 0) return '0 分钟';
   const hours = Math.floor(m / 60);
   const mins = m % 60;
-  if (hours > 0 && mins > 0) return `${hours}小时${mins}分钟`;
+  if (hours > 0 && mins > 0) return `${hours}小时 ${mins}分钟`;
   if (hours > 0) return `${hours}小时`;
   return `${mins}分钟`;
 });
 
-// 学科时长分布
+// 动态计算学科时长分布 (打卡实时联动更新)
 const subjectDistribution = computed(() => {
-  // 按照典型作业学科时长分布
-  return [
-    { name: '数学', color: '#3b82f6', percentage: 48, durationText: '48 min' },
-    { name: '语文', color: '#10b981', percentage: 31, durationText: '31 min' },
-    { name: '英语', color: '#8b5cf6', percentage: 23, durationText: '23 min' },
-    { name: '其他', color: '#cbd5e1', percentage: 0, durationText: '0 min' }
-  ];
-});
+  const minutesBySubject = {};
 
-// 格式化布置时间
-const formatTaskTime = (isoTimeStr) => {
-  if (!isoTimeStr) return '';
-  try {
-    const d = new Date(isoTimeStr);
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const h = String(d.getHours()).padStart(2, '0');
-    const min = String(d.getMinutes()).padStart(2, '0');
-    return `布置时间: ${m}-${day} ${h}:${min}`;
-  } catch (e) {
-    return '';
-  }
-};
+  // 默认学科基准列表
+  const defaultSubjects = ['数学', '语文', '英语', '其他'];
+  const presentSubjectNames = Array.from(new Set(tasks.value.map(t => t.subject_name).filter(Boolean)));
+  const orderedSubjectNames = presentSubjectNames.length > 0
+    ? presentSubjectNames.slice(0, 4)
+    : defaultSubjects;
+
+  orderedSubjectNames.forEach(name => {
+    minutesBySubject[name] = 0;
+  });
+
+  tasks.value.forEach(t => {
+    if (t.is_completed && t.subject_name) {
+      const key = getSubjectKey(t.subject_name);
+      const mins = SUBJECT_BASELINE_MINUTES[key] || 15;
+      if (minutesBySubject[t.subject_name] !== undefined) {
+        minutesBySubject[t.subject_name] += mins;
+      } else {
+        minutesBySubject['其他'] = (minutesBySubject['其他'] || 0) + mins;
+      }
+    }
+  });
+
+  // 进度条满格基准值 (以最大分钟数或 60 分钟作为参考)
+  const maxMins = Math.max(...Object.values(minutesBySubject), 60);
+
+  return orderedSubjectNames.map(name => {
+    const key = getSubjectKey(name);
+    const mins = minutesBySubject[name] || 0;
+    const color = SUBJECT_COLORS[key] || SUBJECT_COLORS.other;
+    const percentage = maxMins > 0 ? Math.min(100, Math.round((mins / maxMins) * 100)) : 0;
+    return {
+      name,
+      color,
+      minutes: mins,
+      percentage,
+      durationText: `${mins} min`
+    };
+  });
+});
 
 // 加载今日作业与统计
 const fetchTodayHomework = async () => {
@@ -451,7 +669,7 @@ const toggleTaskCheck = async (task) => {
     }
     completionRate.value = totalCount.value > 0 ? Math.round((completedCount.value / totalCount.value) * 100) : 0;
 
-    // 若打卡完成，弹出仪式感祝贺弹窗
+    // 若打卡完成，弹出祝贺弹窗
     if (targetCompleted) {
       isAllDone.value = completedCount.value === totalCount.value && totalCount.value > 0;
       showCelebrateModal.value = true;
@@ -471,7 +689,7 @@ const handleHomeworkAdded = () => {
 
 // 庆祝弹窗关闭回调
 const onCelebrateConfirm = () => {
-  // 可停留在本页或做微动效
+  // 保持当前页
 };
 
 // 打开专注计时器
@@ -485,23 +703,31 @@ const goToMistakesReview = () => {
 };
 
 onMounted(() => {
+  loadPomodoroMinutes();
   fetchTodayHomework();
   fetchSubjects();
   fetchReviewQueue();
+  window.addEventListener('study_trace_pomodoro_completed', loadPomodoroMinutes);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('study_trace_pomodoro_completed', loadPomodoroMinutes);
 });
 </script>
 
 <style scoped>
+/* 根容器：边距由 14px 收敛为 12px，消除两侧过多空白，卡片饱满居中 */
 .today-view {
   flex: 1;
-  background-color: var(--st-bg-page, #f8fafc);
-  padding: 16px 14px 110px;
-  max-width: 500px;
+  background-color: #f8fafc;
+  padding: 12px 12px 100px;
+  width: 100%;
+  box-sizing: border-box;
   margin: 0 auto;
   position: relative;
 }
 
-/* 1. 顶部问候区 */
+/* 1. 顶部问候区 (Image 2) */
 .greeting-header {
   display: flex;
   align-items: center;
@@ -510,47 +736,58 @@ onMounted(() => {
 }
 
 .greeting-title {
-  font-size: 20px;
+  display: flex;
+  flex-direction: column;
+  font-size: 24px;
   font-weight: 800;
   color: #0f172a;
-  letter-spacing: -0.3px;
-  margin-bottom: 4px;
+  letter-spacing: -0.5px;
+  line-height: 1.25;
+  margin: 0 0 6px;
+}
+
+.greeting-row {
+  display: block;
+}
+
+.waving-hand {
+  font-size: 22px;
+  margin-left: 2px;
+  vertical-align: middle;
 }
 
 .greeting-date {
   font-size: 13px;
-  color: #64748b;
+  color: #94a3b8;
   font-weight: 500;
 }
 
-.avatar-illustration-badge {
-  width: 52px;
-  height: 52px;
+.greeting-illustration {
+  width: 124px;
+  height: 86px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  filter: drop-shadow(0 4px 10px rgba(59, 130, 246, 0.15));
-  transition: transform 0.15s ease;
 }
 
-.avatar-illustration-badge:active {
-  transform: scale(0.94);
-}
-
-.student-svg {
+.student-study-illustration {
   width: 100%;
   height: 100%;
+  filter: drop-shadow(0 4px 12px rgba(37, 99, 235, 0.08));
 }
 
-/* 2. 数据概览网格 */
+/* 2. 数据概览网格 (Image 3) */
 .overview-grid {
   display: grid;
-  grid-template-columns: 1fr 1.1fr;
-  gap: 12px;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 10px;
   margin-bottom: 16px;
 }
 
 .donut-card {
   margin: 0;
-  padding: 14px 12px;
+  padding: 14px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -559,20 +796,21 @@ onMounted(() => {
   cursor: pointer;
   background: #ffffff;
   border-radius: 16px;
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(226, 232, 240, 0.7);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.02);
 }
 
 .card-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #64748b;
-  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4b5563;
+  margin-bottom: 6px;
 }
 
 .donut-container {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: 92px;
+  height: 92px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -586,7 +824,7 @@ onMounted(() => {
 
 .donut-bg {
   fill: none;
-  stroke: #e2e8f0;
+  stroke: #f1f5f9;
 }
 
 .donut-fill {
@@ -605,17 +843,17 @@ onMounted(() => {
 }
 
 .donut-percent {
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 800;
   color: #0f172a;
-  line-height: 1.1;
+  line-height: 1;
 }
 
 .donut-fraction {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   color: #64748b;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 .stats-column {
@@ -626,14 +864,15 @@ onMounted(() => {
 
 .mini-stat-card {
   margin: 0;
-  padding: 12px 14px;
+  padding: 10px 12px;
   flex: 1;
   display: flex;
   align-items: center;
   cursor: pointer;
   background: #ffffff;
-  border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.7);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.02);
   transition: transform 0.15s ease;
 }
 
@@ -641,21 +880,20 @@ onMounted(() => {
   transform: scale(0.98);
 }
 
-.stat-header {
+.stat-card-inner {
   display: flex;
   align-items: center;
-  width: 100%;
   gap: 10px;
+  width: 100%;
 }
 
-.stat-icon-wrap {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
+.stat-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
   flex-shrink: 0;
 }
 
@@ -667,31 +905,62 @@ onMounted(() => {
   background: #eff6ff;
 }
 
-.stat-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+.stat-svg-icon {
+  width: 24px;
+  height: 24px;
 }
 
-.stat-name {
-  font-size: 11px;
-  color: #64748b;
+.stat-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.stat-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #4b5563;
   font-weight: 500;
 }
 
-.stat-value {
-  font-size: 13px;
+.stat-chevron {
+  color: #9ca3af;
+  font-size: 11px;
+}
+
+.stat-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
+  flex-wrap: wrap;
+  margin-top: 1px;
+}
+
+.stat-num {
+  font-size: 22px;
+  font-weight: 800;
   color: #0f172a;
-  font-weight: 700;
-  margin-top: 2px;
+  line-height: 1.1;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "Inter", sans-serif;
 }
 
-.stat-arrow {
-  color: #94a3b8;
-  font-size: 12px;
+.stat-unit {
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  margin-left: 1px;
+  margin-right: 5px;
 }
 
-/* 3. 今日任务极简清单 */
+/* 3. 今日任务整体卡片系统 (Image 4 规范) */
 .today-tasks-section {
   margin-bottom: 16px;
 }
@@ -700,11 +969,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 4px 10px;
+  padding: 0 4px 8px;
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   color: #0f172a;
 }
@@ -712,9 +981,9 @@ onMounted(() => {
 .view-all-btn {
   background: none;
   border: none;
-  color: #3b82f6;
+  color: #2563eb;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -722,23 +991,31 @@ onMounted(() => {
   padding: 4px;
 }
 
-.empty-tasks-card {
-  text-align: center;
-  padding: 28px 16px;
+/* 核心：将今日任务收纳进统一白底卡片 */
+.tasks-grouped-card {
+  margin: 0;
+  padding: 2px 14px;
   background: #ffffff;
   border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.7);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.02);
+}
+
+.empty-tasks-box {
+  text-align: center;
+  padding: 24px 12px;
 }
 
 .empty-icon-wrap {
-  font-size: 36px;
-  margin-bottom: 8px;
+  font-size: 32px;
+  margin-bottom: 6px;
 }
 
 .empty-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: #0f172a;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .empty-subtitle {
@@ -746,91 +1023,75 @@ onMounted(() => {
   color: #64748b;
 }
 
-.tasks-list {
+.tasks-rows-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 
-.task-card {
-  margin: 0;
-  padding: 12px 14px;
+/* 单条任务行：高度紧凑，带微细分割线，字号相对小巧 (Image 4) */
+.task-row-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #ffffff;
-  border-radius: 16px;
-  border: 1px solid rgba(226, 232, 240, 0.7);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
-  transition: all 0.2s ease;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
-.task-card:active {
-  transform: scale(0.985);
-  background: #f8fafc;
-}
-
-.task-card.is-completed {
-  background: #f8fafc;
-  opacity: 0.88;
+.task-row-item.is-last {
+  border-bottom: none;
 }
 
 .task-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex: 1;
   min-width: 0;
+}
+
+.today-view :deep(.task-left .st-subject-badge) {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  flex-shrink: 0;
+}
+
+.today-view :deep(.task-left .st-subject-badge .badge-text-aa) {
+  font-size: 13px;
+}
+
+.today-view :deep(.task-left .st-subject-badge svg) {
+  width: 19px;
+  height: 19px;
 }
 
 .task-details {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   flex: 1;
   min-width: 0;
 }
 
 .task-subject-title {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   color: #0f172a;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .task-content-text {
-  font-size: 13.5px;
-  color: #334155;
-  line-height: 1.4;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.task-card.is-completed .task-content-text {
-  text-decoration: line-through;
-  color: #94a3b8;
-}
-
-.task-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 1px;
-}
-
-.weekend-tag {
-  font-size: 10px;
-  background: #fef3c7;
-  color: #d97706;
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-weight: 600;
-}
-
-.task-time {
-  font-size: 11px;
+.task-content-text.is-done {
   color: #94a3b8;
 }
 
@@ -845,57 +1106,75 @@ onMounted(() => {
   justify-content: center;
 }
 
-.uncompleted-circle {
-  display: inline-block;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1.8px solid #cbd5e1;
-  background: transparent;
-  transition: all 0.2s ease;
-}
-
-.uncompleted-circle:hover {
-  border-color: #3b82f6;
-}
-
-.completed-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  background: #ecfdf5;
-  color: #10b981;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 8px;
-  border-radius: 9999px;
-  border: 1px solid #a7f3d0;
-}
-
+/* Image 4：18px 浅灰细腻空心圆圈 */
 .uncompleted-circle {
   display: block;
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  border: 2px solid #cbd5e1;
+  border: 1.5px solid #d1d5db;
   background: #ffffff;
   transition: all 0.15s ease;
 }
 
 .checkin-toggle-btn:active .uncompleted-circle {
   border-color: #3b82f6;
-  transform: scale(0.9);
+  transform: scale(0.92);
+}
+
+/* Image 4：绿底白勾小圆点 + 翠绿文字 已完成 */
+.completed-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #10b981;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 4px;
+}
+
+.completed-check-dot {
+  width: 15px;
+  height: 15px;
+}
+
+/* 折叠展开胶囊 */
+.tasks-expand-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 6px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.tasks-expand-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tasks-expand-pill:active {
+  background: #f1f5f9;
+  transform: scale(0.97);
 }
 
 /* 4. 今日错题复习入口横幅 */
 .mistake-review-banner {
   margin: 0 0 16px;
-  padding: 14px 16px;
+  padding: 12px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, #fdf4ff 0%, #eff6ff 100%);
-  border: 1px solid #f3e8ff;
+  background: linear-gradient(135deg, #fbf7ff 0%, #f0f6ff 100%);
+  border: 1px solid #ede9fe;
   border-radius: 16px;
   cursor: pointer;
 }
@@ -903,7 +1182,7 @@ onMounted(() => {
 .banner-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .banner-target-icon {
@@ -933,7 +1212,7 @@ onMounted(() => {
 .banner-subtitle {
   font-size: 12px;
   color: #64748b;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .banner-action-btn {
@@ -942,7 +1221,7 @@ onMounted(() => {
   font-size: 12px;
   font-weight: 600;
   border: none;
-  padding: 6px 12px;
+  padding: 6px 13px;
   border-radius: 9999px;
   display: flex;
   align-items: center;
@@ -954,16 +1233,18 @@ onMounted(() => {
 /* 5. 学习时长分布卡片 */
 .study-distribution-card {
   margin: 0 0 20px;
-  padding: 16px;
+  padding: 14px;
   background: #ffffff;
   border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.7);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
 }
 
 .dist-header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .dist-title {
@@ -974,14 +1255,14 @@ onMounted(() => {
 
 .dist-total {
   font-size: 13px;
-  font-weight: 700;
-  color: #3b82f6;
+  font-weight: 600;
+  color: #64748b;
 }
 
 .dist-bars-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 11px;
 }
 
 .dist-row {
@@ -994,7 +1275,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  width: 50px;
+  width: 44px;
   flex-shrink: 0;
 }
 
@@ -1006,7 +1287,7 @@ onMounted(() => {
 }
 
 .dist-subject-name {
-  font-size: 12px;
+  font-size: 13px;
   color: #334155;
   font-weight: 600;
 }
@@ -1022,13 +1303,13 @@ onMounted(() => {
 .dist-bar-fill {
   height: 100%;
   border-radius: 9999px;
-  transition: width 0.6s ease;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dist-duration {
   width: 50px;
   text-align: right;
-  font-size: 11px;
+  font-size: 12px;
   color: #94a3b8;
   font-weight: 600;
   flex-shrink: 0;
@@ -1037,15 +1318,15 @@ onMounted(() => {
 /* 6. 底部双悬浮快速录入操作胶囊 */
 .floating-quick-actions {
   position: fixed;
-  bottom: 64px;
+  bottom: 66px;
   left: 0;
   right: 0;
   max-width: 500px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 16px;
   display: flex;
   justify-content: center;
-  gap: 16px;
+  gap: 14px;
   pointer-events: none;
   z-index: 90;
 }
@@ -1055,27 +1336,27 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 40px;
-  padding: 0 20px;
+  height: 38px;
+  padding: 0 18px;
   background: #ffffff;
   color: #1e293b;
   border: 1px solid #e2e8f0;
   border-radius: 9999px;
   font-size: 13px;
   font-weight: 600;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .quick-fab-btn:first-child {
-  color: #2563eb;
-  border-color: #bfdbfe;
-  background: #eff6ff;
+  color: #1e293b;
+  border-color: #e2e8f0;
+  background: #ffffff;
 }
 
 .quick-fab-btn:active {
-  transform: scale(0.95);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  transform: scale(0.96);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
 }
 </style>

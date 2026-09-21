@@ -158,6 +158,17 @@ const tick = () => {
     remainingSeconds.value = selectedMinutes.value * 60;
     playDingSound();
 
+    try {
+      const d = new Date();
+      const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const storageKey = `study_trace_pomodoro_${todayStr}`;
+      const curr = parseInt(localStorage.getItem(storageKey) || '0', 10);
+      localStorage.setItem(storageKey, String(curr + selectedMinutes.value));
+      window.dispatchEvent(new CustomEvent('study_trace_pomodoro_completed', { detail: selectedMinutes.value }));
+    } catch (e) {
+      console.warn('Failed to save pomodoro focus minutes:', e);
+    }
+
     showDialog({
       title: '专注时段达成',
       message: '太棒了！已完成本次高效专注阶段，休息 5 分钟活动一下眼睛吧！',
