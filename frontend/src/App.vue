@@ -2,7 +2,7 @@
   <div class="app-container" :class="{ 'app-container--wide': $route.meta?.paperMode }">
     <router-view />
 
-    <!-- 底部导航栏：作业打卡、错题本、学情成绩、家长管理 -->
+    <!-- 底部导航栏：首页、作业、错题、数据、我的 -->
     <van-tabbar
       v-show="!$route.meta?.hideTabbar"
       :placeholder="!$route.meta?.hideTabbar"
@@ -10,10 +10,11 @@
       active-color="#2563eb"
       inactive-color="#94a3b8"
     >
-      <van-tabbar-item to="/" icon="passed">作业打卡</van-tabbar-item>
-      <van-tabbar-item to="/mistakes" icon="records-o">错题本</van-tabbar-item>
-      <van-tabbar-item to="/scores" icon="chart-trending-o">学情成绩</van-tabbar-item>
-      <van-tabbar-item to="/settings" icon="setting-o">家长管理</van-tabbar-item>
+      <van-tabbar-item to="/" icon="wap-home-o">首页</van-tabbar-item>
+      <van-tabbar-item to="/homework" icon="todo-list-o">作业</van-tabbar-item>
+      <van-tabbar-item to="/mistakes" icon="records-o">错题</van-tabbar-item>
+      <van-tabbar-item to="/scores" icon="chart-trending-o">数据</van-tabbar-item>
+      <van-tabbar-item to="/settings" icon="contact-o">我的</van-tabbar-item>
     </van-tabbar>
   </div>
 </template>

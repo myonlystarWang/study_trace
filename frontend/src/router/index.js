@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import TodayView from '../views/TodayView.vue';
 import HomeworkView from '../views/HomeworkView.vue';
 import MistakeView from '../views/MistakeView.vue';
 import SettingsView from '../views/SettingsView.vue';
@@ -11,6 +12,11 @@ import HomeView from '../views/HomeView.vue';
 const routes = [
   {
     path: '/',
+    name: 'today',
+    component: TodayView
+  },
+  {
+    path: '/homework',
     name: 'homework',
     component: HomeworkView
   },

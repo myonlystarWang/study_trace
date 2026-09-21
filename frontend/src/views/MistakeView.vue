@@ -640,7 +640,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { showToast, showConfirmDialog, closeToast } from 'vant';
 import { mistakeApi, settingsApi, ocrApi } from '../api';
 import { compressImage } from '../utils/imageCompress';
@@ -648,6 +648,7 @@ import ImageCropper from '../components/ImageCropper.vue';
 import MathText from '../components/MathText.vue';
 
 const router = useRouter();
+const route = useRoute();
 
 const activeTab = ref('review');
 const subjects = ref([]);
@@ -1455,6 +1456,12 @@ const previewImage = (url) => {
 };
 
 onMounted(async () => {
+  if (route.query.tab === 'review' || route.query.tab === 'all') {
+    activeTab.value = route.query.tab;
+  }
+  if (route.query.action === 'add') {
+    showAddModal.value = true;
+  }
   await fetchSubjects();
   await fetchMistakes();
 });

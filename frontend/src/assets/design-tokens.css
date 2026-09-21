@@ -54,6 +54,18 @@
   --st-shadow-hover: 0 4px 12px rgba(15, 23, 42, 0.06);
   --st-shadow-float: 0 8px 24px rgba(15, 23, 42, 0.08);
 
+  /* 4.1 渐变系统 (Gradients) */
+  --st-gradient-warm: linear-gradient(135deg, #f0fdf4 0%, #eff6ff 50%, #fefce8 100%);
+  --st-gradient-hero: linear-gradient(135deg, #eff6ff 0%, #fef3c7 100%);
+  --st-gradient-streak: linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%);
+  --st-gradient-review: linear-gradient(135deg, #fdf4ff 0%, #eff6ff 100%);
+  --st-gradient-primary-btn: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+
+  /* 4.2 特殊激励阴影 */
+  --st-shadow-achievement: 0 4px 16px rgba(245, 158, 11, 0.18);
+  --st-shadow-pill-active: 0 4px 14px rgba(37, 99, 235, 0.25);
+  --st-shadow-floating-bar: 0 6px 20px rgba(15, 23, 42, 0.12);
+
   /* 5. 文字色（四档，全部通过 WCAG AA 4.5:1 @ #f8fafc 页面底）
      实测对比度见括号，替换前请重新校验：
      #94a3b8 只有 2.45:1，已从 muted 位降级淘汰。 */
@@ -277,6 +289,77 @@ strong {
 .st-subject-tag--neutral {
   background-color: var(--st-neutral-light);
   color: var(--st-neutral);
+}
+
+/* 3.1.1 学科 Squircle 彩色图形徽标系统 (Subject Badges - 40x40 经典圆角彩色图形) */
+.st-subject-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 15px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: transform 0.15s ease;
+}
+
+.st-subject-badge--sm {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+.st-subject-badge--lg {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  font-size: 18px;
+}
+
+.st-subject-badge--math {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+}
+
+.st-subject-badge--chinese {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.st-subject-badge--english {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+}
+
+.st-subject-badge--physics {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+}
+
+.st-subject-badge--chemistry {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+}
+
+.st-subject-badge--biology {
+  background: linear-gradient(135deg, #84cc16 0%, #65a30d 100%);
+}
+
+.st-subject-badge--geography {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+}
+
+.st-subject-badge--history {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+}
+
+.st-subject-badge--politics,
+.st-subject-badge--daofa {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.st-subject-badge--neutral {
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
 }
 
 /* 3.2 专用状态微徽章系统 (Status Tags - 与学科微标签等高 22px、字阶一致，彻底统一卡片信息层级) */

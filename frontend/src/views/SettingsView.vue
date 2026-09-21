@@ -1,6 +1,6 @@
 <template>
   <div class="settings-view">
-    <van-nav-bar title="家长管理" fixed placeholder />
+    <van-nav-bar title="我的" fixed placeholder />
 
     <div class="settings-container">
       <!-- 门禁口令验证卡片 -->

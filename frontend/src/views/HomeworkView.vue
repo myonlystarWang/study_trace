@@ -1,15 +1,9 @@
 <template>
   <div class="homework-view">
-    <!-- 顶栏：品牌门面 (Logo + 智学迹) + 打卡连击胶囊 + 日历微纽 -->
+    <!-- 顶栏：标题 + 打卡连击胶囊 + 日历微纽 + 加号录入 -->
     <div class="top-nav-bar">
       <div class="brand-header">
-        <div class="brand-logo-badge">
-          <van-icon name="bookmark" />
-        </div>
-        <div class="brand-text-wrap">
-          <span class="brand-title">智学迹</span>
-          <span class="brand-subtitle">StudyTrace</span>
-        </div>
+        <h1 class="homework-top-title">作业</h1>
       </div>
 
       <div class="header-right-tools">
@@ -32,7 +26,11 @@
 
         <button class="calendar-pill-btn" @click="showCalendar = true">
           <van-icon name="calendar-o" size="13" />
-          <span>日期</span>
+          <span>月历</span>
+        </button>
+
+        <button class="add-top-round-btn" @click="showAddModal = true" title="录入作业">
+          <van-icon name="plus" size="15" />
         </button>
       </div>
     </div>
@@ -167,9 +165,8 @@
                 <!-- 标题与学科信息 -->
                 <div class="hw-content">
                   <div class="hw-meta-row">
-                    <span class="st-subject-tag" :class="getSubjectTagClass(item.subject_name)">
-                      {{ item.subject_name }}
-                    </span>
+                    <SubjectBadge :name="item.subject_name" size="sm" />
+                    <span class="hw-subject-text">{{ item.subject_name }}</span>
                     <span class="rollover-origin-tag">周五顺延</span>
                     <span class="hw-due-time" v-if="item.completed_at">
                       <van-icon name="clock-o" /> 已于 {{ item.completed_at.substring(11, 16) }} 打卡
@@ -247,9 +244,8 @@
                 <!-- 标题与学科信息 -->
                 <div class="hw-content">
                   <div class="hw-meta-row">
-                    <span class="st-subject-tag" :class="getSubjectTagClass(item.subject_name)">
-                      {{ item.subject_name }}
-                    </span>
+                    <SubjectBadge :name="item.subject_name" size="sm" />
+                    <span class="hw-subject-text">{{ item.subject_name }}</span>
                     <span class="hw-due-time" v-if="item.completed_at">
                       <van-icon name="clock-o" /> 已于 {{ item.completed_at.substring(11, 16) }} 打卡
                     </span>
@@ -289,7 +285,7 @@
 
       <!-- 清爽空状态 -->
       <div class="empty-box" v-else>
-        <van-empty description="今天暂无作业，点击下方添加吧" />
+        <van-empty description="今天没有待办作业，享受一下自由时光吧 ☀️" />
       </div>
     </van-pull-refresh>
 
@@ -337,6 +333,13 @@
     <!-- 25分钟专注番茄钟 (hideFloatingBall=true，由底部并列入口驱动) -->
     <PomodoroTimer ref="pomodoroRef" :hide-floating-ball="true" />
 
+    <!-- 打卡仪式感祝贺弹窗 -->
+    <CheckinCelebrateModal
+      v-model="showCelebrateModal"
+      :streak="streak"
+      :is-all-done="isAllDone"
+    />
+
     <!-- 作业编辑弹窗 -->
     <van-dialog
       v-model:show="showEditModal"
@@ -369,6 +372,8 @@ import { homeworkApi, settingsApi } from '../api';
 import QuickAddModal from '../components/QuickAddModal.vue';
 import CalendarModal from '../components/CalendarModal.vue';
 import PomodoroTimer from '../components/PomodoroTimer.vue';
+import SubjectBadge from '../components/SubjectBadge.vue';
+import CheckinCelebrateModal from '../components/CheckinCelebrateModal.vue';
 
 const pomodoroRef = ref(null);
 const currentDate = ref(new Date().toISOString().split('T')[0]);
@@ -384,6 +389,8 @@ const refreshing = ref(false);
 const showAddModal = ref(false);
 const showCalendar = ref(false);
 const showEditModal = ref(false);
+const showCelebrateModal = ref(false);
+const isAllDone = ref(false);
 const editingItem = ref(null);
 const editContent = ref('');
 const calendarStatusMap = ref({});
@@ -591,7 +598,8 @@ const toggleComplete = async (item) => {
     await homeworkApi.update(item.id, { is_completed: targetStatus });
     item.is_completed = targetStatus;
     if (targetStatus) {
-      showToast({ message: '太棒了！又完成一项', icon: 'passed', duration: 1200 });
+      isAllDone.value = (completedCount.value + 1 >= totalCount.value && totalCount.value > 0);
+      showCelebrateModal.value = true;
     }
     fetchHomework();
   } catch (e) {
@@ -707,6 +715,40 @@ onMounted(async () => {
   letter-spacing: 0.5px;
   line-height: 1;
   margin-top: 1px;
+}
+
+.homework-top-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--st-text-primary, #0f172a);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.add-top-round-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--st-primary, #2563eb);
+  color: #ffffff;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.add-top-round-btn:active {
+  transform: scale(0.92);
+}
+
+.hw-subject-text {
+  font-size: var(--st-font-sm, 13px);
+  font-weight: 700;
+  color: var(--st-text-primary, #0f172a);
 }
 
 .streak-pill {
