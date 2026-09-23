@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test": "node --test tests/*.test.mjs",
+    "test:math": "node --test tests/mathText.test.mjs",
+    "test:homework": "node --test tests/homeworkParser.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
