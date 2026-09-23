@@ -78,7 +78,6 @@
           <div class="progress-copy">
             <div class="card-label-row">
               <span class="card-label">{{ totalCount > 0 && completionRate === 100 ? '今日目标已达成' : '今天的进度' }}</span>
-              <!-- <span v-if="totalCount > 0 && completionRate === 100" class="celebrate-badge">🎉 全部完成</span> -->
             </div>
             <span class="progress-caption">
               <template v-if="totalCount === 0">还没有安排作业</template>
@@ -228,8 +227,10 @@
                 'is-completed': task.is_completed,
                 'is-last': index === displayedTasks.length - 1 && (tasks.length <= PREVIEW_LIMIT)
               }"
+              :aria-label="task.is_completed ? `撤销${task.subject_name}作业打卡` : `打卡${task.subject_name}作业`"
+              @click="toggleTaskCheck(task)"
             >
-              <button class="task-left" type="button" :aria-label="`查看${task.subject_name}作业详情`" @click="openTaskDetail(task)">
+              <div class="task-left">
                 <SubjectBadge :name="task.subject_name" size="sm" />
                 <div class="task-details">
                   <div class="task-subject-title">{{ task.subject_name }}</div>
@@ -237,18 +238,15 @@
                     {{ task.content }}
                   </div>
                 </div>
-              </button>
+              </div>
 
-              <!-- 右侧打卡勾选按钮 (阻止冒泡) -->
-              <button
+              <!-- 右侧打卡状态标识 -->
+              <div
                 class="checkin-toggle-btn"
                 :class="{ 'checked': task.is_completed }"
-                :disabled="taskToggling === task.id"
-                @click.stop="toggleTaskCheck(task)"
-                :aria-label="task.is_completed ? '已完成' : '打卡'"
               >
                 <template v-if="task.is_completed">
-                  <!-- 复刻 Image 4 绿色圆点勾勾 + 已完成文字 -->
+                  <!-- 绿色圆点勾勾 + 已完成文字 -->
                   <span class="completed-pill">
                     <svg viewBox="0 0 16 16" class="completed-check-dot" fill="none">
                       <circle cx="8" cy="8" r="7" fill="#10b981" />
@@ -261,7 +259,7 @@
                   <!-- 18px 浅灰细圈 -->
                   <span class="uncompleted-circle"></span>
                 </template>
-              </button>
+              </div>
             </div>
 
             <!-- 多任务展开/收起胶囊（超过 PREVIEW_LIMIT 时展示，取消滚动条，展示高度适中） -->
@@ -691,7 +689,7 @@ const fetchReviewQueue = async () => {
   }
 };
 
-// 切换作业打卡状态
+// 切换作业打卡状态 (方案 A：整行就地打卡/撤销，轻量矢量提示，无任何 Emoji)
 const toggleTaskCheck = async (task) => {
   if (taskToggling.value) return;
   taskToggling.value = task.id;
@@ -712,10 +710,20 @@ const toggleTaskCheck = async (task) => {
     }
     completionRate.value = totalCount.value > 0 ? Math.round((completedCount.value / totalCount.value) * 100) : 0;
 
-    // 若打卡完成，弹出祝贺弹窗
+    // 轻量即时提示（无 Emoji，使用 Vant 原生矢量图标 passed / revoke）
     if (targetCompleted) {
-      isAllDone.value = completedCount.value === totalCount.value && totalCount.value > 0;
-      showCelebrateModal.value = true;
+      const allDone = completedCount.value === totalCount.value && totalCount.value > 0;
+      showToast({
+        message: allDone ? '今日作业已全部完成' : `${task.subject_name || '作业'}已打卡完成`,
+        icon: 'passed',
+        duration: 1500,
+      });
+    } else {
+      showToast({
+        message: `已撤销${task.subject_name || ''}作业打卡，恢复待办`,
+        icon: 'revoke',
+        duration: 1500,
+      });
     }
   } catch (err) {
     showToast('更新状态失败，请重试');
@@ -1149,15 +1157,21 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
-/* 单条任务行：高度紧凑，带微细分割线，字号相对小巧 (Image 4) */
+/* 单条任务行：整行响应打卡与撤销，点击舒适，字号精致 (Image 4) */
 .task-row-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 0;
+  padding: 10px 4px;
   border-bottom: 1px solid var(--st-border);
   cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
   transition: background 0.15s ease;
+}
+
+.task-row-item:active {
+  background: var(--st-bg-subtle, #f8fafc);
 }
 
 .task-row-item.is-last {
@@ -1171,12 +1185,7 @@ onUnmounted(() => {
   flex: 1;
   min-width: 0;
   min-height: 44px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
+  pointer-events: none;
 }
 
 .today-view :deep(.task-left .st-subject-badge) {
@@ -1222,17 +1231,12 @@ onUnmounted(() => {
 .checkin-toggle-btn {
   background: transparent;
   border: none;
-  cursor: pointer;
   padding: 4px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.15s ease;
-}
-
-.checkin-toggle-btn:active {
-  transform: scale(0.9);
+  pointer-events: none;
 }
 
 /* Image 4：18px 浅灰细腻空心圆圈 */
