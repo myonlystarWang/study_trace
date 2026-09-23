@@ -44,6 +44,7 @@ from backend.app.utils.math_text import normalize_math_text
         (r"\text{求} \ x \ \text{的值}", "求 x 的值"),
         # 手机键盘 / OCR 的 Unicode 上标统一为前端 KaTeX 可渲染的 ^ 形式
         ("若 m² = 4，且（cd）⁻² = 1", "若 m^2 = 4，且(cd)^-2 = 1"),
+        (r"计算：(-\frac{3}{2})² \times 8", r"计算：(-\frac{3}{2})^2 \times 8"),
         # 幂等
         ("$\\frac{1}{2}$ 与 \\(\\frac{3}{4}\\) 比大小", None),
     ],

@@ -14,17 +14,17 @@
  */
 
 const SIMPLE_EXPR_RE = '[A-Za-z0-9]+(?:[+\\-*/][A-Za-z0-9]+)*'
-const PAREN_BASE_RE = `[（(]${SIMPLE_EXPR_RE}[）)]`
+const PAREN_BASE_RE = `[（(](?:[^{}()（）\\r\\n]|\\{[^{}]*\\})+[）)]`
 
 // 单个数学 token：
-//  1) 已是 LaTeX 的命令：\frac{a}{b}、\sqrt{2}、\pi、\times …（命令后可跟一组花括号参数）
-//  2) 斜杠分数：17/2（分子/分母各 1~3 位数字）
-//  3) 上标：x^2、cd^2027、(cd)^2027、（cd）^2027、(a+b+cd)^2、10^-3、2^{10}
+//  1) 上标：优先匹配带底数的幂（支持字母连写与中英文括号底数，含括号内含分数/负数如 (-\frac{3}{2})^2、(cd)^2027）
+//  2) 已是 LaTeX 的命令：\frac{a}{b}、\sqrt{2}、\pi、\times …（命令后可跟一组花括号参数）
+//  3) 斜杠分数：17/2（分子/分母各 1~3 位数字）
 const TOKEN_RE = new RegExp(
   [
+    `([0-9]+|[A-Za-z]+|${PAREN_BASE_RE})\\^\\s*(\\{[^{}]*\\}|\\([^)]*\\)|[-+]?[A-Za-z0-9]+)`, // 上标（优先匹配，避免被 \frac 拆碎）
     '\\\\[a-zA-Z]+\\s*(?:\\{[^{}]*\\})*', // LaTeX 命令（可带花括号参数）
     '([0-9]{1,3})/([0-9]{1,3})', // 斜杠分数（前面紧贴数字的情况在代码里排除，避免用 lookbehind 兼容旧 iOS Safari）
-    `([0-9]+|[A-Za-z]+|${PAREN_BASE_RE})\\^\\s*(\\{[^{}]*\\}|\\([^)]*\\)|[-+]?[A-Za-z0-9]+)`, // 上标：支持字母连写与中英文括号底数
   ].join('|'),
   'g',
 )
@@ -122,15 +122,15 @@ export function buildSegments(raw) {
   let m
   while ((m = TOKEN_RE.exec(source)) !== null) {
     let tex = null
-    if (m[0].startsWith('\\')) {
-      tex = m[0].replace(/\s+/, '') // \frac {17}{2} → \frac{17}{2}
-    } else if (m[1] !== undefined) {
-      // 斜杠分数：过黑名单才转
-      if (!isSafeFraction(m[1], m[2], source, m.index, m[0].length)) continue
-      tex = `\\frac{${m[1]}}{${m[2]}}`
-    } else if (m[3] !== undefined) {
-      tex = toSuperscriptTex(m[3], m[4])
+    if (m[1] !== undefined) {
+      tex = toSuperscriptTex(m[1], m[2])
       if (!tex) continue
+    } else if (m[0].startsWith('\\')) {
+      tex = m[0].replace(/\s+/, '') // \frac {17}{2} → \frac{17}{2}
+    } else if (m[3] !== undefined) {
+      // 斜杠分数：过黑名单才转
+      if (!isSafeFraction(m[3], m[4], source, m.index, m[0].length)) continue
+      tex = `\\frac{${m[3]}}{${m[4]}}`
     }
     if (!tex) continue
     if (m.index > last) out.push({ type: 'text', value: source.slice(last, m.index) })

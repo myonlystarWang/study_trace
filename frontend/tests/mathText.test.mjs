@@ -13,6 +13,10 @@ test('renders multi-symbol and parenthesized exponent bases from OCR', () => {
     ['m^{2}', '(cd)^{2027}'],
   )
   assert.deepEqual(mathValues('（cd）^2027'), ['(cd)^{2027}'])
+  assert.deepEqual(
+    mathValues('(-\\frac{3}{2})^2\\times8'),
+    ['(-\\frac{3}{2})^{2}', '\\times'],
+  )
 })
 
 test('normalizes Unicode superscripts from keyboard and OCR output', () => {

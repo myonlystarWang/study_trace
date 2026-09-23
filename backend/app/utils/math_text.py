@@ -105,9 +105,9 @@ _ESCAPED_LITERALS = {
 _CMD_RE = re.compile(r"\\([a-zA-Z]+)")
 
 # 手机键盘、OCR 与聊天复制常使用 Unicode 上标（m²、x⁻²）；统一成前端
-# MathText 与 KaTeX 都能稳定处理的 ^ 写法。只转换 ASCII 数学底数，避免误伤中文正文。
+_PAREN_BASE_RE = r"[（(](?:[^{}()（）\r\n]|\{[^{}]*\})+[）)]"
 _UNICODE_SUPERSCRIPT_RE = re.compile(
-    r"([A-Za-z0-9]+|[（(][A-Za-z0-9]+(?:[+\-*/][A-Za-z0-9]+)*[）)])([⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]+)"
+    rf"({_PAREN_BASE_RE}|[A-Za-z0-9]+)([⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]+)"
 )
 _UNICODE_SUPERSCRIPT_MAP = str.maketrans({
     "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4",
