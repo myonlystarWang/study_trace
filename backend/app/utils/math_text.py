@@ -104,6 +104,26 @@ _ESCAPED_LITERALS = {
 # 剩余的反斜杠命令：保留白名单，其余只留命令名（不让「\」露给孩子看）
 _CMD_RE = re.compile(r"\\([a-zA-Z]+)")
 
+# 手机键盘、OCR 与聊天复制常使用 Unicode 上标（m²、x⁻²）；统一成前端
+# MathText 与 KaTeX 都能稳定处理的 ^ 写法。只转换 ASCII 数学底数，避免误伤中文正文。
+_UNICODE_SUPERSCRIPT_RE = re.compile(
+    r"([A-Za-z0-9]+|[（(][A-Za-z0-9]+(?:[+\-*/][A-Za-z0-9]+)*[）)])([⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]+)"
+)
+_UNICODE_SUPERSCRIPT_MAP = str.maketrans({
+    "⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4",
+    "⁵": "5", "⁶": "6", "⁷": "7", "⁸": "8", "⁹": "9",
+    "⁺": "+", "⁻": "-",
+})
+
+
+def _normalize_unicode_superscripts(text: str) -> str:
+    """将 OCR 常见的 Unicode 上标统一为 ^，供前端 KaTeX 稳定渲染。"""
+    def _replace(match: re.Match) -> str:
+        base = match.group(1).replace("（", "(").replace("）", ")")
+        return f"{base}^{match.group(2).translate(_UNICODE_SUPERSCRIPT_MAP)}"
+
+    return _UNICODE_SUPERSCRIPT_RE.sub(_replace, text)
+
 
 def _strip_wrappers(text: str) -> str:
     """把 \\text{...} 这类「内容即正文」的包装剥掉，保留花括号内的内容。"""
@@ -147,6 +167,9 @@ def normalize_math_text(text: str | None) -> str:
         out = re.sub(r"\\" + cmd + r"(?![a-zA-Z])", "", out)
     for cmd in _SPACE_CMDS:
         out = re.sub(r"\\" + cmd + r"(?![a-zA-Z])", " ", out)
+
+    # 5.1) OCR / 手机输入的 Unicode 上标统一成 ^ 形式
+    out = _normalize_unicode_superscripts(out)
 
     # 6) 白名单之外的反斜杠命令：只丢反斜杠，命令名留作普通文字，避免裸「\」进入题干
     def _keep_or_strip(m: re.Match) -> str:

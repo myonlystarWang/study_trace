@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
 from backend.app.database import get_db
+from backend.app.auth import require_parent_pin
 from backend.app.models import HomeworkItem, MistakeRecord, Subject
 from backend.app.schemas import (
     HomeworkItemCreate, HomeworkItemUpdate, HomeworkItemOut, MistakeRecordOut,
@@ -329,7 +330,11 @@ def update_homework(
 
 
 @router.delete("/{homework_id}")
-def delete_homework(homework_id: int, db: Session = Depends(get_db)):
+def delete_homework(
+    homework_id: int,
+    db: Session = Depends(get_db),
+    _auth: bool = Depends(require_parent_pin),
+):
     hw = db.query(HomeworkItem).filter(HomeworkItem.id == homework_id).first()
     if not hw:
         raise HTTPException(status_code=404, detail="未找到该作业条目")

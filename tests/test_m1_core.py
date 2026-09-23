@@ -320,7 +320,7 @@ def test_subject_update_and_delete():
     assert res_rename.json()["name"] == "数学"  # 名称受保护
 
     # 3. 尝试删除核心学科（应返回 400 保护拦截）
-    res_del_core = client.delete(f"/api/settings/subjects/{math_id}")
+    res_del_core = client.delete(f"/api/settings/subjects/{math_id}", headers={"X-Parent-PIN": "888888"})
     assert res_del_core.status_code == 400
     assert "预置系统核心学科不可删除" in res_del_core.json()["detail"]
 
@@ -339,10 +339,9 @@ def test_subject_update_and_delete():
     assert res_up.json()["full_score"] == 70.0
 
     # 6. 删除自定义学科（成功删除）
-    res_del_custom = client.delete(f"/api/settings/subjects/{custom_id}")
+    res_del_custom = client.delete(f"/api/settings/subjects/{custom_id}", headers={"X-Parent-PIN": "888888"})
     assert res_del_custom.status_code == 200
     assert res_del_custom.json()["status"] == "ok"
 
     # 7. 恢复数学原本满分
     client.put(f"/api/settings/subjects/{math_id}", json={"full_score": orig_math_score})
-

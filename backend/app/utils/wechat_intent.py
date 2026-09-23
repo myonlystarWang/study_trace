@@ -90,21 +90,81 @@ def normalize_text(text: str) -> str:
 
 
 def clean_item_content(content: str) -> str:
-    """剥离前缀条目序号 (如 1. / 1、 / (1) / 1) / ① / - / • / *)"""
-    return re.sub(r"^(?:[①-⑩\d]+[\.、\)]|\([①-⑩\d]+\)|[•\-\*])\s*", "", content).strip()
+    """剥离前缀条目序号 (如 1. / 1、 / (1) / 1) / ① / - / • / * 等，支持连续多重前缀如 * 1.)"""
+    c = (content or "").strip()
+    prefix_re = re.compile(
+        r"^(?:(?:[①-⑩\d]+[\.、\)\s\-]+|\([①-⑩\d]+\)|（[①-⑩\d]+）|[一二三四五六七八九十]+[、\.]|[-*•·\+\■◆▲●✦★✓✔○◇□△☆✧➢➤])\s*)+"
+    )
+    c = prefix_re.sub("", c).strip()
+    return c
+
+
+def split_inline_items(text: str) -> List[str]:
+    """
+    智能拆解同一行内包含的多个递增序号子项，例如：
+    '1. 发的作文题 2. 在发的四线三格上写自己字帖的内容。'
+    -> ['发的作文题', '在发的四线三格上写自己字帖的内容。']
+
+    对于非列表连续内容（如 'P20 1, 3, 4, 5 P21 10' 或 '订练习册 P33~P43'），保持原样不拆分。
+    """
+    t = (text or "").strip()
+    if not t:
+        return []
+
+    marker_pattern = re.compile(
+        r'(?:^|[\s;；。，,\n])(?:'
+        r'(\d+)[\.、\)]|'
+        r'\(([①-⑩\d]+)\)|'
+        r'（([①-⑩\d]+)）|'
+        r'([①-⑩])'
+        r')\s*'
+    )
+    matches = list(marker_pattern.finditer(t))
+    if len(matches) < 2:
+        cleaned = clean_item_content(t)
+        return [cleaned] if cleaned else []
+
+    circ = '\u2460\u2461\u2462\u2463\u2464\u2465\u2466\u2467\u2468\u2469'
+
+    def parse_num(m):
+        for g in m.groups():
+            if g is not None:
+                if g in circ:
+                    return circ.index(g) + 1
+                if g.isdigit():
+                    return int(g)
+        return None
+
+    nums = [parse_num(m) for m in matches]
+    if any(n is None for n in nums):
+        cleaned = clean_item_content(t)
+        return [cleaned] if cleaned else []
+
+    is_sequential = all(nums[i] == nums[i - 1] + 1 for i in range(1, len(nums)))
+    if not is_sequential or nums[0] not in (1, 2):
+        cleaned = clean_item_content(t)
+        return [cleaned] if cleaned else []
+
+    results = []
+    for i in range(len(matches)):
+        start = matches[i].end()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(t)
+        sub = t[start:end].strip()
+        sub = re.sub(r'[;；,\s]+$', '', sub)
+        sub = clean_item_content(sub)
+        if sub:
+            results.append(sub)
+    return results if results else ([clean_item_content(t)] if clean_item_content(t) else [])
 
 
 def parse_batch_homework_text(raw_content: str, db_subjects: Optional[List[str]] = None) -> List[Tuple[str, str]]:
     """
     解析微信群/微信老师发布的批量多科目作业通知。
     支持班级群常见格式：
-    语文：
-    1. 预习第三课
-    2. 生字词语1+1
-    数学：
-    1. 打印的习题
-    英语：
-    1. 听写单词
+    - Markdown 列表符 (*, -, •)
+    - 各种序号 (1., 1、, ①, 一、, (1))
+    - 冒号隔开或跨行子项
+    - 单行内多序号合并 (如 '1. 作文 2. 字帖')
     """
     subject_set = set(KNOWN_SUBJECT_NAMES)
     if db_subjects:
@@ -117,14 +177,19 @@ def parse_batch_homework_text(raw_content: str, db_subjects: Optional[List[str]]
     current_subject: Optional[str] = None
 
     skip_pattern = re.compile(
-        r"^(?:今日作业|今天作业|各科作业|作业通知|各位家长|请各位家长|请家长|作业如下|温馨提示|大家晚上好|收到请回复|各位同学|【今日作业】|【作业通知】)"
+        r"^(?:今日作业|今天作业|各科作业|作业通知|各位家长|请各位家长|请家长|作业如下|温馨提示|大家晚上好|收到请回复|各位同学|【今日作业】|【作业通知】|\d{1,2}月\d{1,2}日.*|\d{4}[年\-\/]\d{1,2}[月\-\/]\d{1,2}.*)"
+    )
+
+    prefix_re = (
+        r"^(?:[\s*•·\-\+■◆▲●✦★✓✔○◇□△☆✧➢➤]|\d+[\.、\)]|[①-⑩]|\([①-⑩\d]+\)|（[①-⑩\d]+）|[一二三四五六七八九十]+[、\.]|【\d+】|\[\d+\])*"
+        r"(?:【|\[|（|\(|「|『|《)?"
     )
 
     subj_header_re = re.compile(
-        r"^(?:[一二三四五六七八九十\d]+[\.、\s\)])?\s*(?:【|\[)?([\u4e00-\u9fa5]{2,6})(?:】|\])?\s*[:：]\s*(.*)$"
+        prefix_re + r"([\u4e00-\u9fa5]{2,6})(?:】|\]|）|\)|」|』|》)?\s*[:：]\s*(.*)$"
     )
     subj_single_line_re = re.compile(
-        r"^(?:[一二三四五六七八九十\d]+[\.、\s\)])?\s*(?:【|\[)?([\u4e00-\u9fa5]{2,6})(?:】|\])?$"
+        prefix_re + r"([\u4e00-\u9fa5]{2,6})(?:】|\]|）|\)|」|』|》)?\s*[:：]?$"
     )
 
     for line in lines:
@@ -148,9 +213,9 @@ def parse_batch_homework_text(raw_content: str, db_subjects: Optional[List[str]]
                 current_subject = matched_subj
                 rest = mA.group(2).strip()
                 if rest:
-                    clean_rest = clean_item_content(rest)
-                    if clean_rest:
-                        results.append((current_subject, clean_rest))
+                    items = split_inline_items(rest)
+                    for item in items:
+                        results.append((current_subject, item))
                 continue
 
         mB = subj_single_line_re.match(line)
@@ -169,9 +234,9 @@ def parse_batch_homework_text(raw_content: str, db_subjects: Optional[List[str]]
                 continue
 
         if current_subject:
-            clean_item = clean_item_content(line)
-            if clean_item:
-                results.append((current_subject, clean_item))
+            items = split_inline_items(line)
+            for item in items:
+                results.append((current_subject, item))
 
     return results
 

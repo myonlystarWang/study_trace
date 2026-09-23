@@ -27,7 +27,7 @@ def test_single_and_batch_delete_mistakes():
     id2 = res2.json()["id"]
 
     # 2. 验证单条删除
-    del_res1 = client.delete(f"/api/mistakes/{id1}")
+    del_res1 = client.delete(f"/api/mistakes/{id1}", headers={"X-Parent-PIN": "888888"})
     assert del_res1.status_code == 200
     assert del_res1.json()["status"] == "ok"
 
@@ -36,7 +36,7 @@ def test_single_and_batch_delete_mistakes():
     assert get_res1.status_code == 404
 
     # 3. 验证批量删除
-    del_batch = client.post("/api/mistakes/batch-delete", json={"ids": [id2]})
+    del_batch = client.post("/api/mistakes/batch-delete", json={"ids": [id2]}, headers={"X-Parent-PIN": "888888"})
     assert del_batch.status_code == 200
     assert del_batch.json()["deleted_count"] >= 1
 

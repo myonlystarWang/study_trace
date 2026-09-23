@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from backend.app.database import get_db
+from backend.app.auth import require_parent_pin
 from backend.app.models import ExamRecord, ExamScore, Subject, MistakeRecord, HomeworkItem
 from backend.app.routers.paper import CORE_7_SUBJECTS
 from backend.app.schemas import (
@@ -271,7 +272,11 @@ def update_exam(exam_id: int, body: ExamUpdateIn, db: Session = Depends(get_db))
 
 
 @router.delete("/{exam_id}")
-def delete_exam(exam_id: int, db: Session = Depends(get_db)):
+def delete_exam(
+    exam_id: int,
+    db: Session = Depends(get_db),
+    _auth: bool = Depends(require_parent_pin),
+):
     """删除考试（级联删除所有科目得分）"""
     exam = db.query(ExamRecord).filter(ExamRecord.id == exam_id).first()
     if not exam:

@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from backend.app.config import UPLOADS_DIR
 from backend.app.database import get_db
+from backend.app.auth import require_parent_pin
 from backend.app.models import MistakeRecord, MistakeReview, Subject
 from backend.app.schemas import (
     MistakeRecordCreate, MistakeRecordOut, MistakeReviewCreate, MistakeReviewOut, MistakeBatchDeleteIn
@@ -318,7 +319,11 @@ def delete_mistake_image(mistake_id: int, kind: str, db: Session = Depends(get_d
 
 
 @router.delete("/{mistake_id}")
-def delete_mistake(mistake_id: int, db: Session = Depends(get_db)):
+def delete_mistake(
+    mistake_id: int,
+    db: Session = Depends(get_db),
+    _auth: bool = Depends(require_parent_pin),
+):
     r = db.query(MistakeRecord).filter(MistakeRecord.id == mistake_id).first()
     if not r:
         raise HTTPException(status_code=404, detail="未找到该错题记录")
@@ -335,7 +340,11 @@ def delete_mistake(mistake_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/batch-delete")
-def batch_delete_mistakes(payload: MistakeBatchDeleteIn, db: Session = Depends(get_db)):
+def batch_delete_mistakes(
+    payload: MistakeBatchDeleteIn,
+    db: Session = Depends(get_db),
+    _auth: bool = Depends(require_parent_pin),
+):
     if not payload.ids:
         return {"status": "ok", "deleted_count": 0}
     # 先清理关联的复习流水

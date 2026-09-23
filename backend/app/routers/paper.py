@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from backend.app.database import get_db
+from backend.app.auth import require_parent_pin
 from backend.app.models import MistakeRecord, MistakeReview, Subject, Student, Paper
 from backend.app.schemas import (
     PaperCandidateOut,
@@ -625,7 +626,11 @@ def batch_review_paper(paper_id: int, body: PaperBatchReviewIn, db: Session = De
 
 
 @router.delete("/{paper_id}")
-def delete_paper(paper_id: int, db: Session = Depends(get_db)):
+def delete_paper(
+    paper_id: int,
+    db: Session = Depends(get_db),
+    _auth: bool = Depends(require_parent_pin),
+):
     """
     删除一条历史组卷记录（不可恢复）。
 

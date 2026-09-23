@@ -89,7 +89,7 @@ def test_exam_crud_and_absent_calculation():
         assert updated["total_full_score"] == 340.0  # 120 + 120 + 100
 
         # 5. 级联删除测试
-        res_del = client.delete(f"/api/exams/{exam_id}")
+        res_del = client.delete(f"/api/exams/{exam_id}", headers={"X-Parent-PIN": "888888"})
         assert res_del.status_code == 200
         res_get_again = client.get(f"/api/exams/{exam_id}")
         assert res_get_again.status_code == 404

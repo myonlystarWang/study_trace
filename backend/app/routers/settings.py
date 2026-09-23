@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from backend.app.database import get_db
 from backend.app.models import Subject
 from backend.app.schemas import SubjectOut, SubjectCreate, SubjectUpdate
-from backend.app.auth import verify_pin, change_pin, check_is_default_pin
+from backend.app.auth import verify_pin, change_pin, check_is_default_pin, require_parent_pin
 
 router = APIRouter(prefix="/api/settings", tags=["系统设置与门禁"])
 
@@ -66,7 +66,11 @@ def update_subject(subject_id: int, sub_in: SubjectUpdate, db: Session = Depends
 
 
 @router.delete("/subjects/{subject_id}")
-def delete_subject(subject_id: int, db: Session = Depends(get_db)):
+def delete_subject(
+    subject_id: int,
+    db: Session = Depends(get_db),
+    _auth: bool = Depends(require_parent_pin),
+):
     """删除自定义学科（系统预置核心学科禁止删除）"""
     sub = db.query(Subject).filter(Subject.id == subject_id).first()
     if not sub:
@@ -167,5 +171,4 @@ def update_ocr_config(cfg: OcrConfigIn):
 
     env_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
     return {"status": "ok", "message": "OCR配置已更新"}
-
 

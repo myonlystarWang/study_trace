@@ -264,6 +264,30 @@ def test_parse_batch_homework_text():
     assert items[4] == ("生物", "练习册1-4页。")
 
 
+def test_parse_batch_homework_markdown_bullets():
+    """单元测试：验证 Markdown 列表符号 (*, -, •)、行内多序号拆分及日期过滤"""
+    from backend.app.utils.wechat_intent import parse_batch_homework_text
+
+    raw_text = """9月23日
+*   语文： 第5课词语 1+1
+*   数学：
+    1. 计算 P29, 30 (打印的)
+    2. 订周测卷 (活页纸上)
+    3. 订练习册 P33~P43, P48~50
+*   英语： 1. 发的作文题 2. 在发的四线三格上写自己字帖的内容。
+*   生物： P20 1, 3, 4, 5  P21 10  P22 2  P23 5  P24 2 (练习册)"""
+
+    items = parse_batch_homework_text(raw_text)
+    assert len(items) == 7
+    assert items[0] == ("语文", "第5课词语 1+1")
+    assert items[1] == ("数学", "计算 P29, 30 (打印的)")
+    assert items[2] == ("数学", "订周测卷 (活页纸上)")
+    assert items[3] == ("数学", "订练习册 P33~P43, P48~50")
+    assert items[4] == ("英语", "发的作文题")
+    assert items[5] == ("英语", "在发的四线三格上写自己字帖的内容。")
+    assert items[6] == ("生物", "P20 1, 3, 4, 5  P21 10  P22 2  P23 5  P24 2 (练习册)")
+
+
 @pytest.mark.anyio
 async def test_wechat_inbound_batch_homework(db_session: Session):
     """端到端测试：微信上行批量作业通知，写入数据库并即时清理测试脏数据"""
