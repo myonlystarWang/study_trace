@@ -1,70 +1,82 @@
 <template>
   <div class="mistake-view">
-    <!-- 顶部导航栏 (常规与批量双模切换，纯净无冗余文字) -->
-    <van-nav-bar
-      :title="isBatchMode ? `批量管理 (已选 ${selectedIds.length}/${mistakes.length} 项)` : '错题复习本'"
-    />
+    <!-- 顶部固定区域 (Fixed Header: 导航栏、主标签页切换、学科与状态过滤胶囊) -->
+    <header class="mistake-fixed-header">
+      <van-nav-bar
+        :title="isBatchMode ? `批量管理 (已选 ${selectedIds.length}/${mistakes.length} 项)` : '错题复习本'"
+      />
 
-    <div class="mistake-content">
-      <!-- 顶部主标签页切换 -->
-      <div class="mistake-header-bar">
-        <van-tabs v-model:active="activeTab" color="#2563eb" line-width="36px" @change="onTabChange" class="mistake-tabs">
-          <van-tab
-            title="今日复习"
-            :badge="reviewQueueCount > 0 ? reviewQueueCount : null"
-            name="review"
-          />
-          <van-tab title="错题总库" name="all" />
-        </van-tabs>
+      <div class="mistake-fixed-inner">
+        <!-- 顶部主标签页切换 -->
+        <div class="mistake-header-bar">
+          <van-tabs v-model:active="activeTab" color="#2563eb" line-width="36px" @change="onTabChange" class="mistake-tabs">
+            <van-tab
+              title="今日复习"
+              :badge="reviewQueueCount > 0 ? reviewQueueCount : null"
+              name="review"
+            />
+            <van-tab title="错题总库" name="all" />
+          </van-tabs>
+        </div>
+
+        <!-- 学科与状态筛选栏 (Chips) -->
+        <div class="filter-section">
+          <div class="chips-row st-scroll-x">
+            <span
+              class="st-chip"
+              :class="{ active: selectedSubject === null }"
+              @click="selectSubject(null)"
+            >
+              全部学科
+            </span>
+            <span
+              v-for="sub in subjects"
+              :key="sub.id"
+              class="st-chip"
+              :class="{ active: selectedSubject === sub.id }"
+              @click="selectSubject(sub.id)"
+            >
+              {{ sub.name }}
+            </span>
+          </div>
+
+          <!-- 状态过滤（仅在总库标签下展示） -->
+          <div class="chips-row status-row" v-if="activeTab === 'all'">
+            <span
+              v-for="status in ['全部状态', '未掌握', '待复习', '已掌握']"
+              :key="status"
+              class="st-chip"
+              :class="{ active: selectedStatus === (status === '全部状态' ? null : status) }"
+              @click="selectedStatus = (status === '全部状态' ? null : status); fetchMistakes()"
+            >
+              {{ status }}
+            </span>
+          </div>
+        </div>
       </div>
+    </header>
 
-    <!-- 学科与状态筛选栏 (Chips) -->
-    <div class="filter-section">
-      <div class="chips-row st-scroll-x">
-        <span
-          class="st-chip"
-          :class="{ active: selectedSubject === null }"
-          @click="selectSubject(null)"
-        >
-          全部学科
-        </span>
-        <span
-          v-for="sub in subjects"
-          :key="sub.id"
-          class="st-chip"
-          :class="{ active: selectedSubject === sub.id }"
-          @click="selectSubject(sub.id)"
-        >
-          {{ sub.name }}
-        </span>
-      </div>
-
-      <!-- 状态过滤（仅在总库标签下展示） -->
-      <div class="chips-row status-row" v-if="activeTab === 'all'">
-        <span
-          v-for="status in ['全部状态', '未掌握', '待复习', '已掌握']"
-          :key="status"
-          class="st-chip"
-          :class="{ active: selectedStatus === (status === '全部状态' ? null : status) }"
-          @click="selectedStatus = (status === '全部状态' ? null : status); fetchMistakes()"
-        >
-          {{ status }}
-        </span>
-      </div>
-    </div>
-
-    <!-- 错题列表 -->
-    <van-pull-refresh v-model="refreshing" @refresh="fetchMistakes" :disabled="isBatchMode">
-      <div class="mistake-list" v-if="mistakes.length > 0">
+    <!-- 下方独立滚动内容区 (Scrollable Content: 仅错题列表/当前题卡滚动) -->
+    <main class="mistake-scroll-container">
+      <van-pull-refresh v-model="refreshing" @refresh="fetchMistakes" :disabled="isBatchMode">
+      <div
+        class="mistake-list"
+        :class="{ 'review-focus-list': activeTab === 'review' && !isBatchMode }"
+        v-if="displayedMistakes.length > 0"
+      >
         <van-swipe-cell
-          v-for="item in mistakes"
+          v-for="item in displayedMistakes"
           :key="item.id"
           :disabled="isBatchMode"
           class="mistake-swipe-cell"
+          :class="{ 'review-focus-swipe': activeTab === 'review' && !isBatchMode }"
         >
           <div
             class="st-card mistake-card"
-            :class="{ 'is-selected-card': isBatchMode && selectedIds.includes(item.id) }"
+            :class="{
+              'is-selected-card': isBatchMode && selectedIds.includes(item.id),
+              'review-focus-card': activeTab === 'review' && !isBatchMode
+            }"
             @click="isBatchMode ? toggleSelectItem(item.id) : null"
           >
             <div class="card-main-layout">
@@ -88,6 +100,25 @@
                   <span class="st-status-tag" :class="getMasteryStatusTagClass(item.mastery_status)">
                     {{ item.mastery_status }}
                   </span>
+                </div>
+
+                <!-- 专注复习将队列进度收进当前题，避免顶部再叠一张功能卡。 -->
+                <div v-if="activeTab === 'review' && !isBatchMode" class="focus-progress-block">
+                  <div class="focus-progress-copy">
+                    <span class="focus-progress-count">第 {{ reviewPosition }} / {{ reviewSessionTotal }} 题</span>
+                    <button class="focus-queue-link" @click.stop="showReviewQueue = true">
+                      <van-icon name="notes-o" />
+                      <span>队列 {{ mistakes.length }}</span>
+                      <van-icon name="arrow" />
+                    </button>
+                  </div>
+                  <van-progress
+                    :percentage="reviewProgress"
+                    :show-pivot="false"
+                    color="var(--st-primary, #0a7aff)"
+                    track-color="var(--st-bg-subtle, #f1f5f9)"
+                    stroke-width="4"
+                  />
                 </div>
 
                 <!-- 缩略图展示 (点击可放大原图预览) -->
@@ -122,6 +153,21 @@
                   </div>
                 </div>
 
+                <!-- 答案固定紧随题干展示，专注复习时不会被底部操作区挤到题卡之外。 -->
+                <transition name="van-slide-down">
+                  <div class="card-answer-panel" v-if="openedAnswerIds.includes(item.id)">
+                    <div class="answer-header">
+                      <span class="st-icon-badge st-icon-badge--info" style="width: 18px; height: 18px; font-size: var(--st-font-xs);">
+                        <van-icon name="notes-o" />
+                      </span>
+                      <span class="answer-title">参考答案与解析</span>
+                    </div>
+                    <div class="answer-body">
+                      <p class="answer-text">{{ item.answer || '暂无详细答案与解析，可左滑点击「编辑」进行补充。' }}</p>
+                    </div>
+                  </div>
+                </transition>
+
                 <!-- 艾宾浩斯复习操作区（上下两层分明，大拇指热区充分，彻底消除挤压折行） -->
                 <div class="review-action-bar" v-if="!isBatchMode && (activeTab === 'review' || item.mastery_status !== '已掌握')">
                   <div class="review-stat-row">
@@ -142,6 +188,8 @@
                       type="danger"
                       icon="cross"
                       class="rev-action-btn"
+                      :loading="reviewSubmitting"
+                      :disabled="reviewSubmitting"
                       @click.stop="submitReview(item.id, 'forgotten')"
                     >
                       又忘了
@@ -151,6 +199,8 @@
                       type="success"
                       icon="passed"
                       class="rev-action-btn"
+                      :loading="reviewSubmitting"
+                      :disabled="reviewSubmitting"
                       @click.stop="submitReview(item.id, 'remembered')"
                     >
                       掌握啦
@@ -176,20 +226,6 @@
                   </button>
                 </div>
 
-                <!-- 隐藏答案平滑滑动展开面板 -->
-                <transition name="van-slide-down">
-                  <div class="card-answer-panel" v-if="openedAnswerIds.includes(item.id)">
-                    <div class="answer-header">
-                      <span class="st-icon-badge st-icon-badge--info" style="width: 18px; height: 18px; font-size: var(--st-font-xs);">
-                        <van-icon name="notes-o" />
-                      </span>
-                      <span class="answer-title">参考答案与解析</span>
-                    </div>
-                    <div class="answer-body">
-                      <p class="answer-text">{{ item.answer || '暂无详细答案与解析，可左滑点击「编辑」进行补充。' }}</p>
-                    </div>
-                  </div>
-                </transition>
               </div>
             </div>
           </div>
@@ -212,10 +248,50 @@
 
       <!-- 清爽空状态 -->
       <div class="empty-state" v-else>
-        <van-empty :description="activeTab === 'review' ? '今日推荐复习已全部完成！太棒了' : '暂无相关错题'" />
+        <div v-if="activeTab === 'review' && reviewSessionComplete" class="custom-empty-state review-complete-state">
+          <van-icon name="passed" class="custom-empty-icon" />
+          <p class="custom-empty-title">今日复习完成</p>
+          <p class="custom-empty-subtitle">已连续完成 {{ reviewSessionTotal }} 道题，先让知识沉淀下来。</p>
+          <div class="review-complete-actions">
+            <van-button plain round icon="home-o" class="review-complete-btn" @click="router.push('/')">回首页</van-button>
+            <van-button type="primary" round icon="records-o" class="review-complete-btn" @click="openMistakeLibrary">查看错题总库</van-button>
+          </div>
+        </div>
+        <div v-else class="custom-empty-state">
+          <van-icon :name="activeTab === 'review' ? 'passed' : 'records-o'" class="custom-empty-icon" />
+          <p class="custom-empty-title">{{ activeTab === 'review' ? '今日暂无待复习错题' : '暂无相关错题' }}</p>
+          <p v-if="activeTab === 'review'" class="custom-empty-subtitle">下一次复习到来时，会在这里排成队列。</p>
+        </div>
       </div>
     </van-pull-refresh>
-    </div>
+    </main>
+
+    <van-popup v-model:show="showReviewQueue" position="bottom" round class="review-queue-sheet">
+      <div class="sheet-grabber"></div>
+      <div class="review-queue-header">
+        <div>
+          <p class="review-queue-title">今日队列</p>
+          <p class="review-queue-subtitle">还剩 {{ mistakes.length }} 题，点击任意题可从该题继续。</p>
+        </div>
+        <van-button plain size="small" round @click="showReviewQueue = false">完成</van-button>
+      </div>
+      <div class="review-queue-list">
+        <button
+          v-for="(item, index) in mistakes"
+          :key="item.id"
+          class="review-queue-item"
+          :class="{ 'is-current': item.id === currentReviewId }"
+          @click="jumpToReviewItem(item.id)"
+        >
+          <span class="review-queue-index">{{ index + 1 }}</span>
+          <span class="review-queue-copy">
+            <span class="review-queue-subject">{{ item.subject_name }}</span>
+            <span class="review-queue-question"><MathText :text="item.extracted_text || item.source_reference || '图片错题'" /></span>
+          </span>
+          <van-icon :name="item.id === currentReviewId ? 'play-circle-o' : 'arrow'" />
+        </button>
+      </div>
+    </van-popup>
 
     <!-- 批量管理模式：底部三合一操作栏 [退出] [全选/取消全选] [批量删除 (X)] -->
     <div class="floating-bottom-bar st-frosted-bar" v-if="isBatchMode">
@@ -251,7 +327,7 @@
     </div>
 
     <!-- 常规模式：底部三合一操作栏 [+ 录入新错题] [批量管理] [周末组卷] -->
-    <div class="floating-bottom-bar st-frosted-bar" v-else>
+    <div class="floating-bottom-bar st-frosted-bar" v-else-if="false">
       <div class="mistake-bottom-actions">
         <van-button
           type="primary"
@@ -393,8 +469,8 @@
         </div>
 
         <div class="form-group">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label class="form-label" style="margin-bottom: 0;">题干文字（可编辑）</label>
+          <div class="form-label-row">
+            <label class="form-label form-label--inline">题干文字（可编辑）</label>
             <van-button
               size="small"
               type="primary"
@@ -634,6 +710,7 @@
       @skip="onCropSkip"
       @cancel="onCropCancel"
     />
+    <PinDeleteSheet v-model="showDeletePin" @verified="confirmPendingDelete" />
   </div>
 </template>
 
@@ -646,6 +723,7 @@ import { compressImage } from '../utils/imageCompress';
 import ImageCropper from '../components/ImageCropper.vue';
 import MathText from '../components/MathText.vue';
 import SubjectBadge from '../components/SubjectBadge.vue';
+import PinDeleteSheet from '../components/PinDeleteSheet.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -662,6 +740,40 @@ const refreshing = ref(false);
 const isBatchMode = ref(false);
 const selectedIds = ref([]);
 const batchDeleting = ref(false);
+
+// 一次进入「今日复习」就是一段独立的专注会话。队列仍完整保留在 mistakes，
+// 仅把 currentReviewId 对应的一题交给卡片渲染，提交后再推进到下一题。
+const reviewSessionTotal = ref(0);
+const reviewCompletedCount = ref(0);
+const currentReviewId = ref(null);
+const showReviewQueue = ref(false);
+const reviewSubmitting = ref(false);
+
+const currentReviewItem = computed(() =>
+  mistakes.value.find((item) => item.id === currentReviewId.value) || mistakes.value[0] || null
+);
+const hasActiveReviewItem = computed(() =>
+  activeTab.value === 'review' && !isBatchMode.value && Boolean(currentReviewItem.value)
+);
+const displayedMistakes = computed(() => {
+  if (activeTab.value === 'review' && !isBatchMode.value) {
+    return currentReviewItem.value ? [currentReviewItem.value] : [];
+  }
+  return mistakes.value;
+});
+const reviewSessionComplete = computed(() =>
+  activeTab.value === 'review'
+  && reviewSessionTotal.value > 0
+  && reviewCompletedCount.value >= reviewSessionTotal.value
+  && mistakes.value.length === 0
+);
+const reviewPosition = computed(() =>
+  reviewSessionTotal.value ? Math.min(reviewCompletedCount.value + 1, reviewSessionTotal.value) : 0
+);
+const reviewProgress = computed(() => reviewSessionTotal.value
+  ? Math.round((reviewCompletedCount.value / reviewSessionTotal.value) * 100)
+  : 0
+);
 
 const toggleBatchMode = () => {
   if (!isBatchMode.value && mistakes.value.length === 0) {
@@ -701,7 +813,7 @@ const toggleSelectAll = () => {
   }
 };
 
-const handleSingleDelete = (item) => {
+const performSingleDelete = (item) => {
   showConfirmDialog({
     title: '确认删除错题',
     message: `确定要删除此条错题吗？\n「${(item.extracted_text || item.source_reference || '该错题').substring(0, 30)}...」`,
@@ -719,7 +831,7 @@ const handleSingleDelete = (item) => {
   }).catch(() => {});
 };
 
-const handleBatchDelete = () => {
+const performBatchDelete = () => {
   if (selectedIds.value.length === 0) return;
   showConfirmDialog({
     title: '批量删除确认',
@@ -747,6 +859,8 @@ const handleBatchDelete = () => {
 };
 
 const showAddModal = ref(false);
+const showDeletePin = ref(false);
+const pendingDelete = ref(null);
 const submitting = ref(false);
 const fileList = ref([]);
 const showPreview = ref(false);
@@ -947,6 +1061,8 @@ const onTabChange = () => {
   isBatchMode.value = false;
   selectedIds.value = [];
   mistakes.value = [];
+  showReviewQueue.value = false;
+  router.replace({ query: { ...route.query, tab: activeTab.value } });
   fetchMistakes();
 };
 
@@ -954,7 +1070,25 @@ const selectSubject = (subId) => {
   selectedSubject.value = subId;
   selectedIds.value = [];
   mistakes.value = [];
+  showReviewQueue.value = false;
   fetchMistakes();
+};
+
+const openMistakeLibrary = () => {
+  showReviewQueue.value = false;
+  if (activeTab.value === 'all') return;
+  activeTab.value = 'all';
+  onTabChange();
+};
+
+const jumpToReviewItem = (id) => {
+  const index = mistakes.value.findIndex((item) => item.id === id);
+  if (index < 0) return;
+  const selected = mistakes.value[index];
+  // 把选择的题移到剩余队列的队首，之后的「下一题」仍然是连续的单题流。
+  mistakes.value = [selected, ...mistakes.value.slice(0, index), ...mistakes.value.slice(index + 1)];
+  currentReviewId.value = id;
+  showReviewQueue.value = false;
 };
 
 // 学科标签颜色映射
@@ -1011,6 +1145,9 @@ const fetchMistakes = async () => {
       const res = await mistakeApi.getReviewQueue(selectedSubject.value);
       mistakes.value = res.data;
       reviewQueueCount.value = res.data.length;
+      reviewSessionTotal.value = res.data.length;
+      reviewCompletedCount.value = 0;
+      currentReviewId.value = res.data[0]?.id || null;
     } else {
       const res = await mistakeApi.getList({
         subject_id: selectedSubject.value,
@@ -1031,6 +1168,8 @@ const fetchMistakes = async () => {
 };
 
 const submitReview = async (id, result) => {
+  if (reviewSubmitting.value) return;
+  reviewSubmitting.value = true;
   try {
     const res = await mistakeApi.submitReview(id, result);
     const updated = res.data;
@@ -1044,10 +1183,22 @@ const submitReview = async (id, result) => {
     } else {
       showToast({ message: '已重置艾宾浩斯复习周期，明天将再次提醒', icon: 'replay', duration: 2000 });
     }
-    fetchMistakes();
+    if (activeTab.value === 'review') {
+      const remaining = mistakes.value.filter((item) => item.id !== id);
+      mistakes.value = remaining;
+      reviewCompletedCount.value += 1;
+      currentReviewId.value = remaining[0]?.id || null;
+      reviewQueueCount.value = remaining.length;
+      // 徽标应反映服务端真实待复习数（包含未筛选的学科），但不重置当前会话进度。
+      fetchReviewQueueCount();
+    } else {
+      fetchMistakes();
+    }
   } catch (e) {
     const msg = e.response?.data?.detail || '提交复习结果失败';
     showToast(msg);
+  } finally {
+    reviewSubmitting.value = false;
   }
 };
 
@@ -1455,6 +1606,34 @@ const previewImage = (url) => {
   }
 };
 
+const handleSingleDelete = (item) => {
+  pendingDelete.value = { type: 'single', item };
+  if (!sessionStorage.getItem('parent_pin')) {
+    showDeletePin.value = true;
+    return;
+  }
+  performSingleDelete(item);
+};
+
+const handleBatchDelete = () => {
+  if (selectedIds.value.length === 0) return;
+  pendingDelete.value = { type: 'batch' };
+  if (!sessionStorage.getItem('parent_pin')) {
+    showDeletePin.value = true;
+    return;
+  }
+  performBatchDelete();
+};
+
+const confirmPendingDelete = () => {
+  if (pendingDelete.value?.type === 'single') performSingleDelete(pendingDelete.value.item);
+  if (pendingDelete.value?.type === 'batch') performBatchDelete();
+};
+
+const onGlobalAction = (event) => {
+  if (event.detail === 'mistake') showAddModal.value = true;
+};
+
 onMounted(async () => {
   if (route.query.tab === 'review' || route.query.tab === 'all') {
     activeTab.value = route.query.tab;
@@ -1464,6 +1643,7 @@ onMounted(async () => {
   }
   await fetchSubjects();
   await fetchMistakes();
+  window.addEventListener('zhixueji:action', onGlobalAction);
 });
 
 onBeforeUnmount(() => {
@@ -1471,29 +1651,49 @@ onBeforeUnmount(() => {
     clearInterval(pollTimerM);
     pollTimerM = null;
   }
+  window.removeEventListener('zhixueji:action', onGlobalAction);
 });
 </script>
 
 <style scoped>
 .mistake-view {
-  flex: 1;
-  background-color: var(--st-bg-page, #f8fafc);
+  height: calc(100vh - 50px - env(safe-area-inset-bottom, 0px));
+  height: calc(100dvh - 50px - env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  background-color: var(--st-bg-page);
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.mistake-content {
-  padding: 12px 14px 100px;
+.mistake-fixed-header {
+  flex-shrink: 0;
+  background-color: var(--st-bg-page);
+  z-index: 10;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.mistake-fixed-inner {
+  padding: var(--st-space-2) var(--st-space-5) 2px;
+}
+
+.mistake-scroll-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px var(--st-space-5) calc(var(--st-space-6) + 40px);
 }
 
 /* 顶部标签页切换条 */
 .mistake-header-bar {
   margin-bottom: 12px;
-  background: var(--st-bg-card, #ffffff);
-  border-radius: var(--st-radius-lg, 14px);
-  padding: 2px 6px;
-  border: 1px solid var(--st-border, #f1f5f9);
-  box-shadow: var(--st-shadow-card, 0 1px 3px rgba(15, 23, 42, 0.04));
+  background: var(--st-bg-card);
+  border-radius: var(--st-radius-lg);
+  padding: var(--st-space-1) var(--st-space-2);
+  border: 1px solid var(--st-border);
+  box-shadow: var(--st-shadow-card);
 }
 
 .mistake-tabs {
@@ -1516,6 +1716,133 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+/* 单题复习：队列信息从页面顶部收进题卡，阅读区自然占满余下空间。 */
+.focus-progress-block {
+  margin: 10px 0 16px;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--st-border, #f1f5f9);
+}
+
+.focus-progress-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.focus-progress-count {
+  color: var(--st-text-secondary, #475569);
+  font-size: var(--st-font-sm, 13px);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.focus-queue-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--st-primary, #0a7aff);
+  font-size: var(--st-font-xs, 12px);
+  font-weight: 500;
+}
+
+.review-queue-sheet {
+  max-height: min(72vh, 560px);
+  padding: var(--st-space-3) var(--st-space-5) calc(var(--st-space-6) + env(safe-area-inset-bottom, 0px));
+  background: var(--st-bg-card);
+}
+
+.review-queue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0 14px;
+  border-bottom: 1px solid var(--st-border, #f1f5f9);
+}
+
+.review-queue-title,
+.review-queue-subtitle {
+  margin: 0;
+}
+
+.review-queue-title {
+  color: var(--st-text-primary, #0f172a);
+  font-size: var(--st-font-lg, 16px);
+  font-weight: 700;
+}
+
+.review-queue-subtitle {
+  margin-top: 3px;
+  color: var(--st-text-muted, #64748b);
+  font-size: var(--st-font-xs, 12px);
+}
+
+.review-queue-list {
+  max-height: calc(min(72vh, 560px) - 102px);
+  overflow-y: auto;
+}
+
+.review-queue-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+  min-height: 58px;
+  padding: 9px 2px;
+  border: 0;
+  border-bottom: 1px solid var(--st-border, #f1f5f9);
+  background: transparent;
+  color: var(--st-text-secondary, #475569);
+  text-align: left;
+}
+
+.review-queue-item.is-current {
+  color: var(--st-primary, #0a7aff);
+}
+
+.review-queue-index {
+  display: inline-grid;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--st-bg-subtle, #f1f5f9);
+  color: inherit;
+  font-size: var(--st-font-xs, 12px);
+  font-variant-numeric: tabular-nums;
+}
+
+.review-queue-item.is-current .review-queue-index {
+  background: var(--st-primary-light, #eff6ff);
+}
+
+.review-queue-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.review-queue-subject {
+  font-size: var(--st-font-xs, 12px);
+  font-weight: 600;
+}
+
+.review-queue-question {
+  overflow: hidden;
+  color: var(--st-text-muted, #64748b);
+  font-size: var(--st-font-sm, 13px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chips-row {
@@ -1541,6 +1868,29 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.review-focus-list {
+  min-height: calc(100dvh - 320px);
+}
+
+.review-focus-card {
+  min-height: calc(100dvh - 320px);
+  padding: 16px;
+}
+
+.review-focus-card .card-main-layout,
+.review-focus-card .card-inner-content {
+  min-height: inherit;
+}
+
+.review-focus-card .card-inner-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.review-focus-card .card-body {
+  flex: 1;
 }
 
 .card-header {
@@ -1793,8 +2143,82 @@ onBeforeUnmount(() => {
   white-space: nowrap !important;
 }
 
+.review-focus-card .review-action-bar {
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.review-focus-card .review-buttons-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.review-focus-card .rev-action-btn {
+  min-height: 46px;
+  font-size: var(--st-font-md, 14px);
+}
+
+.review-focus-card .btn-answer {
+  grid-column: 1 / -1;
+  order: -1;
+  min-height: 38px;
+  color: var(--st-text-secondary, #475569);
+  border-color: var(--st-border-bold, #e2e8f0);
+}
+
 .empty-state {
   padding: 40px 0;
+}
+
+.custom-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 16px 16px;
+}
+
+.custom-empty-icon {
+  display: block;
+  margin: 0 auto 14px;
+  color: var(--st-primary);
+  font-size: 40px;
+  line-height: 1;
+}
+
+.custom-empty-title {
+  font-size: var(--st-font-lg);
+  font-weight: 600;
+  color: var(--st-text-primary);
+  margin: 0 0 6px;
+}
+
+.custom-empty-subtitle {
+  font-size: var(--st-font-sm);
+  color: var(--st-text-secondary);
+  margin: 0;
+  max-width: 220px;
+  line-height: 1.5;
+}
+
+.review-complete-state {
+  padding-top: 32px;
+}
+
+.review-complete-actions {
+  display: flex;
+  width: 100%;
+  max-width: 300px;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.review-complete-btn {
+  flex: 1;
+  height: 42px;
+  font-size: var(--st-font-sm, 13px);
 }
 
 /* 底部常驻悬浮栏 */
@@ -1823,7 +2247,7 @@ onBeforeUnmount(() => {
   flex: 1.5;
   height: 42px;
   font-size: var(--st-font-md);
-  font-weight: 600;
+  font-weight: 700;
   border-radius: var(--st-radius-full, 9999px);
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
   white-space: nowrap;
@@ -1832,31 +2256,32 @@ onBeforeUnmount(() => {
 .action-btn-secondary {
   flex: 0.95;
   height: 42px;
-  font-size: var(--st-font-sm);
+  font-size: var(--st-font-md);
   font-weight: 600;
-  color: #334155;
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
+  color: var(--st-primary);
+  background-color: var(--st-primary-light);
+  border: 1px solid var(--st-border-focus);
   border-radius: var(--st-radius-full, 9999px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.1);
   white-space: nowrap;
   padding: 0 6px;
 }
 
 .action-btn-secondary:active {
-  background-color: #f1f5f9;
+  background-color: var(--st-border-focus);
 }
 
 .action-btn-paper {
   flex: 0.72;
   padding: 0 8px;
-  color: #2563eb;
-  background-color: #eff6ff;
-  border-color: rgba(37, 99, 235, 0.3);
+  font-size: var(--st-font-md);
+  color: var(--st-primary);
+  background-color: var(--st-primary-light);
+  border-color: var(--st-border-focus);
 }
 
 .action-btn-paper:active {
-  background-color: #dbeafe;
+  background-color: var(--st-border-focus);
 }
 
 .action-btn-danger {
@@ -1971,19 +2396,19 @@ onBeforeUnmount(() => {
 
 /* 答案展示面板与轻量胶囊样式 */
 .card-answer-panel {
-  margin-top: 10px;
-  padding: 10px 12px;
-  background: #f8fafc;
-  border-radius: var(--st-radius-md, 8px);
-  border: 1px dashed #cbd5e1;
-  border-left: 3px solid var(--st-primary, #2563eb);
+  margin-top: var(--st-space-4);
+  padding: var(--st-space-3) var(--st-space-4);
+  background: var(--st-bg-subtle);
+  border-radius: var(--st-radius-md);
+  border: 1px solid var(--st-border);
+  border-left: 3px solid var(--st-primary);
 }
 
 .answer-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: var(--st-space-2);
+  margin-bottom: var(--st-space-2);
 }
 
 .answer-title {
@@ -1994,14 +2419,29 @@ onBeforeUnmount(() => {
 
 .answer-body {
   font-size: var(--st-font-sm);
-  color: #334155;
-  line-height: var(--st-leading-normal);
+  color: var(--st-text-regular);
+  line-height: var(--st-leading-loose);
 }
 
 .answer-text {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* 专注复习中，解析再长也只在自身区域滚动，底部的复习操作始终可回到视野中。 */
+.review-focus-card .card-answer-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: min(26dvh, 200px);
+}
+
+.review-focus-card .answer-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: var(--st-space-1);
+  -webkit-overflow-scrolling: touch;
 }
 
 .btn-answer {
@@ -2065,20 +2505,29 @@ onBeforeUnmount(() => {
 
 /* 弹窗抽屉 */
 .add-modal-body {
-  padding: 1rem 1.25rem 1.75rem;
+  padding: var(--st-space-3) var(--st-space-5) calc(var(--st-space-6) + env(safe-area-inset-bottom, 0px));
 }
 
 .sheet-grabber {
   width: 36px;
   height: 4px;
-  border-radius: 2px;
-  background-color: var(--st-border-bold, #e2e8f0);
-  margin: 0 auto 14px;
+  border-radius: var(--st-radius-full);
+  background-color: var(--st-border-bold);
+  margin: 0 auto var(--st-space-4);
 }
 
 .form-group {
-  margin-bottom: 14px;
+  margin-bottom: var(--st-space-4);
 }
+
+.form-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--st-space-2);
+}
+
+.form-label--inline { margin-bottom: 0; }
 
 .form-label {
   display: block;
@@ -2095,10 +2544,10 @@ onBeforeUnmount(() => {
 }
 
 .sheet-input-field {
-  background-color: var(--st-bg-subtle, #f1f5f9);
-  border-radius: var(--st-radius-md, 10px);
-  border: 1px solid var(--st-border, #f1f5f9);
-  padding: 8px 12px;
+  background-color: var(--st-bg-subtle);
+  border-radius: var(--st-radius-md);
+  border: 1px solid var(--st-border);
+  padding: var(--st-space-3) var(--st-space-4);
 }
 
 .upload-hint {
@@ -2125,11 +2574,11 @@ onBeforeUnmount(() => {
 
 /* 题干文字的实时渲染预览：让人看到最终效果，而不是 LaTeX 源码 */
 .math-preview {
-  margin-top: 8px;
-  padding: 8px 12px;
-  border-radius: var(--st-radius-md, 10px);
-  border: 1px dashed var(--st-border-bold, #e2e8f0);
-  background: var(--st-bg-card, #ffffff);
+  margin-top: var(--st-space-3);
+  padding: var(--st-space-3) var(--st-space-4);
+  border-radius: var(--st-radius-md);
+  border: 1px dashed var(--st-border-bold);
+  background: var(--st-bg-card);
 }
 
 .math-preview-label {
@@ -2149,7 +2598,8 @@ onBeforeUnmount(() => {
 
 .modal-footer-btns {
   display: flex;
-  gap: 12px;
-  margin-top: 18px;
+  gap: var(--st-space-4);
+  margin-top: var(--st-space-5);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--st-keyboard-inset));
 }
 </style>

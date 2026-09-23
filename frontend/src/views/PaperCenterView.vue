@@ -15,7 +15,7 @@
     <div class="paper-center-body">
       <!-- 预设快捷模式卡片 -->
       <div class="st-card section-card preset-card">
-        <div class="st-section-header" style="margin-bottom: 12px;">
+        <div class="st-section-header paper-section-header">
           <span class="st-icon-badge st-icon-badge--primary">
             <van-icon name="fire-o" />
           </span>
@@ -42,8 +42,8 @@
 
       <!-- 学科过滤滑动条 -->
       <div class="st-card section-card filter-card">
-        <div class="filter-header" style="margin-bottom: 12px;">
-          <div class="st-section-header" style="margin-bottom: 0;">
+        <div class="filter-header">
+          <div class="st-section-header paper-section-header--flush">
             <span class="st-icon-badge st-icon-badge--info">
               <van-icon name="filter-o" />
             </span>
@@ -101,16 +101,16 @@
               <van-checkbox :model-value="selectedIds.includes(item.id)" />
             </div>
             <div class="candidate-info">
-              <div class="candidate-tags" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <div class="candidate-tags">
                 <SubjectBadge :name="item.subject_name" size="sm" />
-                <span style="font-size: 13px; font-weight: 700; color: #0f172a;">{{ item.subject_name }}</span>
+                <span class="candidate-subject-name">{{ item.subject_name }}</span>
                 <span v-if="item.error_type" class="st-status-tag st-status-tag--warning">{{ item.error_type }}</span>
                 <span v-if="item.is_ebbinghaus" class="st-status-tag st-status-tag--purple">艾宾浩斯</span>
                 <span v-if="item.is_unmastered" class="st-status-tag st-status-tag--danger">高频未掌握</span>
                 <span v-if="item.is_this_week" class="st-status-tag st-status-tag--success">本周新增</span>
               </div>
               <div class="candidate-text">
-                {{ item.extracted_text || '（图片题目，点击右侧预览）' }}
+                <MathText :text="item.extracted_text || '（图片题目，点击右侧预览）'" />
               </div>
               <div class="candidate-meta">
                 <span>复习 {{ item.review_count }} 次 · {{ item.mastery_status }}</span>
@@ -125,7 +125,7 @@
 
       <!-- 试卷排版与外观配置 -->
       <div class="st-card section-card config-card">
-        <div class="st-section-header" style="margin-bottom: 14px;">
+        <div class="st-section-header paper-section-header--spacious">
           <span class="st-icon-badge st-icon-badge--neutral">
             <van-icon name="setting-o" />
           </span>
@@ -208,8 +208,8 @@
     </div>
 
     <!-- 图片大图预览 -->
-    <van-popup v-model:show="showImgPreview" round :style="{ padding: '10px', maxWidth: '90%' }">
-      <img :src="previewImgUrl" style="max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px;" />
+    <van-popup v-model:show="showImgPreview" round class="paper-image-preview">
+      <img :src="previewImgUrl" class="paper-image-preview-img" alt="题目图片预览" />
     </van-popup>
 
     <!-- 历史组卷记录抽屉 -->
@@ -283,6 +283,7 @@
         </div>
       </div>
     </van-popup>
+    <PinDeleteSheet v-model="showDeletePin" @verified="confirmPendingDelete" />
   </div>
 </template>
 
@@ -292,6 +293,8 @@ import { useRouter } from 'vue-router';
 import { showToast, showConfirmDialog } from 'vant';
 import { paperApi, settingsApi } from '../api';
 import SubjectBadge from '../components/SubjectBadge.vue';
+import MathText from '../components/MathText.vue';
+import PinDeleteSheet from '../components/PinDeleteSheet.vue';
 
 const router = useRouter();
 
@@ -316,6 +319,8 @@ const previewImgUrl = ref('');
 const showHistorySheet = ref(false);
 const historyList = ref([]);
 const historyLoading = ref(false);
+const showDeletePin = ref(false);
+const pendingDeletePaper = ref(null);
 
 // 函数式 ref 收集各 SwipeCell 实例：既能读滑动位移，也能主动 close()
 const swipeRefs = {};
@@ -427,7 +432,7 @@ const onHistoryCardClick = (item) => {
   router.push(`/paper/print?id=${item.id}`);
 };
 
-const confirmDeletePaper = async (item) => {
+const performDeletePaper = async (item) => {
   try {
     await showConfirmDialog({
       title: '删除组卷记录',
@@ -449,6 +454,19 @@ const confirmDeletePaper = async (item) => {
   } catch (err) {
     showToast(err.response?.data?.detail || '删除失败，请稍后重试');
   }
+};
+
+const confirmDeletePaper = (item) => {
+  pendingDeletePaper.value = item;
+  if (!sessionStorage.getItem('parent_pin')) {
+    showDeletePin.value = true;
+    return;
+  }
+  performDeletePaper(item);
+};
+
+const confirmPendingDelete = () => {
+  if (pendingDeletePaper.value) performDeletePaper(pendingDeletePaper.value);
 };
 
 const formatHistoryTime = (isoString) => {
@@ -570,12 +588,12 @@ onMounted(async () => {
 <style scoped>
 .paper-center-view {
   min-height: 100vh;
-  background-color: #f8fafc;
-  padding-bottom: 90px;
+  background-color: var(--st-bg-page);
+  padding-bottom: 132px;
 }
 
 .paper-center-body {
-  padding: 12px;
+  padding: var(--st-space-4);
 }
 
 .section-card {
@@ -595,32 +613,33 @@ onMounted(async () => {
 .preset-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+  gap: var(--st-space-3);
 }
 
 .preset-item {
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 10px;
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-md);
+  padding: var(--st-space-3);
   cursor: pointer;
   transition: all 0.2s ease;
-  background: #f8fafc;
+  background: var(--st-bg-subtle);
 }
 
 .preset-item.active {
-  border-color: #2563eb;
-  background: #eff6ff;
+  border-color: var(--st-primary);
+  background: var(--st-primary-light);
+  box-shadow: 0 0 0 1px var(--st-primary-light);
 }
 
 .preset-icon {
-  font-size: 20px;
-  margin-bottom: 4px;
+  font-size: var(--st-font-xl);
+  margin-bottom: var(--st-space-1);
 }
 
 .preset-name {
   font-size: var(--st-font-md);
   font-weight: 600;
-  color: #1e293b;
+  color: var(--st-text-primary);
 }
 
 .preset-desc {
@@ -634,11 +653,12 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: var(--st-space-4);
 }
 
 .select-actions {
   font-size: var(--st-font-xs);
-  color: #2563eb;
+  color: var(--st-primary);
 }
 
 .action-link {
@@ -646,16 +666,16 @@ onMounted(async () => {
 }
 
 .action-divider {
-  margin: 0 6px;
-  color: #cbd5e1;
+  margin: 0 var(--st-space-2);
+  color: var(--st-border-bold);
 }
 
 .subject-chips {
   display: flex;
-  gap: 6px;
+  gap: var(--st-space-2);
   overflow-x: auto;
   scrollbar-width: none;
-  padding-bottom: 4px;
+  padding-bottom: var(--st-space-1);
 }
 
 .subject-chips::-webkit-scrollbar {
@@ -680,9 +700,9 @@ onMounted(async () => {
 }
 
 .filter-footer-row {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px dashed #e2e8f0;
+  margin-top: var(--st-space-3);
+  padding-top: var(--st-space-3);
+  border-top: 1px dashed var(--st-border);
 }
 
 .extra-sub-label {
@@ -695,30 +715,30 @@ onMounted(async () => {
 .list-summary {
   font-size: var(--st-font-xs);
   color: var(--st-text-secondary);
-  margin-bottom: 8px;
+  margin-bottom: var(--st-space-3);
 }
 
 .candidate-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--st-space-3);
 }
 
 .candidate-item {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
+  gap: var(--st-space-3);
+  padding: var(--st-space-3);
+  border-radius: var(--st-radius-md);
+  border: 1px solid var(--st-border);
+  background: var(--st-bg-card);
   transition: all 0.2s;
   cursor: pointer;
 }
 
 .candidate-item.selected {
-  border-color: #93c5fd;
-  background: #f0f7ff;
+  border-color: var(--st-border-focus);
+  background: var(--st-primary-light);
 }
 
 .candidate-checkbox {
@@ -733,19 +753,26 @@ onMounted(async () => {
 .candidate-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 6px;
+  align-items: center;
+  gap: var(--st-space-2);
+  margin-bottom: var(--st-space-2);
+}
+
+.candidate-subject-name {
+  font-size: var(--st-font-sm);
+  font-weight: 700;
+  color: var(--st-text-primary);
 }
 
 .candidate-text {
   font-size: var(--st-font-sm);
-  color: #1e293b;
+  color: var(--st-text-regular);
   line-height: var(--st-leading-tight);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  margin-bottom: 6px;
+  margin-bottom: var(--st-space-2);
 }
 
 .candidate-meta {
@@ -756,9 +783,9 @@ onMounted(async () => {
 .candidate-thumb {
   width: 54px;
   height: 54px;
-  border-radius: 6px;
+  border-radius: var(--st-radius-sm);
   overflow: hidden;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--st-border);
   flex-shrink: 0;
 }
 
@@ -842,13 +869,13 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid #e2e8f0;
-  padding: 8px 16px;
-  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--st-border);
+  padding: var(--st-space-3) var(--st-space-5);
+  padding-bottom: calc(var(--st-space-3) + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  gap: var(--st-space-2);
+  box-shadow: var(--st-shadow-float);
   z-index: 99;
 }
 
@@ -861,7 +888,7 @@ onMounted(async () => {
 .main-stat {
   font-size: var(--st-font-md);
   font-weight: 600;
-  color: #0f172a;
+  color: var(--st-text-primary);
 }
 
 .sub-stat {
@@ -870,12 +897,12 @@ onMounted(async () => {
 }
 
 .highlight {
-  color: #2563eb;
+  color: var(--st-primary);
   font-weight: 700;
 }
 
 .warn-hint {
-  color: #d97706;
+  color: var(--st-warning-dark);
 }
 
 .compose-submit-btn {
@@ -889,8 +916,8 @@ onMounted(async () => {
 
 /* 历史记录抽屉样式 */
 .history-sheet-header {
-  padding: 16px 16px 10px;
-  border-bottom: 1px solid #f1f5f9;
+  padding: var(--st-space-5) var(--st-space-5) var(--st-space-3);
+  border-bottom: 1px solid var(--st-border);
 }
 
 /* 抽屉内的页面级标题：比卡片区标题高一档（17px），用类名承载而不是写在模板 style 里，
@@ -909,18 +936,18 @@ onMounted(async () => {
 .history-sheet-content {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 14px 24px;
+  padding: var(--st-space-4) var(--st-space-4) calc(var(--st-space-6) + env(safe-area-inset-bottom, 0px));
 }
 
 .history-sheet-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--st-space-3);
 }
 
 /* 左滑删除：外层裁圆角，使删除按钮与卡片视觉一体 */
 .history-swipe-cell {
-  border-radius: 10px;
+  border-radius: var(--st-radius-md);
   overflow: hidden;
 }
 
@@ -932,42 +959,42 @@ onMounted(async () => {
 }
 
 .history-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 12px 14px;
+  background: var(--st-bg-card);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-md);
+  padding: var(--st-space-4);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .history-card:active {
-  background: #f1f5f9;
+  background: var(--st-bg-subtle);
 }
 
 .history-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: var(--st-space-2);
 }
 
 .history-card-title {
   font-size: var(--st-font-md);
   font-weight: 600;
-  color: #1e293b;
+  color: var(--st-text-primary);
 }
 
 .history-card-desc {
   font-size: var(--st-font-xs);
   color: var(--st-text-secondary);
-  margin-bottom: 8px;
+  margin-bottom: var(--st-space-3);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--st-space-2);
 }
 
 .history-card-desc .dot {
-  color: #cbd5e1;
+  color: var(--st-border-bold);
 }
 
 .history-card-footer {
@@ -975,10 +1002,16 @@ onMounted(async () => {
   justify-content: flex-end;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
-  padding-top: 6px;
-  border-top: 1px dashed #e2e8f0;
+  gap: var(--st-space-2);
+  padding-top: var(--st-space-2);
+  border-top: 1px dashed var(--st-border);
 }
+
+.paper-section-header { margin-bottom: var(--st-space-4); }
+.paper-section-header--flush { margin-bottom: 0; }
+.paper-section-header--spacious { margin-bottom: var(--st-space-4); }
+.paper-image-preview { max-width: 90%; padding: var(--st-space-3); background: var(--st-bg-card); }
+.paper-image-preview-img { display: block; max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: var(--st-radius-sm); }
 
 /* 窄屏下按钮文字不竖排；真放不下就整体换行 */
 .history-card-footer :deep(.van-button) {

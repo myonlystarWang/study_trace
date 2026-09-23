@@ -2,7 +2,7 @@
   <div class="score-view">
     <!-- 顶部导航栏 -->
     <van-nav-bar
-      title="学情成绩"
+      title="成长"
     />
 
     <div class="score-content">
@@ -14,8 +14,8 @@
               <van-icon name="award-o" />
             </span>
             <div>
-              <div class="student-name">初一学情档案</div>
-              <div class="student-sub">已记录 {{ examList.length }} 场考试 · 全科均衡追踪</div>
+              <div class="student-name">这一段时间的成长</div>
+              <div class="student-sub">已记录 {{ examList.length }} 场考试 · 先看趋势，再看细节</div>
             </div>
           </div>
           <div v-if="latestExam" class="latest-badge">
@@ -42,6 +42,15 @@
         </div>
       </div>
 
+      <button class="growth-next-step" type="button" :aria-expanded="showInsights" @click="toggleInsights">
+        <span>
+          <b>{{ showInsights ? '成长解读与考试记录' : (weakSubjectsCount > 0 ? '下一步：复习需要关注的科目' : '下一步：保持今天的学习节奏') }}</b>
+          <small>{{ showInsights ? '收起详细分析' : '查看完整分析、成绩与组卷管理' }}</small>
+        </span>
+        <van-icon :name="showInsights ? 'arrow-up' : 'arrow'" />
+      </button>
+
+      <template v-if="showInsights">
       <!-- 薄弱学科诊断预警条 -->
       <div v-if="weakSubjects.length > 0" class="weak-diagnostic-box">
         <div class="diagnostic-header">
@@ -60,16 +69,21 @@
             class="weak-tag-card"
             @click="$router.push('/mistakes')"
           >
-            <div class="weak-card-top">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <SubjectBadge :name="item.subject_name" size="sm" />
-                <span class="weak-sub-name">{{ item.subject_name }}</span>
-              </div>
-              <van-tag type="danger" plain size="medium">重点关注</van-tag>
+            <div class="weak-card-badge-col">
+              <SubjectBadge :name="item.subject_name" size="sm" />
             </div>
-            <div class="weak-card-desc">{{ item.reason }}</div>
-            <div class="weak-card-action">
-              <span>前往错题本复习 &gt;</span>
+            <div class="weak-card-body">
+              <div class="weak-card-header-row">
+                <div class="weak-card-title-group">
+                  <span class="weak-sub-name">{{ item.subject_name }}</span>
+                  <span class="weak-focus-pill">重点关注</span>
+                </div>
+                <div class="weak-card-action">
+                  <span>前往错题本复习</span>
+                  <van-icon name="arrow" class="action-arrow" />
+                </div>
+              </div>
+              <div class="weak-card-desc">{{ item.reason }}</div>
             </div>
           </div>
         </div>
@@ -170,7 +184,18 @@
           </div>
         </div>
 
-        <div v-if="examList.length > 0" class="ledger-list">
+        <div v-if="examLoading" class="ledger-state-box" aria-label="正在加载考试记录">
+          <van-skeleton title :row="3" />
+        </div>
+
+        <div v-else-if="examLoadError" class="ledger-state-box ledger-error-state" role="status">
+          <van-icon name="warning-o" class="ledger-state-icon" />
+          <p class="custom-empty-title">考试记录暂时未能加载</p>
+          <p class="custom-empty-subtitle">请检查网络后重新加载。</p>
+          <button class="ledger-retry-btn" type="button" @click="reloadScoreData">重新加载</button>
+        </div>
+
+        <div v-else-if="examList.length > 0" class="ledger-list">
           <van-swipe-cell
             v-for="exam in examList"
             :key="exam.id"
@@ -254,31 +279,35 @@
         </div>
 
         <div v-else class="empty-ledger-box">
-          <van-empty description="暂无考试记录，点击下方录入第一场考试吧" />
+          <div class="custom-empty-state">
+          <van-icon name="chart-trending-o" class="custom-empty-icon" />
+            <p class="custom-empty-title">暂无考试记录</p>
+            <p class="custom-empty-subtitle">点击下方按钮，录入第一场考试</p>
+          </div>
         </div>
       </div>
+      </template>
     </div>
 
-    <!-- 家长 PIN 码门禁抽屉（保护录入与修改） -->
+    <!-- 删除成绩前的 PIN 验证抽屉 -->
     <van-popup
       v-model:show="showPinModal"
       position="bottom"
       round
-      class="bottom-sheet-modal"
-      :style="{ padding: '16px 20px 32px' }"
+      class="bottom-sheet-modal score-pin-sheet"
     >
-      <div style="width: 36px; height: 4px; background: #e2e8f0; border-radius: 2px; margin: 0 auto 16px;"></div>
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-        <div style="display: flex; align-items: center; gap: 8px;">
+      <div class="sheet-grabber"></div>
+      <div class="score-pin-header">
+        <div class="score-pin-title-row">
           <span class="st-icon-badge st-icon-badge--warning">
             <van-icon name="lock" />
           </span>
-          <span style="font-size: var(--st-font-xl); font-weight: 600; color: #0f172a;">家长身份验证</span>
+          <span class="score-pin-title">家长身份验证</span>
         </div>
-        <van-icon name="cross" size="18" color="#94a3b8" style="cursor: pointer;" @click="showPinModal = false" />
+        <van-icon name="cross" size="18" class="score-pin-close" @click="showPinModal = false" />
       </div>
-      <p style="font-size: var(--st-font-sm); color: var(--st-text-secondary); margin-bottom: 16px; line-height: var(--st-leading-normal);">
-        考试成绩录入与修改属于家长权限，请输入 6 位管理口令：
+      <p class="score-pin-copy">
+        删除考试会同时移除全部科目成绩，请输入管理口令后继续：
       </p>
       <van-field
         v-model="parentPinInput"
@@ -286,9 +315,9 @@
         maxlength="6"
         placeholder="请输入口令 (默认 888888)"
         center
-        style="background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 16px;"
+        class="score-pin-input"
       />
-      <div style="display: flex; gap: 10px;">
+      <div class="score-pin-actions">
         <van-button round block plain @click="showPinModal = false">取消</van-button>
         <van-button type="primary" round block @click="handleConfirmPin">验证并继续</van-button>
       </div>
@@ -492,6 +521,10 @@ import SubjectBadge from '../components/SubjectBadge.vue';
 const examList = ref([]);
 const subjects = ref([]);
 const weakSubjects = ref([]);
+const examLoading = ref(false);
+const examLoadError = ref(false);
+// 成长页与今天、作业一样，首屏直接呈现内容；按钮只负责收起长内容。
+const showInsights = ref(true);
 
 // 折线图状态
 const trendChartRef = ref(null);
@@ -635,6 +668,15 @@ const liveRate = computed(() => {
   return Math.round((liveTotalScore.value / liveTotalFull.value) * 1000) / 10;
 });
 
+const toggleInsights = async () => {
+  showInsights.value = !showInsights.value;
+  if (showInsights.value) {
+    await nextTick();
+    await fetchTrendData();
+    await fetchRadarData();
+  }
+};
+
 // 页面初始化
 onMounted(async () => {
   await fetchSubjects();
@@ -644,10 +686,13 @@ onMounted(async () => {
   await fetchRadarData();
 
   window.addEventListener('resize', handleResize);
+  window.addEventListener('zhixueji:action', onGlobalAction);
+  if (new URLSearchParams(window.location.search).get('action') === 'add') openCreateModal();
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
+  window.removeEventListener('zhixueji:action', onGlobalAction);
   if (trendChartInstance) trendChartInstance.dispose();
   if (radarChartInstance) radarChartInstance.dispose();
 });
@@ -668,11 +713,23 @@ const fetchSubjects = async () => {
 };
 
 const fetchExamList = async () => {
+  examLoading.value = true;
+  examLoadError.value = false;
   try {
     const res = await examApi.getList();
     examList.value = res.data || [];
   } catch (err) {
     console.error('获取考试列表失败', err);
+    examLoadError.value = true;
+  } finally {
+    examLoading.value = false;
+  }
+};
+
+const reloadScoreData = async () => {
+  await fetchExamList();
+  if (!examLoadError.value) {
+    await Promise.all([fetchWeaknesses(), fetchTrendData(), fetchRadarData()]);
   }
 };
 
@@ -721,6 +778,7 @@ const renderTrendChart = () => {
     const option = {
       tooltip: {
         trigger: 'axis',
+        textStyle: { fontSize: 12 },
         formatter: (params) => {
           const p = params[0];
           const item = trendItems.value[p.dataIndex];
@@ -732,15 +790,16 @@ const renderTrendChart = () => {
       },
       grid: {
         top: 30,
-        right: 15,
-        bottom: 40,
-        left: 45
+        right: 20,
+        bottom: 48,
+        left: 50
       },
       xAxis: {
         type: 'category',
         data: xDates,
         axisLabel: {
-          fontSize: 11,
+          fontSize: 12,
+          interval: 'auto',
           color: '#64748b'
         },
         axisLine: { lineStyle: { color: '#e2e8f0' } }
@@ -752,7 +811,7 @@ const renderTrendChart = () => {
         max: 100,
         axisLabel: {
           formatter: '{value}%',
-          fontSize: 11,
+          fontSize: 12,
           color: '#64748b'
         },
         splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } }
@@ -777,7 +836,7 @@ const renderTrendChart = () => {
             show: true,
             position: 'top',
             formatter: (p) => `${p.value}%`,
-            fontSize: 10,
+            fontSize: 12,
             color: '#1e293b'
           }
         }
@@ -878,23 +937,11 @@ const checkParentUnlocked = () => {
 };
 
 const handleRequestCreate = () => {
-  if (checkParentUnlocked()) {
-    openCreateModal();
-  } else {
-    pendingAction = 'create';
-    parentPinInput.value = '';
-    showPinModal.value = true;
-  }
+  openCreateModal();
 };
 
 const handleRequestEdit = (exam) => {
-  if (checkParentUnlocked()) {
-    openEditModal(exam);
-  } else {
-    pendingAction = { type: 'edit', exam };
-    parentPinInput.value = '';
-    showPinModal.value = true;
-  }
+  openEditModal(exam);
 };
 
 const handleConfirmPin = async () => {
@@ -909,11 +956,7 @@ const handleConfirmPin = async () => {
     showToast({ message: '验证成功', icon: 'success' });
     showPinModal.value = false;
 
-    if (pendingAction === 'create') {
-      openCreateModal();
-    } else if (pendingAction?.type === 'edit') {
-      openEditModal(pendingAction.exam);
-    } else if (pendingAction?.type === 'delete') {
+    if (pendingAction?.type === 'delete') {
       handleDeleteExam(pendingAction.exam);
     }
   } catch (err) {
@@ -1095,37 +1138,42 @@ const handleDeleteExam = (exam) => {
     }
   }).catch(() => {});
 };
+
+const onGlobalAction = (event) => {
+  if (event.detail === 'score') handleRequestCreate();
+};
 </script>
 
 <style scoped>
 .score-view {
   flex: 1;
-  background-color: #f8fafc;
-  padding-bottom: 100px;
+  background-color: var(--st-bg-page);
+  padding-bottom: 92px;
 }
 
 .score-content {
-  padding: 12px;
+  padding: var(--st-space-4) var(--st-space-5);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--st-space-4);
 }
 
 /* 概览卡片 */
 .summary-card {
-  background: var(--st-bg-card, #ffffff);
-  border-radius: var(--st-radius-md, 14px);
-  padding: 16px;
+  padding: var(--st-space-card) var(--st-space-5);
   color: var(--st-text-primary);
-  box-shadow: var(--st-shadow-card);
-  border: 1px solid var(--st-border, #f1f5f9);
 }
+
+.growth-next-step { display: flex; width: 100%; min-height: 60px; align-items: center; justify-content: space-between; padding: var(--st-space-4) var(--st-space-5); border: 1px solid var(--st-border-focus); border-radius: var(--st-radius-lg); background: var(--st-primary-light); color: var(--st-primary); text-align: left; }
+.growth-next-step b, .growth-next-step small { display: block; }
+.growth-next-step b { color: var(--st-text-primary); font-size: var(--st-font-md); font-weight: 600; }
+.growth-next-step small { margin-top: 3px; color: var(--st-text-secondary); font-size: var(--st-font-xs); }
 
 .summary-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: var(--st-space-4);
 }
 
 .student-info {
@@ -1174,11 +1222,11 @@ const handleDeleteExam = (exam) => {
 .summary-stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  background: var(--st-bg-page, #f8fafc);
-  padding: 10px;
-  border-radius: 10px;
-  border: 1px solid var(--st-border, #f1f5f9);
+  gap: var(--st-space-3);
+  background: var(--st-bg-subtle);
+  padding: var(--st-space-3);
+  border-radius: var(--st-radius-md);
+  border: 1px solid var(--st-border);
   text-align: center;
 }
 
@@ -1209,14 +1257,11 @@ const handleDeleteExam = (exam) => {
 
 /* 薄弱预警诊断 */
 .weak-diagnostic-box {
-  background: #fff;
-  border-radius: var(--st-radius-md, 14px);
-  padding: 12px;
-  border-left: 4px solid var(--st-danger, #ef4444);
+  background: var(--st-bg-card);
+  border-radius: var(--st-radius-lg);
+  padding: var(--st-space-4);
+  border: 1px solid #fecaca;
   box-shadow: var(--st-shadow-card);
-  border-top: 1px solid var(--st-border, #f1f5f9);
-  border-right: 1px solid var(--st-border, #f1f5f9);
-  border-bottom: 1px solid var(--st-border, #f1f5f9);
 }
 
 .diag-title-row {
@@ -1256,42 +1301,96 @@ const handleDeleteExam = (exam) => {
 }
 
 .weak-tag-card {
-  background: #fef2f2;
-  border-radius: 8px;
-  padding: 8px 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--st-danger-light, #fef2f2);
+  border: 1px solid #fecaca;
+  border-radius: var(--st-radius-md, 8px);
+  padding: 10px 14px;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.weak-card-top {
+.weak-tag-card:active {
+  opacity: 0.88;
+  transform: translateY(1px);
+}
+
+.weak-card-badge-col {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.weak-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.weak-card-header-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+}
+
+.weak-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .weak-sub-name {
-  font-size: var(--st-font-sm);
+  font-size: var(--st-font-sm, 14px);
   font-weight: 600;
   color: #991b1b;
+  line-height: 1.2;
 }
 
-.weak-card-desc {
-  font-size: var(--st-font-xs);
+.weak-focus-pill {
+  font-size: 11px;
+  font-weight: 500;
   color: #dc2626;
-  margin: 4px 0;
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.25);
+  border-radius: 4px;
+  padding: 1px 6px;
+  line-height: 1.25;
+  white-space: nowrap;
 }
 
 .weak-card-action {
-  font-size: var(--st-font-xs);
+  font-size: var(--st-font-xs, 12px);
   color: #2563eb;
-  text-align: right;
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.weak-card-action .action-arrow {
+  font-size: 11px;
+  margin-top: 1px;
+}
+
+.weak-card-desc {
+  font-size: var(--st-font-xs, 12px);
+  color: #b91c1c;
+  line-height: 1.4;
+  margin: 0;
 }
 
 .weak-good-box {
-  background: #f0fdf4;
+  background: var(--st-success-light);
   border: 1px solid #bbf7d0;
-  border-radius: 12px;
-  padding: 10px 14px;
+  border-radius: var(--st-radius-lg);
+  padding: var(--st-space-3) var(--st-space-4);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1309,17 +1408,14 @@ const handleDeleteExam = (exam) => {
 
 /* 图表卡片通用样式 */
 .chart-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 14px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  padding: var(--st-space-card) var(--st-space-5);
 }
 
 .chart-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: var(--st-space-4);
 }
 
 .card-title-group {
@@ -1404,11 +1500,11 @@ const handleDeleteExam = (exam) => {
 
 .custom-select {
   font-size: var(--st-font-xs);
-  padding: 4px 8px;
-  border-radius: 6px;
-  border: 1px solid #cbd5e1;
-  background: #f8fafc;
-  color: #334155;
+  padding: 6px 8px;
+  border-radius: var(--st-radius-sm);
+  border: 1px solid var(--st-border-bold);
+  background: var(--st-bg-subtle);
+  color: var(--st-text-regular);
   outline: none;
   max-width: 150px;
   text-overflow: ellipsis;
@@ -1478,10 +1574,7 @@ const handleDeleteExam = (exam) => {
 }
 
 .exam-card {
-  background: #fff;
-  border-radius: 14px;
-  padding: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  padding: var(--st-space-4) var(--st-space-5);
 }
 
 .exam-card-top {
@@ -1499,16 +1592,16 @@ const handleDeleteExam = (exam) => {
 .exam-type-badge {
   font-size: var(--st-font-xs);
   font-weight: 600;
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--st-primary-light);
+  color: var(--st-primary);
   padding: 2px 6px;
-  border-radius: 6px;
+  border-radius: var(--st-radius-sm);
 }
 
 .exam-title {
   font-size: var(--st-font-md);
   font-weight: 600;
-  color: #0f172a;
+  color: var(--st-text-primary);
 }
 
 .exam-date-row {
@@ -1521,17 +1614,17 @@ const handleDeleteExam = (exam) => {
 }
 
 .rank-tag {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--st-bg-subtle);
+  color: var(--st-text-secondary);
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: var(--st-radius-sm);
   font-size: var(--st-font-xs);
 }
 
 .exam-score-banner {
-  background: #f8fafc;
-  border-radius: 8px;
-  padding: 8px 10px;
+  background: var(--st-bg-subtle);
+  border-radius: var(--st-radius-md);
+  padding: var(--st-space-3) var(--st-space-4);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1546,7 +1639,8 @@ const handleDeleteExam = (exam) => {
 .total-num {
   font-size: var(--st-font-xl);
   font-weight: 700;
-  color: #0f172a;
+  color: var(--st-text-primary);
+  font-variant-numeric: tabular-nums;
 }
 
 .total-full {
@@ -1561,9 +1655,9 @@ const handleDeleteExam = (exam) => {
 }
 
 .sub-score-chip {
-  background: #f1f5f9;
-  border-radius: 6px;
-  padding: 4px 6px;
+  background: var(--st-bg-subtle);
+  border-radius: var(--st-radius-sm);
+  padding: 4px var(--st-space-2);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1575,11 +1669,11 @@ const handleDeleteExam = (exam) => {
 }
 
 .chip-name {
-  color: #475569;
+  color: var(--st-text-secondary);
 }
 
 .chip-score {
-  color: #0f172a;
+  color: var(--st-text-primary);
 }
 
 .chip-score small {
@@ -1592,8 +1686,72 @@ const handleDeleteExam = (exam) => {
 }
 
 .empty-ledger-box {
-  background: #fff;
-  border-radius: 14px;
+  background: var(--st-bg-card);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-lg);
+}
+
+.ledger-state-box {
+  padding: var(--st-space-6) var(--st-space-5);
+  background: var(--st-bg-card);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-lg);
+}
+
+.ledger-error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.ledger-state-icon {
+  margin-bottom: var(--st-space-3);
+  color: var(--st-warning-dark);
+  font-size: 30px;
+}
+
+.ledger-retry-btn {
+  min-height: 42px;
+  margin-top: var(--st-space-4);
+  padding: 0 var(--st-space-5);
+  border: 0;
+  border-radius: var(--st-radius-full);
+  background: var(--st-primary);
+  color: #ffffff;
+  font: inherit;
+  font-size: var(--st-font-md);
+  font-weight: 600;
+}
+
+.empty-ledger-box .custom-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 30px 16px;
+}
+
+.empty-ledger-box .custom-empty-icon {
+  color: var(--st-primary);
+  font-size: 40px;
+  line-height: 1;
+  margin-bottom: 14px;
+}
+
+.empty-ledger-box .custom-empty-title {
+  font-size: var(--st-font-lg);
+  font-weight: 600;
+  color: var(--st-text-primary);
+  margin: 0 0 6px;
+}
+
+.empty-ledger-box .custom-empty-subtitle {
+  font-size: var(--st-font-sm);
+  color: var(--st-text-secondary);
+  margin: 0;
+  max-width: 220px;
+  line-height: 1.5;
 }
 
 /* 录入/编辑弹窗 */
@@ -1607,30 +1765,32 @@ const handleDeleteExam = (exam) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 16px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: var(--st-space-4) var(--st-space-5);
+  border-bottom: 1px solid var(--st-border);
+  background: var(--st-bg-card);
 }
 
 .popup-title {
   font-size: var(--st-font-xl);
   font-weight: 600;
-  color: #0f172a;
+  color: var(--st-text-primary);
 }
 
 .popup-scroll-body {
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 24px;
+  padding-bottom: calc(var(--st-space-6) + max(env(safe-area-inset-bottom, 0px), var(--st-keyboard-inset)));
+  background: var(--st-bg-page);
 }
 
 /* 智能大段文字识别填表卡片 */
 .smart-parse-card {
-  margin: 12px 16px 6px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 1px solid #cbd5e1;
-  border-radius: 12px;
-  padding: 12px 14px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  margin: var(--st-space-4) var(--st-space-4) var(--st-space-2);
+  background: var(--st-bg-subtle);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-lg);
+  padding: var(--st-space-4);
+  box-shadow: var(--st-shadow-card);
 }
 
 .smart-parse-header {
@@ -1671,9 +1831,9 @@ const handleDeleteExam = (exam) => {
 }
 
 .smart-parse-input-box {
-  background: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  background: var(--st-bg-card);
+  border-radius: var(--st-radius-sm);
+  border: 1px solid var(--st-border);
   overflow: hidden;
   margin-bottom: 8px;
 }
@@ -1734,16 +1894,16 @@ const handleDeleteExam = (exam) => {
 }
 
 .live-calc-bar {
-  margin: 10px 16px;
-  padding: 10px 14px;
-  background: #eff6ff;
-  border-radius: 10px;
-  border: 1px solid #bfdbfe;
+  margin: var(--st-space-3) var(--st-space-4);
+  padding: var(--st-space-3) var(--st-space-4);
+  background: var(--st-primary-light);
+  border-radius: var(--st-radius-md);
+  border: 1px solid var(--st-border-focus);
 }
 
 .calc-label {
   font-size: var(--st-font-xs);
-  color: #1d4ed8;
+  color: var(--st-primary-dark);
   font-weight: 500;
 }
 
@@ -1756,12 +1916,12 @@ const handleDeleteExam = (exam) => {
 
 .calc-main {
   font-size: var(--st-font-lg);
-  color: #1e3a8a;
+  color: var(--st-text-primary);
 }
 
 .calc-main b {
-  font-size: 18px;
-  color: #2563eb;
+  font-size: var(--st-font-xl);
+  color: var(--st-primary);
 }
 
 .calc-sub {
@@ -1770,8 +1930,8 @@ const handleDeleteExam = (exam) => {
 }
 
 .subject-edit-item {
-  padding: 8px 12px;
-  border-bottom: 1px solid #f1f5f9;
+  padding: var(--st-space-3) var(--st-space-4);
+  border-bottom: 1px solid var(--st-border);
 }
 
 .sub-item-header {
@@ -1784,7 +1944,7 @@ const handleDeleteExam = (exam) => {
 .sub-name-tag {
   font-size: var(--st-font-sm);
   font-weight: 600;
-  color: #1e293b;
+  color: var(--st-text-primary);
 }
 
 .sub-absent-toggle {
@@ -1806,13 +1966,39 @@ const handleDeleteExam = (exam) => {
 .score-input-field,
 .full-input-field {
   padding: 4px 8px;
-  background: #f8fafc;
-  border-radius: 6px;
+  background: var(--st-bg-subtle);
+  border-radius: var(--st-radius-sm);
 }
 
 .popup-bottom-actions {
-  padding: 16px;
+  padding: var(--st-space-4);
 }
+
+.score-pin-sheet {
+  padding: var(--st-space-4) var(--st-space-5) calc(var(--st-space-6) + env(safe-area-inset-bottom, 0px));
+  background: var(--st-bg-card);
+}
+
+.sheet-grabber {
+  width: 36px;
+  height: 4px;
+  margin: 0 auto var(--st-space-4);
+  border-radius: var(--st-radius-full);
+  background: var(--st-border-bold);
+}
+
+.score-pin-header, .score-pin-title-row, .score-pin-actions {
+  display: flex;
+  align-items: center;
+}
+
+.score-pin-header { justify-content: space-between; margin-bottom: var(--st-space-3); }
+.score-pin-title-row { gap: var(--st-space-2); }
+.score-pin-title { font-size: var(--st-font-xl); font-weight: 600; color: var(--st-text-primary); }
+.score-pin-close { cursor: pointer; color: var(--st-text-muted); }
+.score-pin-copy { margin: 0 0 var(--st-space-4); font-size: var(--st-font-sm); color: var(--st-text-secondary); line-height: var(--st-leading-normal); }
+.score-pin-input { margin-bottom: var(--st-space-4); background: var(--st-bg-subtle); border: 1px solid var(--st-border); border-radius: var(--st-radius-md); }
+.score-pin-actions { gap: var(--st-space-3); }
 
 /* 左滑操作与底部常驻悬浮栏 */
 .exam-swipe-cell {
@@ -1871,10 +2057,12 @@ const handleDeleteExam = (exam) => {
 }
 
 .add-score-btn {
-  font-weight: 600;
-  height: 42px;
-  font-size: var(--st-font-md);
+  font-weight: 700;
+  height: 46px;
+  font-size: 15px;
   border-radius: var(--st-radius-full, 9999px);
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
 }
+
+.floating-bottom-bar { display: none; }
 </style>

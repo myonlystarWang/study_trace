@@ -25,20 +25,13 @@
         </div>
 
         <div class="user-nav-cells">
-          <div class="user-nav-item" @click="$router.push('/about')">
+          <button class="user-nav-item" type="button" @click="$router.push('/about')">
             <span class="nav-item-left">
-              <van-icon name="info-o" color="#3b82f6" size="16" />
+              <van-icon name="info-o" color="var(--st-primary)" size="16" />
               <span>系统运行自检与服务状态</span>
             </span>
             <van-icon name="arrow" class="nav-arrow" />
-          </div>
-          <div class="user-nav-item" @click="$router.push('/preview')">
-            <span class="nav-item-left">
-              <van-icon name="gem-o" color="#8b5cf6" size="16" />
-              <span>设计系统与组件规范预览</span>
-            </span>
-            <van-icon name="arrow" class="nav-arrow" />
-          </div>
+          </button>
         </div>
       </div>
 
@@ -65,7 +58,7 @@
           round
           :loading="verifying"
           @click="handleVerifyPin"
-          style="margin-top: 1.5rem;"
+          class="pin-unlock-btn st-action-btn st-action-btn--primary"
         >
           解锁进入管理视图
         </van-button>
@@ -453,7 +446,7 @@
             </div>
 
             <!-- 保存配置按钮 -->
-            <div style="margin-top: 14px;">
+            <div class="notif-save-wrap">
               <van-button
                 type="primary"
                 block
@@ -637,14 +630,16 @@
           </div>
 
           <div class="st-collapse-body" v-show="isSectionOpen('backup')">
-            <van-cell title="全站数据导出备份" is-link label="包含 SQLite 数据库与所有错题高清原图" @click="handleExportBackup" />
-            <van-cell title="从备份 Zip 包还原" label="恢复前将自动在本地创建数据快照">
+            <div class="settings-action-list backup-action-list">
+              <van-cell title="全站数据导出备份" is-link label="包含 SQLite 数据库与所有错题高清原图" @click="handleExportBackup" />
+              <van-cell title="从备份 Zip 包还原" label="恢复前将自动在本地创建数据快照">
               <template #right-icon>
-                <van-uploader :after-read="handleImportBackup" accept=".zip">
-                  <van-button size="small" type="primary">选择并还原</van-button>
+                <van-uploader :after-read="handleImportBackup" accept=".zip" class="backup-upload">
+                  <van-button size="small" class="backup-restore-btn">选择备份</van-button>
                 </van-uploader>
               </template>
-            </van-cell>
+              </van-cell>
+            </div>
           </div>
         </div>
 
@@ -666,9 +661,11 @@
           </div>
 
           <div class="st-collapse-body" v-show="isSectionOpen('security')">
-            <van-cell title="修改管理口令" is-link icon="lock" @click="showChangePin = true" />
-            <van-cell title="系统关于与运行自检" is-link icon="info-o" @click="$router.push('/about')" />
-            <van-cell title="退出管理并锁定口令" is-link icon="cross" @click="lockSettings" />
+            <div class="settings-action-list security-action-list">
+              <van-cell title="修改管理口令" is-link icon="lock" @click="showChangePin = true" />
+              <van-cell title="系统关于与运行自检" is-link icon="info-o" @click="$router.push('/about')" />
+              <van-cell title="退出管理并锁定口令" is-link icon="cross" @click="lockSettings" />
+            </div>
           </div>
         </div>
       </div>
@@ -682,7 +679,7 @@
       confirm-button-text="保存分值"
       @confirm="submitEditSubject"
     >
-      <div style="padding: 1.25rem 1rem 0.5rem;">
+      <div class="settings-dialog-body">
         <van-field
           v-model="editSubForm.name"
           label="学科名称"
@@ -698,7 +695,7 @@
         <div v-if="editSubForm.is_default" class="edit-dialog-tip">
           注：系统预置核心学科名称受保护不可删除，仅支持根据当地中考标准修改满分分值。
         </div>
-        <div v-else style="margin-top: 14px; text-align: center;">
+        <div v-else class="delete-subject-wrap">
           <van-button
             type="danger"
             plain
@@ -722,7 +719,7 @@
       confirm-button-text="添加"
       @confirm="submitAddSubject"
     >
-      <div style="padding: 1.25rem 1rem 0.5rem;">
+      <div class="settings-dialog-body">
         <van-field v-model="newSub.name" label="学科名称" placeholder="如：科学 / 物理 / 法语" />
         <van-field v-model="newSub.full_score" type="number" label="满分分值" placeholder="100" />
       </div>
@@ -736,7 +733,7 @@
       confirm-button-text="确认修改"
       @confirm="submitChangePin"
     >
-      <div style="padding: 1.25rem 1rem 0.5rem;">
+      <div class="settings-dialog-body">
         <van-field v-model="pinForm.oldPin" type="password" label="原口令" placeholder="请输入原口令" />
         <van-field v-model="pinForm.newPin" type="password" label="新口令" placeholder="请输入新口令 (至少4位)" />
       </div>
@@ -989,7 +986,7 @@ const handleVerifyPin = async () => {
 
     if (res.data?.is_default_pin) {
       showDialog({
-        title: '⚠️ 安全加固提醒',
+        title: '安全加固提醒',
         message: '系统当前正在使用初始默认口令 (888888)。为了防止公网未授权访问与数据泄露，强烈建议立即修改管理口令！',
         confirmButtonText: '立即修改',
         confirmButtonColor: '#e11d48',
@@ -1351,7 +1348,7 @@ const renderMonthlyCharts = () => {
           borderColor: '#e2e8f0',
           borderWidth: 1,
           padding: [8, 10],
-          textStyle: { color: '#0f172a', fontSize: 11 },
+          textStyle: { color: '#0f172a', fontSize: 12 },
           formatter: (params) => {
             const p = params[0];
             const item = monthlyData.value?.daily_trends?.[p.dataIndex];
@@ -1378,14 +1375,14 @@ const renderMonthlyCharts = () => {
           itemWidth: 10,
           itemHeight: 7,
           itemGap: 14,
-          textStyle: { fontSize: 10, color: '#64748b' },
+          textStyle: { fontSize: 12, color: '#64748b' },
           data: ['作业总量', '打卡率']
         },
-        grid: { top: 28, right: 38, bottom: 22, left: 28 },
+        grid: { top: 32, right: 44, bottom: 30, left: 40 },
         xAxis: {
           type: 'category',
           data: days,
-          axisLabel: { fontSize: 10, color: '#64748b', interval: 4 },
+          axisLabel: { fontSize: 12, color: '#64748b', interval: 5 },
           axisLine: { lineStyle: { color: '#e2e8f0' } },
           axisTick: { alignWithLabel: true }
         },
@@ -1393,11 +1390,11 @@ const renderMonthlyCharts = () => {
           {
             type: 'value',
             name: '项',
-            nameTextStyle: { fontSize: 9, color: '#94a3b8', padding: [0, 0, 0, -8] },
+            nameTextStyle: { fontSize: 12, color: '#64748b', padding: [0, 0, 0, -8] },
             min: 0,
             max: y1Max,
             interval: y1Max / 4,
-            axisLabel: { fontSize: 9, color: '#64748b' },
+            axisLabel: { fontSize: 12, color: '#64748b' },
             splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } }
           },
           {
@@ -1405,7 +1402,7 @@ const renderMonthlyCharts = () => {
             min: 0,
             max: 100,
             interval: 25,
-            axisLabel: { formatter: '{value}%', fontSize: 9, color: '#10b981' },
+            axisLabel: { formatter: '{value}%', fontSize: 12, color: '#10b981' },
             splitLine: { show: false }
           }
         ],
@@ -1459,17 +1456,17 @@ const renderMonthlyCharts = () => {
           trigger: 'axis',
           formatter: '{b}: 遗漏未完成 {c} 次'
         },
-        grid: { top: 25, right: 15, bottom: 25, left: 35 },
+        grid: { top: 30, right: 18, bottom: 30, left: 40 },
         xAxis: {
           type: 'category',
           data: subs,
-          axisLabel: { fontSize: 11, color: '#475569' },
+          axisLabel: { fontSize: 12, color: '#475569', interval: 0 },
           axisLine: { lineStyle: { color: '#e2e8f0' } }
         },
         yAxis: {
           type: 'value',
           minInterval: 1,
-          axisLabel: { fontSize: 10, color: '#64748b' },
+          axisLabel: { fontSize: 12, color: '#64748b' },
           splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } }
         },
         series: [
@@ -1488,7 +1485,7 @@ const renderMonthlyCharts = () => {
             label: {
               show: true,
               position: 'top',
-              fontSize: 11,
+              fontSize: 12,
               color: '#d97706'
             }
           }
@@ -1529,35 +1526,32 @@ onUnmounted(() => {
 
 .settings-view {
   flex: 1;
-  background-color: var(--st-bg-page, #f8fafc);
+  background-color: var(--st-bg-page);
 }
 
 .settings-container {
-  padding: 12px 14px 16px;
+  padding: var(--st-space-4) var(--st-space-5) 92px;
   max-width: 600px;
   margin: 0 auto;
 }
 
 .settings-top-notice {
-  margin-bottom: 14px;
-  border-radius: var(--st-radius-sm, 8px);
+  margin-bottom: var(--st-space-4);
+  border-radius: var(--st-radius-md);
+  font-size: var(--st-font-xs);
 }
 
 .user-profile-card {
-  margin: 0 0 16px;
-  padding: 16px 14px 8px;
-  background: var(--st-bg-card, #ffffff);
-  border-radius: var(--st-radius-md, 14px);
-  border: 1px solid var(--st-border, #f1f5f9);
-  box-shadow: var(--st-shadow-card);
+  margin: 0 0 var(--st-space-5);
+  padding: var(--st-space-5) var(--st-space-5) var(--st-space-2);
 }
 
 .user-profile-main {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #f1f5f9;
+  gap: var(--st-space-4);
+  padding-bottom: var(--st-space-4);
+  border-bottom: 1px solid var(--st-border);
 }
 
 .user-avatar-wrap {
@@ -1590,10 +1584,10 @@ onUnmounted(() => {
 
 .user-grade-tag {
   font-size: var(--st-font-xs, 12px);
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--st-primary-light);
+  color: var(--st-primary);
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: var(--st-radius-sm);
   font-weight: 600;
 }
 
@@ -1613,14 +1607,20 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 4px;
+  min-height: 44px;
+  width: 100%;
+  padding: var(--st-space-3) var(--st-space-1);
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
   border-radius: 8px;
   transition: background 0.15s ease;
 }
 
 .user-nav-item:active {
-  background: #f8fafc;
+  background: var(--st-bg-subtle);
 }
 
 .nav-item-left {
@@ -1628,39 +1628,38 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   font-size: var(--st-font-sm, 13px);
-  color: #334155;
+  color: var(--st-text-regular);
   font-weight: 500;
 }
 
 .nav-arrow {
-  color: #cbd5e1;
-  font-size: 12px;
+  color: var(--st-text-muted);
+  font-size: var(--st-font-xs);
 }
 
 .pin-gate-card {
-  margin: 2.5rem auto;
+  margin: var(--st-space-6) auto;
   max-width: 440px;
-  background: var(--st-bg-card, #ffffff);
-  border-radius: var(--st-radius-md, 14px);
-  padding: 2.5rem 1.5rem;
+  background: var(--st-bg-card);
+  border-radius: var(--st-radius-lg);
+  padding: var(--st-space-6) var(--st-space-5);
   text-align: center;
-  border: 1px solid var(--st-border, #f1f5f9);
-  box-shadow: var(--st-shadow-card);
+  border: 1px solid var(--st-border);
 }
 
 .gate-icon-circle {
   width: 60px;
   height: 60px;
-  background: var(--st-warning-light, #fffbeb);
-  border-radius: var(--st-radius-full, 9999px);
+  background: var(--st-warning-light);
+  border-radius: var(--st-radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 1.25rem;
+  margin: 0 auto var(--st-space-5);
 }
 
 .pin-gate-card h3 {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--st-space-2);
   font-size: var(--st-font-xl);
   font-weight: 700;
   color: var(--st-text-primary);
@@ -1669,23 +1668,27 @@ onUnmounted(() => {
 .gate-tip {
   font-size: var(--st-font-sm);
   color: var(--st-text-secondary);
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--st-space-5);
 }
 
 .pin-field {
-  background: var(--st-bg-page, #f8fafc);
-  border-radius: var(--st-radius-sm, 8px);
-  border: 1px solid var(--st-border, #e2e8f0);
-  font-size: 1.2rem;
+  background: var(--st-bg-subtle);
+  border-radius: var(--st-radius-md);
+  border: 1px solid var(--st-border);
+  font-size: var(--st-font-lg);
   letter-spacing: 4px;
 }
 
+.pin-unlock-btn {
+  margin-top: var(--st-space-5);
+}
+
 .channel-config-box {
-  background: #f8fafc;
-  margin: 10px 0;
-  padding: 12px;
-  border-radius: var(--st-radius-sm, 8px);
-  border: 1px solid var(--st-border, #e2e8f0);
+  background: var(--st-bg-subtle);
+  margin: var(--st-space-3) 0;
+  padding: var(--st-space-4);
+  border-radius: var(--st-radius-md);
+  border: 1px solid var(--st-border);
 }
 
 .channel-header {
@@ -1711,7 +1714,7 @@ onUnmounted(() => {
 
 .channel-field {
   background: transparent;
-  padding: 6px 0 2px;
+  padding: var(--st-space-2) 0 var(--st-space-1);
 }
 
 .channel-field :deep(.van-field__label) {
@@ -1739,11 +1742,11 @@ onUnmounted(() => {
 
 /* 微信家庭成员结构化管理列表样式 */
 .wechat-members-section {
-  margin: 10px 0 6px;
-  background: var(--st-bg-surface, #ffffff);
-  border: 1px solid var(--st-border-light, #e2e8f0);
-  border-radius: var(--st-radius-md, 10px);
-  padding: 10px 12px;
+  margin: var(--st-space-3) 0 var(--st-space-2);
+  background: var(--st-bg-card);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-md);
+  padding: var(--st-space-3) var(--st-space-4);
 }
 
 .wechat-members-header {
@@ -1768,11 +1771,11 @@ onUnmounted(() => {
 }
 
 .wechat-member-card {
-  background: var(--st-bg-elevated, #f8fafc);
-  border: 1px solid var(--st-border-light, #edf2f7);
-  border-radius: var(--st-radius-sm, 8px);
-  padding: 8px 10px;
-  margin-bottom: 8px;
+  background: var(--st-bg-subtle);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-sm);
+  padding: var(--st-space-3) var(--st-space-4);
+  margin-bottom: var(--st-space-3);
   transition: all 0.2s ease;
 }
 
@@ -1853,9 +1856,9 @@ onUnmounted(() => {
 
 .member-openid-input {
   width: 100%;
-  border: 1px solid var(--st-border-light, #cbd5e1);
-  background: #ffffff;
-  font-family: monospace;
+  border: 1px solid var(--st-border-bold);
+  background: var(--st-bg-card);
+  font-family: var(--st-font-mono);
   font-size: var(--st-font-xs);
   color: var(--st-text-primary);
   padding: 6px 8px;
@@ -1899,7 +1902,7 @@ onUnmounted(() => {
 
 /* 渠道多选网格选择器 */
 .channel-selector-section {
-  padding: 10px 2px 8px;
+  padding: var(--st-space-3) var(--st-space-1);
 }
 
 .channel-selector-header {
@@ -1936,10 +1939,11 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 10px;
-  background-color: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: var(--st-radius-md, 10px);
+  min-width: 0;
+  padding: var(--st-space-3) var(--st-space-2);
+  background-color: var(--st-bg-subtle);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-md);
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
@@ -1950,8 +1954,8 @@ onUnmounted(() => {
 }
 
 .channel-select-card.is-active {
-  background-color: #eff6ff;
-  border-color: var(--st-primary, #2563eb);
+  background-color: var(--st-primary-light);
+  border-color: var(--st-primary);
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
 }
 
@@ -1976,11 +1980,11 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 16px 12px;
-  margin: 10px 0;
-  background-color: #f8fafc;
-  border: 1px dashed #cbd5e1;
-  border-radius: var(--st-radius-md, 10px);
+  padding: var(--st-space-4);
+  margin: var(--st-space-3) 0;
+  background-color: var(--st-bg-subtle);
+  border: 1px dashed var(--st-border-bold);
+  border-radius: var(--st-radius-md);
   color: var(--st-text-secondary);
   font-size: var(--st-font-xs);
 }
@@ -2230,68 +2234,68 @@ onUnmounted(() => {
 .section-toolbar-title {
   font-size: var(--st-font-sm);
   font-weight: 600;
-  color: #475569;
+  color: var(--st-text-secondary);
 }
 
 .section-toolbar-count {
   font-size: var(--st-font-xs);
   color: var(--st-text-muted);
-  background: #f1f5f9;
+  background: var(--st-bg-subtle);
   padding: 1px 6px;
-  border-radius: 10px;
+  border-radius: var(--st-radius-full);
 }
 
 .section-toggle-all-btn {
   background: none;
   border: none;
   font-size: var(--st-font-xs);
-  color: #2563eb;
+  color: var(--st-primary);
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: var(--st-radius-sm);
   transition: background-color 0.2s;
 }
 
 .section-toggle-all-btn:hover {
-  background-color: #eff6ff;
+  background-color: var(--st-primary-light);
 }
 
 /* 现代化折叠卡片 */
 .st-collapse-card {
   margin-bottom: 10px;
-  background: var(--st-bg-card, #ffffff);
-  border-radius: 14px;
-  border: 1px solid var(--st-border, #f1f5f9);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  background: var(--st-bg-card);
+  border-radius: var(--st-radius-lg);
+  border: 1px solid var(--st-border);
+  box-shadow: var(--st-shadow-card);
   overflow: hidden;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .st-collapse-card.is-open {
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  border-color: var(--st-border-bold);
+  box-shadow: var(--st-shadow-hover);
 }
 
 .st-collapse-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
+  padding: var(--st-space-4) var(--st-space-5);
   cursor: pointer;
   user-select: none;
-  background: #ffffff;
+  background: var(--st-bg-card);
   transition: background-color 0.15s ease;
 }
 
 .st-collapse-header:hover {
-  background-color: #f8fafc;
+  background-color: var(--st-bg-subtle);
 }
 
 .st-collapse-header:active {
-  background-color: #f1f5f9;
+  background-color: var(--st-bg-subtle);
 }
 
 .st-collapse-header-left {
@@ -2361,8 +2365,67 @@ onUnmounted(() => {
 }
 
 .notif-save-btn {
-  height: 38px;
+  height: 42px;
   font-size: var(--st-font-md);
   font-weight: 600;
+}
+
+.notif-save-wrap {
+  margin-top: var(--st-space-4);
+}
+
+.settings-action-list {
+  overflow: hidden;
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-md);
+  background: var(--st-bg-card);
+}
+
+.settings-action-list :deep(.van-cell) {
+  min-height: 56px;
+  padding: var(--st-space-3) var(--st-space-4);
+}
+
+.settings-action-list :deep(.van-cell__title) {
+  font-size: var(--st-font-md);
+  font-weight: 600;
+  color: var(--st-text-primary);
+}
+
+.settings-action-list :deep(.van-cell__label) {
+  margin-top: var(--st-space-1);
+  font-size: var(--st-font-xs);
+  line-height: var(--st-leading-normal);
+  color: var(--st-text-secondary);
+}
+
+.backup-restore-btn {
+  height: 30px;
+  padding: 0 var(--st-space-3);
+  border: 1px solid var(--st-primary);
+  border-radius: var(--st-radius-full);
+  background: var(--st-primary-light);
+  color: var(--st-primary);
+  font-size: var(--st-font-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.security-action-list :deep(.van-cell:last-child) {
+  color: var(--st-danger);
+}
+
+.security-action-list :deep(.van-cell:last-child .van-cell__title),
+.security-action-list :deep(.van-cell:last-child .van-icon) {
+  color: var(--st-danger);
+}
+
+.settings-dialog-body {
+  padding: var(--st-space-5) var(--st-space-4) var(--st-space-2);
+}
+
+.delete-subject-wrap {
+  margin-top: var(--st-space-4);
+  text-align: center;
 }
 </style>

@@ -31,7 +31,7 @@
       <!-- 顶栏：打卡连击 + 日期概览 + 家长入口 -->
       <div class="top-nav-bar">
         <div class="streak-badge">
-          <van-icon name="fire" color="#f97316" size="16" />
+          <van-icon name="fire" color="var(--st-warning-dark)" size="16" />
           <span>连续打卡 <b>{{ streakCount }}</b> 天</span>
         </div>
         <div class="parent-entry-btn" title="家长管理入口" @click="showPinSheet = true">
@@ -389,15 +389,15 @@
       round 
       class="bottom-sheet-modal"
     >
-      <div class="bottom-sheet-content" style="text-align: center;">
-        <div class="sheet-grabber"></div>
-        <div class="st-icon-badge st-icon-badge--primary" style="width: 42px; height: 42px; font-size: 20px; margin: 0 auto 12px;">
+        <div class="bottom-sheet-content preview-pin-sheet">
+          <div class="sheet-grabber"></div>
+        <div class="st-icon-badge st-icon-badge--primary preview-pin-icon">
           <van-icon name="lock" />
         </div>
-        <h3 style="font-size: var(--st-font-xl); font-weight: 600; color: var(--st-text-primary); margin-bottom: 6px;">
+        <h3 class="preview-pin-title">
           家长身份安全验证
         </h3>
-        <p style="font-size: var(--st-font-sm); color: var(--st-text-secondary); margin-bottom: 20px;">
+        <p class="preview-pin-copy">
           设置与成绩管理已开启专属 PIN 保护，请输入 4~6 位安全码
         </p>
         <van-field 
@@ -405,14 +405,13 @@
           type="password" 
           maxlength="6"
           placeholder="请输入家长 PIN 码 (默认 1234)"
-          class="sheet-input-field"
-          style="text-align: center; font-size: 18px; letter-spacing: 6px;"
+          class="sheet-input-field preview-pin-input"
         />
         <van-button 
           type="primary" 
           block 
           round 
-          style="margin-top: 18px; font-weight: 600;"
+          class="preview-sheet-submit"
           @click="verifyPin"
         >
           立即解锁
@@ -702,7 +701,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
 .preview-container {
   min-height: 100vh;
   background-color: var(--st-bg-page);
-  padding-bottom: 84px;
+  padding-bottom: calc(54px + var(--st-space-6) + env(safe-area-inset-bottom, 0px));
 }
 
 /* 顶部演示模式控制条 */
@@ -712,17 +711,17 @@ const getSubjectBadgeClass = getSubjectTagClass;
   z-index: 50;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
-  padding: 10px 16px;
+  padding: var(--st-space-3) var(--st-space-5);
   border-bottom: 1px solid var(--st-border-bold);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--st-space-3);
 }
 
 .demo-badge {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--st-space-2);
   font-size: var(--st-font-xs);
   font-weight: 600;
   color: var(--st-primary);
@@ -741,15 +740,15 @@ const getSubjectBadgeClass = getSubjectTagClass;
   display: flex;
   background-color: var(--st-bg-subtle);
   border-radius: var(--st-radius-md);
-  padding: 3px;
-  gap: 4px;
+  padding: var(--st-space-1);
+  gap: var(--st-space-1);
 }
 
 .switch-tab-btn {
   flex: 1;
   border: none;
   background: transparent;
-  padding: 6px 12px;
+  padding: var(--st-space-2) var(--st-space-4);
   font-size: var(--st-font-sm);
   font-weight: 500;
   color: var(--st-text-secondary);
@@ -763,7 +762,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
 }
 
 .switch-tab-btn.active {
-  background-color: #ffffff;
+  background-color: var(--st-bg-card);
   color: var(--st-text-primary);
   font-weight: 600;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
@@ -771,7 +770,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
 
 /* 主内容容器 */
 .screen-content {
-  padding: 14px 16px;
+  padding: var(--st-space-card) var(--st-space-5);
 }
 
 /* 顶栏信息 */
@@ -790,7 +789,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
   font-weight: 600;
   color: var(--st-text-primary);
   background: var(--st-bg-card);
-  padding: 4px 12px;
+  padding: var(--st-space-1) var(--st-space-4);
   border-radius: var(--st-radius-full);
   border: 1px solid var(--st-border-bold);
   box-shadow: var(--st-shadow-card);
@@ -823,7 +822,7 @@ const getSubjectBadgeClass = getSubjectTagClass;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 8px 2px;
+  padding: var(--st-space-3) var(--st-space-1);
   background-color: var(--st-bg-card);
   border: 1px solid var(--st-border);
   border-radius: var(--st-radius-md);
@@ -957,8 +956,8 @@ const getSubjectBadgeClass = getSubjectTagClass;
 }
 
 .hw-card-face.is-done {
-  background-color: #fafbfc;
-  border-color: #f1f5f9;
+  background-color: var(--st-bg-subtle);
+  border-color: var(--st-border);
 }
 
 /* 圆形打勾勾交互 */
@@ -1208,15 +1207,51 @@ const getSubjectBadgeClass = getSubjectTagClass;
 }
 
 .bottom-sheet-content {
-  padding: 16px 20px calc(24px + env(safe-area-inset-bottom));
+  padding: var(--st-space-5) var(--st-space-5) calc(var(--st-space-6) + env(safe-area-inset-bottom, 0px));
 }
 
 .sheet-grabber {
   width: 36px;
   height: 4px;
-  border-radius: 2px;
-  background-color: var(--st-border-bold, #e2e8f0);
-  margin: 0 auto 16px;
+  border-radius: var(--st-radius-full);
+  background-color: var(--st-border-bold);
+  margin: 0 auto var(--st-space-5);
+}
+
+.preview-pin-sheet {
+  text-align: center;
+}
+
+.preview-pin-icon {
+  width: 42px;
+  height: 42px;
+  margin: 0 auto var(--st-space-4);
+  font-size: var(--st-font-xl);
+}
+
+.preview-pin-title {
+  margin: 0 0 var(--st-space-2);
+  color: var(--st-text-primary);
+  font-size: var(--st-font-xl);
+  font-weight: 600;
+}
+
+.preview-pin-copy {
+  margin: 0 0 var(--st-space-5);
+  color: var(--st-text-secondary);
+  font-size: var(--st-font-sm);
+  line-height: var(--st-leading-normal);
+}
+
+.preview-pin-input {
+  text-align: center;
+  font-size: var(--st-font-xl);
+  letter-spacing: var(--st-space-2);
+}
+
+.preview-sheet-submit {
+  margin-top: var(--st-space-5);
+  font-weight: 600;
 }
 
 .form-label-row {

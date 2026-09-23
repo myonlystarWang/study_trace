@@ -3,13 +3,10 @@
     <!-- 1. 顶部温和生活感问候区 (像素级复刻 Image 2) -->
     <header class="greeting-header">
       <div class="greeting-text">
-        <h1 class="greeting-title">
-          <span class="greeting-row">{{ timeGreeting }}，</span>
-          <span class="greeting-row">同学 <span class="waving-hand">👋</span></span>
-        </h1>
+        <h1 class="greeting-title">{{ timeGreeting }}，同学</h1>
         <p class="greeting-date">{{ formattedDate }}</p>
       </div>
-      <div class="greeting-illustration" @click="$router.push('/settings')">
+      <button class="greeting-illustration" type="button" aria-label="进入我的页面" @click="$router.push('/settings')">
         <!-- 伏案学习男孩矢量插图 (高度复刻 Image 2 绿植、课桌、书本、写字学生) -->
         <svg viewBox="0 0 160 110" fill="none" class="student-study-illustration">
           <!-- 绿植与陶盆 (右侧后景) -->
@@ -64,36 +61,39 @@
           <path d="M102 46 C98 42, 97 34, 106 36 Z" fill="#1e293b" />
           <path d="M125 40 C131 38, 134 44, 129 48 Z" fill="#1e293b" />
         </svg>
-      </div>
+      </button>
     </header>
 
     <main class="today-content">
       <!-- 2. 数据概览 2 列网格 (严格复刻 Image 3 文字、数字比例、图标) -->
       <section class="overview-grid">
         <!-- 左侧：今日完成率 Donut 环形图卡片 -->
-        <div class="st-card donut-card" @click="$router.push('/homework')">
-          <span class="card-label">今日完成率</span>
+        <button class="st-card donut-card" type="button" aria-label="查看今日作业进度" @click="$router.push('/homework')">
+          <div class="progress-copy">
+            <span class="card-label">今天的进度</span>
+            <span class="progress-caption">{{ totalCount > 0 ? `已完成 ${completedCount} 项作业` : '还没有安排作业' }}</span>
+          </div>
           <div class="donut-container">
             <svg class="donut-svg" viewBox="0 0 100 100">
               <defs>
                 <linearGradient id="donut-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#06b6d4" />
-                  <stop offset="100%" stop-color="#2563eb" />
+                  <stop offset="0%" stop-color="var(--st-primary)" />
+                  <stop offset="100%" stop-color="var(--st-primary-dark)" />
                 </linearGradient>
               </defs>
               <circle
                 class="donut-bg"
                 cx="50"
                 cy="50"
-                r="38"
-                stroke-width="9"
+                r="42"
+                stroke-width="10"
               />
               <circle
                 class="donut-fill"
                 cx="50"
                 cy="50"
-                r="38"
-                stroke-width="9"
+                r="42"
+                stroke-width="10"
                 stroke-linecap="round"
                 :stroke-dasharray="circumference"
                 :stroke-dashoffset="progressOffset"
@@ -104,12 +104,12 @@
               <span class="donut-fraction">{{ completedCount }}/{{ totalCount }} 项</span>
             </div>
           </div>
-        </div>
+        </button>
 
         <!-- 右侧：双层微型统计卡片 -->
         <div class="stats-column">
           <!-- 连续学习卡片 -->
-          <div class="st-card mini-stat-card" @click="$router.push('/homework')">
+          <button class="st-card mini-stat-card" type="button" aria-label="查看连续学习记录" @click="$router.push('/homework')">
             <div class="stat-card-inner">
               <div class="stat-icon-box stat-icon-fire">
                 <svg viewBox="0 0 24 24" class="stat-svg-icon" fill="none">
@@ -134,10 +134,10 @@
                 </div>
               </div>
             </div>
-          </div>
+          </button>
 
           <!-- 今日学习时长卡片 -->
-          <div class="st-card mini-stat-card" @click="openPomodoro">
+          <button class="st-card mini-stat-card" type="button" aria-label="打开专注计时器" @click="openPomodoro">
             <div class="stat-card-inner">
               <div class="stat-icon-box stat-icon-time">
                 <svg viewBox="0 0 24 24" class="stat-svg-icon" fill="none">
@@ -166,7 +166,7 @@
                 </div>
               </div>
             </div>
-          </div>
+          </button>
         </div>
       </section>
 
@@ -182,10 +182,20 @@
         <!-- 整合到统一白底大卡片中 -->
         <div class="st-card tasks-grouped-card">
           <!-- 任务列表为空状态 -->
-          <div v-if="tasks.length === 0 && !loading" class="empty-tasks-box">
-            <div class="empty-icon-wrap">☀️</div>
-            <p class="empty-title">今天没有待办作业</p>
-            <p class="empty-subtitle">自由时光属于你，或是提前录入新作业吧！</p>
+          <div v-if="loading" class="tasks-loading-box" aria-label="正在加载今日作业">
+            <van-skeleton title :row="2" />
+          </div>
+          <div v-else-if="todayLoadError" class="tasks-state-box" role="status">
+            <van-icon name="warning-o" class="tasks-state-icon" />
+            <p class="empty-title">今日作业暂时未能加载</p>
+            <p class="empty-subtitle">请检查网络后重新加载。</p>
+            <button class="empty-focus-button" type="button" @click="fetchTodayHomework">重新加载</button>
+          </div>
+          <div v-else-if="tasks.length === 0" class="empty-tasks-box">
+            <van-icon name="underway-o" class="empty-focus-icon" />
+            <p class="empty-title">今天安排得很从容</p>
+            <p class="empty-subtitle">留出 25 分钟，做一次安静的专注吧。</p>
+            <button class="empty-focus-button" type="button" @click="openPomodoro">开始专注</button>
           </div>
 
           <!-- 任务列表行 -->
@@ -195,9 +205,8 @@
               :key="task.id"
               class="task-row-item"
               :class="{ 'is-completed': task.is_completed, 'is-last': index === displayedTasks.length - 1 }"
-              @click="openTaskDetail(task)"
             >
-              <div class="task-left">
+              <button class="task-left" type="button" :aria-label="`查看${task.subject_name}作业详情`" @click="openTaskDetail(task)">
                 <SubjectBadge :name="task.subject_name" size="sm" />
                 <div class="task-details">
                   <div class="task-subject-title">{{ task.subject_name }}</div>
@@ -205,7 +214,7 @@
                     {{ task.content }}
                   </div>
                 </div>
-              </div>
+              </button>
 
               <!-- 右侧打卡勾选按钮 (阻止冒泡) -->
               <button
@@ -232,22 +241,11 @@
               </button>
             </div>
           </div>
-
-          <!-- 多作业防撑爆折叠/展开胶囊 (超过 5 项时显示) -->
-          <div v-if="tasks.length > 5" class="tasks-expand-wrapper">
-            <button class="tasks-expand-pill" @click="isTasksExpanded = !isTasksExpanded">
-              <span v-if="!isTasksExpanded">
-                展开更多 {{ uncompletedHiddenCount > 0 ? `(还有 ${uncompletedHiddenCount} 项待办)` : `(还有 ${tasks.length - 5} 项)` }}
-              </span>
-              <span v-else>收起任务</span>
-              <van-icon :name="isTasksExpanded ? 'arrow-up' : 'arrow-down'" size="11" />
-            </button>
-          </div>
         </div>
       </section>
 
       <!-- 4. 今日错题复习入口横幅 -->
-      <section class="mistake-review-banner st-card" @click="goToMistakesReview">
+      <button class="mistake-review-banner st-card" type="button" aria-label="进入今日错题复习" @click="goToMistakesReview">
         <div class="banner-left">
           <div class="banner-target-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -263,10 +261,10 @@
             </p>
           </div>
         </div>
-        <button class="banner-action-btn">
+        <span class="banner-action-btn">
           {{ reviewQueueCount > 0 ? '开始复习' : '去错题本' }} <van-icon name="arrow" />
-        </button>
-      </section>
+        </span>
+      </button>
 
       <!-- 5. 学习时长分布卡片 (动态联动) -->
       <section class="study-distribution-card st-card">
@@ -362,6 +360,7 @@ const router = useRouter();
 
 // 基础数据状态
 const loading = ref(false);
+const todayLoadError = ref(false);
 const tasks = ref([]);
 const subjects = ref([]);
 const totalCount = ref(0);
@@ -370,9 +369,6 @@ const completionRate = ref(0);
 const streakDays = ref(0);
 const reviewQueueCount = ref(0);
 const taskToggling = ref(null);
-
-// 首页任务展示折叠状态
-const isTasksExpanded = ref(false);
 
 // 弹窗与详情状态
 const showAddModal = ref(false);
@@ -443,8 +439,8 @@ const formattedDate = computed(() => {
 });
 
 // SVG 环形进度条计算
-const radius = 38;
-const circumference = 2 * Math.PI * radius; // ~238.76
+const radius = 42;
+const circumference = 2 * Math.PI * radius; // ~263.89
 const progressOffset = computed(() => {
   const rate = Math.min(Math.max(completionRate.value, 0), 100);
   return circumference - (rate / 100) * circumference;
@@ -458,20 +454,8 @@ const sortedTasks = computed(() => {
   });
 });
 
-// 默认仅显示前 5 项，超出时通过折叠胶囊按需展开
-const displayedTasks = computed(() => {
-  if (isTasksExpanded.value || sortedTasks.value.length <= 5) {
-    return sortedTasks.value;
-  }
-  return sortedTasks.value.slice(0, 5);
-});
-
-// 计算隐藏的待办（未完成）作业数量
-const uncompletedHiddenCount = computed(() => {
-  if (isTasksExpanded.value || sortedTasks.value.length <= 5) return 0;
-  const hiddenTasks = sortedTasks.value.slice(5);
-  return hiddenTasks.filter(t => !t.is_completed).length;
-});
+// 全部任务直接呈现在可滚动的紧凑容器中
+const displayedTasks = computed(() => sortedTasks.value);
 
 // ==========================================
 // 学习时长与学科分布科学动态统计
@@ -616,6 +600,7 @@ const subjectDistribution = computed(() => {
 // 加载今日作业与统计
 const fetchTodayHomework = async () => {
   loading.value = true;
+  todayLoadError.value = false;
   try {
     const res = await homeworkApi.getList(todayStr);
     const data = res.data;
@@ -632,6 +617,7 @@ const fetchTodayHomework = async () => {
     streakDays.value = data.streak || 0;
   } catch (err) {
     console.error('获取今日作业失败:', err);
+    todayLoadError.value = true;
   } finally {
     loading.value = false;
   }
@@ -711,16 +697,23 @@ const goToMistakesReview = () => {
   router.push('/mistakes?tab=review');
 };
 
+const onGlobalAction = (event) => {
+  if (event.detail === 'homework') showAddModal.value = true;
+  if (event.detail === 'focus') openPomodoro();
+};
+
 onMounted(() => {
   loadPomodoroMinutes();
   fetchTodayHomework();
   fetchSubjects();
   fetchReviewQueue();
   window.addEventListener('study_trace_pomodoro_completed', loadPomodoroMinutes);
+  window.addEventListener('zhixueji:action', onGlobalAction);
 });
 
 onUnmounted(() => {
   window.removeEventListener('study_trace_pomodoro_completed', loadPomodoroMinutes);
+  window.removeEventListener('zhixueji:action', onGlobalAction);
 });
 </script>
 
@@ -728,8 +721,8 @@ onUnmounted(() => {
 /* 根容器：边距由 14px 收敛为 12px，底部留足悬浮胶囊与 Tabbar 避让空间，绝不遮挡末尾内容 */
 .today-view {
   flex: 1;
-  background-color: #f8fafc;
-  padding: 12px 12px calc(50px + env(safe-area-inset-bottom, 0px) + 75px);
+  background-color: var(--st-bg-page);
+  padding: var(--st-space-5) var(--st-space-5) calc(64px + env(safe-area-inset-bottom, 0px) + 60px);
   width: 100%;
   box-sizing: border-box;
   margin: 0 auto;
@@ -741,42 +734,34 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 4px 16px;
+  min-height: 72px;
+  padding: 0 var(--st-space-1) var(--st-space-4);
 }
 
 .greeting-title {
-  display: flex;
-  flex-direction: column;
-  font-size: 24px;
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.5px;
+  font-size: var(--st-font-xl);
+  font-weight: 700;
+  color: var(--st-text-primary);
+  letter-spacing: 0;
   line-height: 1.25;
-  margin: 0 0 6px;
-}
-
-.greeting-row {
-  display: block;
-}
-
-.waving-hand {
-  font-size: 22px;
-  margin-left: 2px;
-  vertical-align: middle;
+  margin: 0 0 var(--st-space-1);
 }
 
 .greeting-date {
-  font-size: 13px;
-  color: #94a3b8;
+  font-size: var(--st-font-sm);
+  color: var(--st-text-muted);
   font-weight: 500;
 }
 
 .greeting-illustration {
-  width: 124px;
-  height: 86px;
+  width: 92px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
   cursor: pointer;
 }
 
@@ -788,38 +773,53 @@ onUnmounted(() => {
 
 /* 2. 数据概览网格 (Image 3) */
 .overview-grid {
-  display: grid;
-  grid-template-columns: 1fr 1.15fr;
-  gap: 10px;
-  margin-bottom: 16px;
+  display: block;
+  margin-bottom: var(--st-space-6);
 }
 
 .donut-card {
   margin: 0;
-  padding: 14px 10px;
+  min-height: 112px;
+  padding: var(--st-space-5);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  text-align: center;
+  justify-content: space-between;
+  text-align: left;
+  width: 100%;
+  font: inherit;
   cursor: pointer;
-  background: #ffffff;
-  border-radius: 16px;
-  border: 1px solid rgba(226, 232, 240, 0.7);
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.02);
+  background: var(--st-bg-card);
+  border-radius: var(--st-radius-lg);
+  border: 1px solid var(--st-border);
+  box-shadow: var(--st-shadow-card);
 }
 
 .card-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: #4b5563;
-  margin-bottom: 6px;
+  display: block;
+  font-size: var(--st-font-lg);
+  font-weight: 600;
+  color: var(--st-text-primary);
+}
+
+.progress-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--st-space-2);
+  min-width: 0;
+}
+
+.progress-caption {
+  font-size: var(--st-font-sm);
+  color: var(--st-text-secondary);
+  line-height: var(--st-leading-normal);
 }
 
 .donut-container {
   position: relative;
-  width: 92px;
-  height: 92px;
+  width: 82px;
+  height: 82px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -833,12 +833,12 @@ onUnmounted(() => {
 
 .donut-bg {
   fill: none;
-  stroke: #f1f5f9;
+  stroke: var(--st-primary-light);
 }
 
 .donut-fill {
   fill: none;
-  stroke: #06b6d4;
+  stroke: var(--st-primary);
   stroke: url(#donut-gradient);
   transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -852,21 +852,22 @@ onUnmounted(() => {
 }
 
 .donut-percent {
-  font-size: 22px;
-  font-weight: 800;
-  color: #0f172a;
+  font-size: var(--st-font-xl);
+  font-weight: 700;
+  color: var(--st-primary);
+  font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 
 .donut-fraction {
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 500;
-  color: #64748b;
-  margin-top: 3px;
+  color: var(--st-text-muted);
+  margin-top: var(--st-space-1);
 }
 
 .stats-column {
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 10px;
 }
@@ -878,10 +879,13 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   cursor: pointer;
-  background: #ffffff;
-  border-radius: 16px;
-  border: 1px solid rgba(226, 232, 240, 0.7);
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.02);
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  background: var(--st-bg-card);
+  border-radius: var(--st-radius-lg);
+  border: 1px solid var(--st-border);
+  box-shadow: var(--st-shadow-card);
   transition: transform 0.15s ease;
 }
 
@@ -907,11 +911,11 @@ onUnmounted(() => {
 }
 
 .stat-icon-fire {
-  background: #fff7ed;
+  background: var(--st-warning-light);
 }
 
 .stat-icon-time {
-  background: #eff6ff;
+  background: var(--st-primary-light);
 }
 
 .stat-svg-icon {
@@ -935,14 +939,14 @@ onUnmounted(() => {
 }
 
 .stat-label {
-  font-size: 13px;
-  color: #4b5563;
+  font-size: var(--st-font-sm);
+  color: var(--st-text-regular);
   font-weight: 500;
 }
 
 .stat-chevron {
-  color: #9ca3af;
-  font-size: 11px;
+  color: var(--st-text-muted);
+  font-size: var(--st-font-xs);
 }
 
 .stat-value-row {
@@ -956,15 +960,15 @@ onUnmounted(() => {
 .stat-num {
   font-size: 22px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--st-text-primary);
   line-height: 1.1;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "Inter", sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 
 .stat-unit {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 500;
-  color: #334155;
+  color: var(--st-text-regular);
   margin-left: 1px;
   margin-right: 5px;
 }
@@ -982,16 +986,16 @@ onUnmounted(() => {
 }
 
 .section-title {
-  font-size: 17px;
+  font-size: var(--st-font-xl);
   font-weight: 700;
-  color: #0f172a;
+  color: var(--st-text-primary);
 }
 
 .view-all-btn {
   background: none;
   border: none;
-  color: #2563eb;
-  font-size: 13px;
+  color: var(--st-primary);
+  font-size: var(--st-font-sm);
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -1004,10 +1008,10 @@ onUnmounted(() => {
 .tasks-grouped-card {
   margin: 0;
   padding: 2px 14px;
-  background: #ffffff;
-  border-radius: 16px;
-  border: 1px solid rgba(226, 232, 240, 0.7);
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.02);
+  background: var(--st-bg-card);
+  border-radius: var(--st-radius-lg);
+  border: 1px solid var(--st-border);
+  box-shadow: var(--st-shadow-card);
 }
 
 .empty-tasks-box {
@@ -1015,26 +1019,64 @@ onUnmounted(() => {
   padding: 24px 12px;
 }
 
+.tasks-loading-box,
+.tasks-state-box {
+  padding: var(--st-space-6) var(--st-space-4);
+}
+
+.tasks-state-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.tasks-state-icon {
+  margin-bottom: var(--st-space-3);
+  color: var(--st-warning-dark);
+  font-size: 30px;
+}
+
+.empty-focus-icon { margin: 0 auto var(--st-space-3); color: var(--st-primary); font-size: 30px; }
+.empty-focus-button { min-height: 42px; margin-top: var(--st-space-4); padding: 0 var(--st-space-5); border: 0; border-radius: var(--st-radius-full); background: var(--st-primary); color: #fff; font-size: var(--st-font-md); font-weight: 600; }
+
 .empty-icon-wrap {
   font-size: 32px;
   margin-bottom: 6px;
 }
 
 .empty-title {
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 700;
-  color: #0f172a;
+  color: var(--st-text-primary);
   margin-bottom: 3px;
 }
 
 .empty-subtitle {
-  font-size: 12px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
 }
 
 .tasks-rows-list {
   display: flex;
   flex-direction: column;
+  max-height: 196px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+}
+
+.tasks-rows-list::-webkit-scrollbar {
+  width: 3px;
+}
+
+.tasks-rows-list::-webkit-scrollbar-thumb {
+  background: var(--st-border-bold, #cbd5e1);
+  border-radius: 9999px;
+}
+
+.tasks-rows-list::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* 单条任务行：高度紧凑，带微细分割线，字号相对小巧 (Image 4) */
@@ -1043,7 +1085,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 10px 0;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--st-border);
   cursor: pointer;
   transition: background 0.15s ease;
 }
@@ -1058,6 +1100,13 @@ onUnmounted(() => {
   gap: 10px;
   flex: 1;
   min-width: 0;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .today-view :deep(.task-left .st-subject-badge) {
@@ -1065,10 +1114,6 @@ onUnmounted(() => {
   height: 34px;
   border-radius: 9px;
   flex-shrink: 0;
-}
-
-.today-view :deep(.task-left .st-subject-badge .badge-text-aa) {
-  font-size: 13px;
 }
 
 .today-view :deep(.task-left .st-subject-badge svg) {
@@ -1085,15 +1130,15 @@ onUnmounted(() => {
 }
 
 .task-subject-title {
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 600;
-  color: #0f172a;
+  color: var(--st-text-primary);
   line-height: 1.25;
 }
 
 .task-content-text {
-  font-size: 12px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
   line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
@@ -1101,7 +1146,7 @@ onUnmounted(() => {
 }
 
 .task-content-text.is-done {
-  color: #94a3b8;
+  color: var(--st-text-muted);
 }
 
 .checkin-toggle-btn {
@@ -1121,13 +1166,13 @@ onUnmounted(() => {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 1.5px solid #d1d5db;
-  background: #ffffff;
+  border: 1.5px solid var(--st-border-bold);
+  background: var(--st-bg-card);
   transition: all 0.15s ease;
 }
 
 .checkin-toggle-btn:active .uncompleted-circle {
-  border-color: #3b82f6;
+  border-color: var(--st-primary);
   transform: scale(0.92);
 }
 
@@ -1136,8 +1181,8 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #10b981;
-  font-size: 12px;
+  color: var(--st-success-dark);
+  font-size: var(--st-font-xs);
   font-weight: 600;
   padding: 2px 4px;
 }
@@ -1148,33 +1193,6 @@ onUnmounted(() => {
 }
 
 /* 折叠展开胶囊 */
-.tasks-expand-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 8px 0 6px;
-  border-top: 1px solid #f1f5f9;
-}
-
-.tasks-expand-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 12px;
-  border-radius: 9999px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  color: #64748b;
-  font-size: 11.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.tasks-expand-pill:active {
-  background: #f1f5f9;
-  transform: scale(0.97);
-}
-
 /* 4. 今日错题复习入口横幅 */
 .mistake-review-banner {
   margin: 0 0 16px;
@@ -1182,10 +1200,13 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(135deg, #fbf7ff 0%, #f0f6ff 100%);
-  border: 1px solid #ede9fe;
-  border-radius: 16px;
+  background: var(--st-gradient-review);
+  border: 1px solid var(--st-purple-light);
+  border-radius: var(--st-radius-lg);
   cursor: pointer;
+  width: 100%;
+  font: inherit;
+  text-align: left;
 }
 
 .banner-left {
@@ -1198,7 +1219,7 @@ onUnmounted(() => {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: #8b5cf6;
+  background: var(--st-purple);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -1213,25 +1234,25 @@ onUnmounted(() => {
 }
 
 .banner-title {
-  font-size: 14px;
+  font-size: var(--st-font-md);
   font-weight: 700;
-  color: #0f172a;
+  color: var(--st-text-primary);
 }
 
 .banner-subtitle {
-  font-size: 12px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
   margin-top: 1px;
 }
 
 .banner-action-btn {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: var(--st-primary);
   color: #ffffff;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
   border: none;
   padding: 6px 13px;
-  border-radius: 9999px;
+  border-radius: var(--st-radius-full);
   display: flex;
   align-items: center;
   gap: 2px;
@@ -1243,10 +1264,10 @@ onUnmounted(() => {
 .study-distribution-card {
   margin: 0 0 20px;
   padding: 14px;
-  background: #ffffff;
-  border-radius: 16px;
-  border: 1px solid rgba(226, 232, 240, 0.7);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+  background: var(--st-bg-card);
+  border-radius: var(--st-radius-lg);
+  border: 1px solid var(--st-border);
+  box-shadow: var(--st-shadow-card);
 }
 
 .dist-header {
@@ -1257,15 +1278,15 @@ onUnmounted(() => {
 }
 
 .dist-title {
-  font-size: 15px;
+  font-size: var(--st-font-lg);
   font-weight: 700;
-  color: #0f172a;
+  color: var(--st-text-primary);
 }
 
 .dist-total {
-  font-size: 13px;
+  font-size: var(--st-font-sm);
   font-weight: 600;
-  color: #64748b;
+  color: var(--st-text-secondary);
 }
 
 .dist-bars-list {
@@ -1296,15 +1317,15 @@ onUnmounted(() => {
 }
 
 .dist-subject-name {
-  font-size: 13px;
-  color: #334155;
+  font-size: var(--st-font-sm);
+  color: var(--st-text-regular);
   font-weight: 600;
 }
 
 .dist-bar-track {
   flex: 1;
   height: 8px;
-  background: #f1f5f9;
+  background: var(--st-bg-subtle);
   border-radius: 9999px;
   overflow: hidden;
 }
@@ -1318,8 +1339,8 @@ onUnmounted(() => {
 .dist-duration {
   width: 50px;
   text-align: right;
-  font-size: 12px;
-  color: #94a3b8;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-muted);
   font-weight: 600;
   flex-shrink: 0;
 }
@@ -1327,21 +1348,27 @@ onUnmounted(() => {
 /* 6. 底部双悬浮快速录入操作胶囊 (精细复刻配图浅蓝质感胶囊 + 严密防漂移定位) */
 .floating-quick-actions {
   position: fixed;
-  /* 严密动态锚定：精准位于底部 Tabbar (50px + 安全区) 之上 14px，绝不发生漂移重叠 */
-  bottom: calc(50px + env(safe-area-inset-bottom, 0px) + 14px);
+  /* 与作业/错题/数据页一致：底部常驻磨砂横条，不再透出页面内容 */
+  bottom: calc(50px + env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
   max-width: 500px;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 8px 16px;
+  background: linear-gradient(to top, rgba(248, 250, 252, 0.96) 80%, rgba(248, 250, 252, 0));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 14px;
-  pointer-events: none;
-  z-index: 95;
+  gap: 12px;
+  z-index: 40;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
 }
+
+/* 录入由应用壳的全局加号统一提供，避免首页与各业务页重复争抢注意力。 */
+.floating-quick-actions { display: none; }
 
 .quick-fab-btn {
   pointer-events: auto;
@@ -1349,13 +1376,13 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  height: 42px;
+  height: 46px;
   padding: 0 20px;
   background: #eff6ff;
   color: #2563eb;
-  border: 1px solid #bfdbfe;
+  border: 1px solid #93c5fd;
   border-radius: 9999px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   box-shadow: 0 4px 16px rgba(37, 99, 235, 0.12);
   cursor: pointer;

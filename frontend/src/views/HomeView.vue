@@ -75,22 +75,22 @@ onMounted(async () => {
 <style scoped>
 .home-view {
   min-height: 100vh;
-  background-color: var(--st-bg-page, #f8fafc);
-  padding-bottom: 2rem;
+  background-color: var(--st-bg-page);
+  padding-bottom: var(--st-space-6);
 }
 
 .home-container {
-  padding: 12px 14px 60px;
+  padding: var(--st-space-4) var(--st-space-5) 92px;
   max-width: 600px;
   margin: 0 auto;
 }
 
 .hero-card {
-  margin: 0 0 14px;
-  padding: 24px 16px;
-  background: var(--st-bg-card, #ffffff);
-  border-radius: var(--st-radius-md, 14px);
-  border: 1px solid var(--st-border, #f1f5f9);
+  margin: 0 0 var(--st-space-4);
+  padding: var(--st-space-6) var(--st-space-5);
+  background: var(--st-bg-card);
+  border-radius: var(--st-radius-lg);
+  border: 1px solid var(--st-border);
   box-shadow: var(--st-shadow-card);
   text-align: center;
 }
@@ -98,21 +98,21 @@ onMounted(async () => {
 .hero-badge {
   width: 46px;
   height: 46px;
-  font-size: 24px;
-  margin: 0 auto 12px;
+  font-size: var(--st-font-xl);
+  margin: 0 auto var(--st-space-4);
 }
 
 .hero-card h2 {
   font-size: var(--st-font-xl);
   font-weight: 700;
   color: var(--st-text-primary);
-  margin-bottom: 6px;
+  margin: 0 0 var(--st-space-2);
 }
 
 .hero-card p {
   font-size: var(--st-font-sm);
   color: var(--st-text-secondary);
   line-height: var(--st-leading-normal);
-  margin-bottom: 12px;
+  margin: 0 0 var(--st-space-4);
 }
 </style>

@@ -435,26 +435,26 @@ onMounted(async () => {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: #ffffff;
+  background: var(--st-bg-card);
 }
 
 .paper-nav-bar {
-  background: #ffffff;
-  border-bottom: 1px solid var(--st-border, #f1f5f9);
+  background: var(--st-bg-card);
+  border-bottom: 1px solid var(--st-border);
 }
 
 .paper-action-bar {
-  background: #ffffff;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--st-border, #e2e8f0);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  background: var(--st-bg-card);
+  padding: var(--st-space-2) var(--st-space-4);
+  border-bottom: 1px solid var(--st-border);
+  box-shadow: var(--st-shadow-card);
 }
 
 .action-bar-inner {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--st-space-2);
   max-width: 600px;
   margin: 0 auto;
 }
@@ -463,7 +463,8 @@ onMounted(async () => {
   flex: 1;
   white-space: nowrap !important;
   font-weight: 500;
-  border-radius: var(--st-radius-sm, 8px);
+  border-radius: var(--st-radius-full);
+  font-size: var(--st-font-xs);
 }
 
 /* 试卷大抬头排版规范 */
@@ -638,9 +639,9 @@ onMounted(async () => {
 
 /* 打印提示弹窗内容 */
 .print-tip-content {
-  padding: 12px;
+  padding: var(--st-space-4);
   font-size: var(--st-font-sm);
-  color: #334155;
+  color: var(--st-text-regular);
   line-height: var(--st-leading-loose);
 }
 
@@ -654,8 +655,8 @@ onMounted(async () => {
 }
 
 .paper-warning-bar {
-  margin-bottom: 8px;
-  border-radius: 6px;
+  margin-bottom: var(--st-space-2);
+  border-radius: var(--st-radius-sm);
   font-size: var(--st-font-sm);
 }
 
@@ -663,22 +664,22 @@ onMounted(async () => {
 .review-modal-body {
   max-height: 60vh;
   overflow-y: auto;
-  padding: 10px 14px;
+  padding: var(--st-space-3) var(--st-space-4);
 }
 
 .review-header-tools {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #f1f5f9;
-  padding: 8px 10px;
-  border-radius: 6px;
-  margin-bottom: 8px;
+  background: var(--st-bg-subtle);
+  padding: var(--st-space-3) var(--st-space-4);
+  border-radius: var(--st-radius-sm);
+  margin-bottom: var(--st-space-3);
   font-size: var(--st-font-xs);
 }
 
 .review-progress strong {
-  color: #2563eb;
+  color: var(--st-primary);
 }
 
 .quick-batch-btns {
@@ -687,7 +688,7 @@ onMounted(async () => {
 }
 
 .batch-link {
-  color: #2563eb;
+  color: var(--st-primary);
   cursor: pointer;
   font-weight: 500;
 }
@@ -697,37 +698,37 @@ onMounted(async () => {
 }
 
 .divider {
-  margin: 0 6px;
-  color: #cbd5e1;
+  margin: 0 var(--st-space-2);
+  color: var(--st-border-bold);
 }
 
 .review-tip {
   font-size: var(--st-font-xs);
   color: var(--st-text-secondary);
-  margin-bottom: 10px;
+  margin-bottom: var(--st-space-3);
 }
 
 
 .review-question-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--st-space-3);
 }
 
 .review-item-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 10px;
-  background: #f8fafc;
-  border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  padding: var(--st-space-3) var(--st-space-4);
+  background: var(--st-bg-subtle);
+  border-radius: var(--st-radius-sm);
+  border: 1px solid var(--st-border);
 }
 
 .review-q-title {
   flex: 1;
   font-size: var(--st-font-sm);
-  color: #1e293b;
+  color: var(--st-text-regular);
   min-width: 0;
   margin-right: 8px;
   white-space: nowrap;
@@ -740,7 +741,7 @@ onMounted(async () => {
 }
 
 .sub-name {
-  color: #2563eb;
+  color: var(--st-primary);
   margin: 0 4px;
 }
 
@@ -750,14 +751,14 @@ onMounted(async () => {
 
 .review-toggles {
   display: flex;
-  gap: 6px;
+  gap: var(--st-space-2);
 }
 
 .review-tag-btn {
-  padding: 4px 12px;
-  border-radius: var(--st-radius-full, 9999px);
-  border: 1px solid var(--st-border, #e2e8f0);
-  background: #ffffff;
+  padding: var(--st-space-1) var(--st-space-3);
+  border-radius: var(--st-radius-full);
+  border: 1px solid var(--st-border);
+  background: var(--st-bg-card);
   font-size: var(--st-font-xs);
   cursor: pointer;
   transition: all 0.2s;

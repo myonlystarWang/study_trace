@@ -1,168 +1,179 @@
 <template>
   <div class="homework-view">
-    <!-- 顶栏：标题 + 打卡连击胶囊 + 日历微纽 + 加号录入 -->
-    <div class="top-nav-bar">
-      <div class="brand-header">
-        <h1 class="homework-top-title">作业</h1>
-      </div>
-
-      <div class="header-right-tools">
-        <!-- 满卡状态：所有作业已完成 -->
-        <div class="streak-pill" v-if="rate === 100 && totalCount > 0" title="今日作业已全部打卡完成！">
-          <van-icon name="fire" color="#f97316" size="13" />
-          <span>连打 <b>{{ streak > 0 ? streak : 1 }}</b> 天</span>
-        </div>
-        <!-- 进行中状态：有作业但未全部完成 -->
-        <div class="streak-pill streak-pill--idle" v-else-if="totalCount > 0" title="今日作业打卡中">
-          <van-icon name="underway-o" color="#2563eb" size="13" />
-          <span v-if="completedCount > 0">打卡中 <b>{{ completedCount }}/{{ totalCount }}</b></span>
-          <span v-else>待打卡 <b>{{ totalCount }}</b> 项</span>
-        </div>
-        <!-- 无作业状态 -->
-        <div class="streak-pill streak-pill--idle" v-else title="今日暂无作业">
-          <van-icon name="notes-o" color="#64748b" size="13" />
-          <span>暂无作业</span>
+    <!-- 顶部固定区域 (Fixed Header: 顶栏、子标签、周历、进度概览、学科胶囊、列表区头) -->
+    <header class="homework-fixed-header">
+      <!-- 顶栏：标题 + 打卡连击胶囊 + 日历微纽 + 加号录入 -->
+      <div class="top-nav-bar">
+        <div class="brand-header">
+          <h1 class="homework-top-title">作业</h1>
         </div>
 
-        <button class="calendar-pill-btn" @click="showCalendar = true">
-          <van-icon name="calendar-o" size="13" />
-          <span>月历</span>
-        </button>
-
-        <button class="add-top-round-btn" @click="showAddModal = true" title="录入作业">
-          <van-icon name="plus" size="15" />
-        </button>
-      </div>
-    </div>
-
-    <!-- iOS 风格三段式子标签栏：今日作业 | 全部作业 | 历史记录 (与 chatgpt.jpg 保持一致) -->
-    <div class="homework-sub-tabs">
-      <button
-        class="sub-tab-item"
-        :class="{ active: subTab === 'today' }"
-        @click="switchSubTab('today')"
-      >
-        <span>今日作业</span>
-        <div class="sub-tab-indicator" v-if="subTab === 'today'"></div>
-      </button>
-      <button
-        class="sub-tab-item"
-        :class="{ active: subTab === 'all' }"
-        @click="switchSubTab('all')"
-      >
-        <span>全部作业</span>
-        <div class="sub-tab-indicator" v-if="subTab === 'all'"></div>
-      </button>
-      <button
-        class="sub-tab-item"
-        :class="{ active: subTab === 'history' }"
-        @click="switchSubTab('history')"
-      >
-        <span>历史记录</span>
-        <div class="sub-tab-indicator" v-if="subTab === 'history'"></div>
-      </button>
-    </div>
-
-    <!-- 顶部 7 日横向胶囊日历条 (仅在「今日作业」视图展示) -->
-    <div class="week-strip-container" v-if="subTab === 'today'">
-      <button class="week-nav-arrow" @click="changeWeek(-1)" title="上一周">
-        <van-icon name="arrow-left" size="13" />
-      </button>
-
-      <div 
-        class="week-strip-box"
-        @touchstart="handleTouchStart"
-        @touchend="handleTouchEnd"
-      >
-        <div
-          v-for="day in weekDays"
-          :key="day.dateStr"
-          class="week-day-pill"
-          :class="{ active: day.isSelected, today: day.isToday }"
-          @click="selectDay(day.dateStr)"
-        >
-          <span class="day-label">{{ day.label }}</span>
-          <span class="day-number">{{ day.dateNumber }}</span>
-          <span 
-            class="day-dot" 
-            :class="'dot-' + (day.status || 'gray')"
-          ></span>
-        </div>
-      </div>
-
-      <button class="week-nav-arrow" @click="changeWeek(1)" title="下一周">
-        <van-icon name="arrow" size="13" />
-      </button>
-    </div>
-
-    <!-- 今日进度概览卡片 (含 100% 达成微反馈) -->
-    <div class="st-card progress-summary-card" v-if="subTab === 'today'">
-      <div class="progress-header">
-        <div class="st-section-header" style="margin-bottom: 0;">
-          <span class="st-icon-badge st-icon-badge--primary">
-            <van-icon name="chart-trending-o" />
-          </span>
-          <span class="section-title">{{ isToday ? '今日' : currentDate }} 作业进度</span>
-        </div>
-        <span class="progress-stat-text">
-          <b>{{ completedCount }}</b> / {{ totalCount }} 已完成
-        </span>
-      </div>
-
-      <div class="progress-bar-wrapper">
-        <van-progress
-          :percentage="rate"
-          :color="rate === 100 && totalCount > 0 ? 'var(--st-success, #10b981)' : 'var(--st-primary, #2563eb)'"
-          :show-pivot="false"
-          stroke-width="8"
-        />
-      </div>
-
-      <!-- 100% 全部完成成就微反馈 -->
-      <transition name="van-fade">
-        <div v-if="rate === 100 && totalCount > 0" class="all-done-banner">
-          <div class="st-icon-badge st-icon-badge--success" style="width: 22px; height: 22px;">
-            <van-icon name="passed" />
+        <div class="header-right-tools">
+          <!-- 满卡状态：所有作业已完成 -->
+          <div class="streak-pill" v-if="rate === 100 && totalCount > 0" title="今日作业已全部打卡完成！">
+            <van-icon name="fire" color="#f97316" size="13" />
+            <span>连打 <b>{{ streak > 0 ? streak : 1 }}</b> 天</span>
           </div>
-          <span>太棒了！{{ weekendRollover ? '周末大作业与今日任务已全部完成' : '今日全部作业均已如期完成' }}</span>
+          <!-- 进行中状态：有作业但未全部完成 -->
+          <div class="streak-pill streak-pill--idle" v-else-if="totalCount > 0" title="今日作业打卡中">
+            <van-icon name="underway-o" color="#2563eb" size="13" />
+            <span v-if="completedCount > 0">打卡中 <b>{{ completedCount }}/{{ totalCount }}</b></span>
+            <span v-else>待打卡 <b>{{ totalCount }}</b> 项</span>
+          </div>
+          <!-- 无作业状态 -->
+          <div class="streak-pill streak-pill--idle" v-else title="今日暂无作业">
+            <van-icon name="notes-o" color="#64748b" size="13" />
+            <span>暂无作业</span>
+          </div>
+
+          <button class="calendar-pill-btn" @click="showCalendar = true">
+            <van-icon name="calendar-o" size="13" />
+            <span>月历</span>
+          </button>
+
+          <button class="add-top-round-btn" @click="showAddModal = true" title="录入作业">
+            <van-icon name="plus" size="15" />
+          </button>
         </div>
-      </transition>
-    </div>
-
-    <!-- 全部/历史记录 顶部状态卡片 -->
-    <div class="st-card scope-summary-card" v-else>
-      <div class="scope-summary-left">
-        <span class="st-icon-badge" :class="subTab === 'all' ? 'st-icon-badge--warning' : 'st-icon-badge--success'">
-          <van-icon :name="subTab === 'all' ? 'todo-list-o' : 'passed'" />
-        </span>
-        <span class="section-title">{{ subTab === 'all' ? '全部待完成作业' : '历史打卡记录' }}</span>
       </div>
-      <span class="scope-badge-count">共 {{ totalCount }} 项</span>
-    </div>
 
-    <!-- 学科快捷筛选胶囊栏 (Chips - 强制单行滑动) -->
-    <div class="subject-chips-bar st-scroll-x" v-if="subjects.length > 0">
-      <span
-        class="st-chip"
-        :class="{ active: selectedSubject === null }"
-        @click="selectedSubject = null"
-      >
-        全部 ({{ totalCount }})
-      </span>
-      <span
-        v-for="sub in subjects"
-        :key="sub.id"
-        class="st-chip"
-        :class="{ active: selectedSubject === sub.id }"
-        @click="selectedSubject = sub.id"
-      >
-        {{ sub.name }}
-      </span>
-    </div>
+      <!-- iOS 风格三段式子标签栏：今日作业 | 全部作业 | 历史记录 (与 chatgpt.jpg 保持一致) -->
+      <div class="homework-sub-tabs">
+        <button
+          class="sub-tab-item"
+          :class="{ active: subTab === 'today' }"
+          @click="switchSubTab('today')"
+        >
+          <span>今日作业</span>
+          <div class="sub-tab-indicator" v-if="subTab === 'today'"></div>
+        </button>
+        <button
+          class="sub-tab-item"
+          :class="{ active: subTab === 'all' }"
+          @click="switchSubTab('all')"
+        >
+          <span>全部作业</span>
+          <div class="sub-tab-indicator" v-if="subTab === 'all'"></div>
+        </button>
+        <button
+          class="sub-tab-item"
+          :class="{ active: subTab === 'history' }"
+          @click="switchSubTab('history')"
+        >
+          <span>历史记录</span>
+          <div class="sub-tab-indicator" v-if="subTab === 'history'"></div>
+        </button>
+      </div>
 
-    <!-- 作业列表区 (左滑抽屉、手势解耦、无 Emoji) -->
-    <van-pull-refresh v-model="refreshing" @refresh="fetchHomework">
-      <div class="homework-list-wrapper" v-if="filteredItems.length > 0 || filteredRolloverItems.length > 0">
+      <!-- 顶部 7 日横向胶囊日历条 (仅在「今日作业」视图展示) -->
+      <div class="week-strip-container" v-if="subTab === 'today'">
+        <button class="week-nav-arrow" @click="changeWeek(-1)" title="上一周">
+          <van-icon name="arrow-left" size="13" />
+        </button>
+
+        <div 
+          class="week-strip-box"
+          @touchstart="handleTouchStart"
+          @touchend="handleTouchEnd"
+        >
+          <div
+            v-for="day in weekDays"
+            :key="day.dateStr"
+            class="week-day-pill"
+            :class="{ active: day.isSelected, today: day.isToday }"
+            @click="selectDay(day.dateStr)"
+          >
+            <span class="day-label">{{ day.label }}</span>
+            <span class="day-number">{{ day.dateNumber }}</span>
+            <span 
+              class="day-dot" 
+              :class="'dot-' + (day.status || 'gray')"
+            ></span>
+          </div>
+        </div>
+
+        <button class="week-nav-arrow" @click="changeWeek(1)" title="下一周">
+          <van-icon name="arrow" size="13" />
+        </button>
+      </div>
+
+      <!-- 今日进度概览卡片 (含 100% 达成微反馈) -->
+      <div class="st-card progress-summary-card" v-if="subTab === 'today'">
+        <div class="progress-header">
+          <div class="st-section-header" style="margin-bottom: 0;">
+            <span class="st-icon-badge st-icon-badge--primary">
+              <van-icon name="chart-trending-o" />
+            </span>
+            <span class="section-title">{{ isToday ? '今日' : currentDate }} 作业进度</span>
+          </div>
+          <span class="progress-stat-text">
+            <b>{{ completedCount }}</b> / {{ totalCount }} 已完成
+          </span>
+        </div>
+
+        <div class="progress-bar-wrapper">
+          <van-progress
+            :percentage="rate"
+            :color="rate === 100 && totalCount > 0 ? 'var(--st-success, #10b981)' : 'var(--st-primary, #2563eb)'"
+            :show-pivot="false"
+            stroke-width="8"
+          />
+        </div>
+      </div>
+
+      <!-- 全部/历史记录 顶部状态卡片 -->
+      <div class="st-card scope-summary-card" v-else>
+        <div class="scope-summary-left">
+          <span class="st-icon-badge" :class="subTab === 'all' ? 'st-icon-badge--warning' : 'st-icon-badge--success'">
+            <van-icon :name="subTab === 'all' ? 'todo-list-o' : 'passed'" />
+          </span>
+          <span class="section-title">{{ subTab === 'all' ? '全部待完成作业' : '历史打卡记录' }}</span>
+        </div>
+        <span class="scope-badge-count">共 {{ totalCount }} 项</span>
+      </div>
+
+      <!-- 学科快捷筛选胶囊栏 (Chips - 强制单行滑动) -->
+      <div class="subject-chips-bar st-scroll-x" v-if="subjects.length > 0">
+        <span
+          class="st-chip"
+          :class="{ active: selectedSubject === null }"
+          @click="selectedSubject = null"
+        >
+          全部 ({{ totalCount }})
+        </span>
+        <span
+          v-for="sub in subjects"
+          :key="sub.id"
+          class="st-chip"
+          :class="{ active: selectedSubject === sub.id }"
+          @click="selectedSubject = sub.id"
+        >
+          {{ sub.name }}
+        </span>
+      </div>
+
+      <!-- 固定列表头 (待办作业 X项 / 全部任务 / 历史记录，无顺延大作业时固定在红框底部) -->
+      <div class="fixed-list-header" v-if="filteredRolloverItems.length === 0 && filteredItems.length > 0">
+        <div class="list-section-header">
+          <div class="list-title-box">
+            <span class="st-icon-badge st-icon-badge--primary">
+              <van-icon name="todo-list-o" />
+            </span>
+            <span class="section-title">
+              {{ subTab === 'today' ? '待办作业' : (subTab === 'all' ? '全部任务' : '已完成任务') }} ({{ filteredItems.length }} 项)
+            </span>
+          </div>
+          <span class="swipe-hint">
+            <van-icon name="exchange" /> 左滑卡片呼出操作
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 下方独立滚动内容区 (Scrollable Content: 仅卡片列表滚动) -->
+    <main class="homework-scroll-container">
+      <van-pull-refresh v-model="refreshing" @refresh="fetchHomework">
+        <div class="homework-list-wrapper" v-if="filteredItems.length > 0 || filteredRolloverItems.length > 0">
         <!-- 分区1：周末顺延大作业（如果存在 filteredRolloverItems） -->
         <div class="rollover-section" v-if="filteredRolloverItems.length > 0">
           <div class="list-section-header rollover-header">
@@ -209,9 +220,6 @@
                       <van-icon name="underway-o" size="11" />
                       布置时间: {{ formatSimpleTime(item.created_at || item.date) }}
                     </span>
-                    <span class="hw-done-time" v-if="item.completed_at">
-                      · {{ item.completed_at.substring(11, 16) }} 打卡
-                    </span>
                   </div>
                 </div>
 
@@ -222,8 +230,13 @@
                   @click.stop="toggleComplete(item)"
                   title="点击快捷打卡"
                 >
-                  <van-icon v-if="item.is_completed" name="success" size="12" />
-                  <span>{{ item.is_completed ? '已完成' : '未完成' }}</span>
+                  <div class="status-main">
+                    <van-icon v-if="item.is_completed" name="success" size="12" />
+                    <span>{{ item.is_completed ? '已完成' : '未完成' }}</span>
+                  </div>
+                  <div class="status-time" v-if="item.completed_at">
+                    {{ item.completed_at.substring(11, 16) }} 打卡
+                  </div>
                 </div>
               </div>
 
@@ -250,16 +263,16 @@
 
         <!-- 分区2：今日独立任务/当日作业 -->
         <div class="today-section" v-if="filteredItems.length > 0">
-          <div class="list-section-header" :class="{ 'with-top-margin': filteredRolloverItems.length > 0 }">
+          <div class="list-section-header with-top-margin" v-if="filteredRolloverItems.length > 0">
             <div class="list-title-box">
               <span class="st-icon-badge st-icon-badge--primary">
                 <van-icon name="todo-list-o" />
               </span>
               <span class="section-title">
-                {{ filteredRolloverItems.length > 0 ? '今日独立任务' : (subTab === 'today' ? '待办作业' : (subTab === 'all' ? '全部任务' : '已完成任务')) }} ({{ filteredItems.length }} 项)
+                今日独立任务 ({{ filteredItems.length }} 项)
               </span>
             </div>
-            <span class="swipe-hint" v-if="filteredRolloverItems.length === 0">
+            <span class="swipe-hint">
               <van-icon name="exchange" /> 左滑卡片呼出操作
             </span>
           </div>
@@ -293,9 +306,6 @@
                       <van-icon name="underway-o" size="11" />
                       布置时间: {{ formatSimpleTime(item.created_at || item.date) }}
                     </span>
-                    <span class="hw-done-time" v-if="item.completed_at">
-                      · {{ item.completed_at.substring(11, 16) }} 打卡
-                    </span>
                   </div>
                 </div>
 
@@ -306,8 +316,13 @@
                   @click.stop="toggleComplete(item)"
                   title="点击快捷打卡"
                 >
-                  <van-icon v-if="item.is_completed" name="success" size="12" />
-                  <span>{{ item.is_completed ? '已完成' : '未完成' }}</span>
+                  <div class="status-main">
+                    <van-icon v-if="item.is_completed" name="success" size="12" />
+                    <span>{{ item.is_completed ? '已完成' : '未完成' }}</span>
+                  </div>
+                  <div class="status-time" v-if="item.completed_at">
+                    {{ item.completed_at.substring(11, 16) }} 打卡
+                  </div>
                 </div>
               </div>
 
@@ -335,9 +350,19 @@
 
       <!-- 清爽空状态 -->
       <div class="empty-box" v-else>
-        <van-empty :description="subTab === 'today' ? '今天没有待办作业，享受一下自由时光吧 ☀️' : (subTab === 'all' ? '太棒了，当前没有未完成的作业！' : '暂无历史打卡记录')" />
+        <div class="custom-empty-state">
+          <div
+            class="custom-empty-icon st-icon-badge"
+            :class="subTab === 'today' ? 'st-icon-badge--primary' : (subTab === 'all' ? 'st-icon-badge--success' : 'st-icon-badge--neutral')"
+          >
+            <van-icon :name="subTab === 'today' ? 'smile-o' : (subTab === 'all' ? 'passed' : 'clock-o')" />
+          </div>
+          <p class="custom-empty-title">{{ subTab === 'today' ? '今天没有待办作业' : (subTab === 'all' ? '全部作业已完成' : '暂无历史打卡记录') }}</p>
+          <p v-if="subTab !== 'history'" class="custom-empty-subtitle">{{ subTab === 'today' ? '享受自由时光，或提前录入新作业' : '当前没有未完成的作业' }}</p>
+        </div>
       </div>
     </van-pull-refresh>
+    </main>
 
     <!-- 底部常驻磨砂悬浮录入栏 (居中大胶囊录入 + 专注计时) -->
     <div class="floating-bottom-bar st-frosted-bar">
@@ -353,6 +378,7 @@
       >
         <van-icon name="underway-o" size="16" />
         <span v-if="pomodoroRef?.isRunning">{{ pomodoroRef?.formattedTime }}</span>
+        <span v-else>专注</span>
       </button>
     </div>
 
@@ -389,7 +415,9 @@
       v-model="showCelebrateModal"
       :streak="streak"
       :is-all-done="isAllDone"
+      @close-detail="showDetailSheet = false"
     />
+    <PinDeleteSheet v-model="showDeletePin" @verified="confirmPendingDelete" />
 
     <!-- 作业编辑弹窗 -->
     <van-dialog
@@ -417,7 +445,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { showToast, showConfirmDialog } from 'vant';
 import { homeworkApi, settingsApi } from '../api';
 import QuickAddModal from '../components/QuickAddModal.vue';
@@ -426,6 +454,7 @@ import PomodoroTimer from '../components/PomodoroTimer.vue';
 import SubjectBadge from '../components/SubjectBadge.vue';
 import CheckinCelebrateModal from '../components/CheckinCelebrateModal.vue';
 import HomeworkDetailSheet from '../components/HomeworkDetailSheet.vue';
+import PinDeleteSheet from '../components/PinDeleteSheet.vue';
 
 const pomodoroRef = ref(null);
 const currentDate = ref(new Date().toISOString().split('T')[0]);
@@ -451,6 +480,8 @@ const calendarStatusMap = ref({});
 const subTab = ref('today'); // 'today' | 'all' | 'history'
 const selectedHomework = ref(null);
 const showDetailSheet = ref(false);
+const showDeletePin = ref(false);
+const pendingDeleteItem = ref(null);
 
 const openDetail = (item) => {
   selectedHomework.value = item;
@@ -770,7 +801,7 @@ const submitEditHomework = async () => {
   }
 };
 
-const handleDelete = (item) => {
+const performDelete = (item) => {
   showConfirmDialog({
     title: '确认删除',
     message: '确定要删除这条作业记录吗？'
@@ -785,18 +816,66 @@ const handleDelete = (item) => {
   });
 };
 
+const handleDelete = (item) => {
+  pendingDeleteItem.value = item;
+  if (!sessionStorage.getItem('parent_pin')) {
+    showDeletePin.value = true;
+    return;
+  }
+  performDelete(item);
+};
+
+const confirmPendingDelete = () => {
+  if (pendingDeleteItem.value) performDelete(pendingDeleteItem.value);
+};
+
+const onGlobalAction = (event) => {
+  if (event.detail === 'homework') showAddModal.value = true;
+  if (event.detail === 'focus') pomodoroRef.value?.open();
+};
+
 onMounted(async () => {
   await fetchSubjects();
   await fetchHomework();
   await fetchWeekStatus();
+  if (new URLSearchParams(window.location.search).get('action') === 'add') showAddModal.value = true;
+  window.addEventListener('zhixueji:action', onGlobalAction);
 });
+
+onUnmounted(() => window.removeEventListener('zhixueji:action', onGlobalAction));
 </script>
 
 <style scoped>
 .homework-view {
+  height: calc(100vh - 50px - env(safe-area-inset-bottom, 0px));
+  height: calc(100dvh - 50px - env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--st-bg-page);
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.homework-fixed-header {
+  flex-shrink: 0;
+  background-color: var(--st-bg-page);
+  padding: var(--st-space-4) var(--st-space-5) 2px;
+  z-index: 10;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.homework-scroll-container {
   flex: 1;
-  background-color: var(--st-bg-page, #f8fafc);
-  padding: 12px 14px 100px;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px var(--st-space-5) calc(var(--st-space-6) + 60px);
+}
+
+.fixed-list-header {
+  margin-top: 2px;
+  padding: 0;
 }
 
 /* 顶栏信息 */
@@ -817,7 +896,7 @@ onMounted(async () => {
   width: 32px;
   height: 32px;
   border-radius: 9px;
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  background: var(--st-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -853,7 +932,7 @@ onMounted(async () => {
 .homework-top-title {
   font-size: 24px;
   font-weight: 800;
-  color: var(--st-text-primary, #0f172a);
+  color: var(--st-text-primary);
   margin: 0;
   letter-spacing: -0.5px;
 }
@@ -872,9 +951,9 @@ onMounted(async () => {
   position: relative;
   background: transparent;
   border: none;
-  font-size: 15px;
+  font-size: var(--st-font-lg);
   font-weight: 500;
-  color: #64748b;
+  color: var(--st-text-secondary);
   cursor: pointer;
   padding: 4px 0 8px;
   transition: all 0.2s ease;
@@ -882,7 +961,7 @@ onMounted(async () => {
 
 .sub-tab-item.active {
   font-weight: 700;
-  color: #0f172a;
+  color: var(--st-text-primary);
 }
 
 .sub-tab-indicator {
@@ -892,8 +971,8 @@ onMounted(async () => {
   transform: translateX(-50%);
   width: 22px;
   height: 3px;
-  border-radius: 9999px;
-  background: #2563eb;
+  border-radius: var(--st-radius-full);
+  background: var(--st-primary);
 }
 
 /* 全部/历史统计条 */
@@ -902,8 +981,8 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
-  padding: 12px 14px;
-  border-radius: 14px;
+  padding: var(--st-space-4) var(--st-space-card);
+  border-radius: var(--st-radius-lg);
 }
 
 .scope-summary-left {
@@ -913,19 +992,19 @@ onMounted(async () => {
 }
 
 .scope-badge-count {
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
-  color: #2563eb;
-  background: #eff6ff;
+  color: var(--st-primary);
+  background: var(--st-primary-light);
   padding: 3px 10px;
-  border-radius: 9999px;
+  border-radius: var(--st-radius-full);
 }
 
 .add-top-round-btn {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: #2563eb;
+  background: var(--st-primary);
   color: #ffffff;
   border: none;
   display: inline-flex;
@@ -937,14 +1016,18 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
+/* 录入与专注由全局加号动作面板统一承接。 */
+.add-top-round-btn,
+.floating-bottom-bar { display: none; }
+
 .add-top-round-btn:active {
   transform: scale(0.92);
 }
 
 .hw-subject-text {
-  font-size: 15px;
+  font-size: var(--st-font-lg);
   font-weight: 700;
-  color: #0f172a;
+  color: var(--st-text-primary);
 }
 
 .streak-pill {
@@ -954,11 +1037,11 @@ onMounted(async () => {
   height: 28px;
   font-size: var(--st-font-xs);
   font-weight: 600;
-  color: #c2410c;
-  background: #fff7ed;
+  color: var(--st-warning-dark);
+  background: var(--st-warning-light);
   padding: 0 9px;
   border-radius: var(--st-radius-full, 9999px);
-  border: 1px solid #fed7aa;
+  border: 1px solid var(--st-warning);
   white-space: nowrap;
 }
 
@@ -1019,15 +1102,15 @@ onMounted(async () => {
 }
 
 .week-day-pill.active {
-  background-color: #2563eb;
-  border-color: #2563eb;
+  background-color: var(--st-primary);
+  border-color: var(--st-primary);
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
 }
 
 .week-day-pill .day-label {
-  font-size: 11px;
+  font-size: var(--st-font-xs);
   line-height: 1;
-  color: #64748b;
+  color: var(--st-text-secondary);
   margin-bottom: 4px;
 }
 
@@ -1037,10 +1120,10 @@ onMounted(async () => {
 }
 
 .week-day-pill .day-number {
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 600;
   line-height: 1.1;
-  color: #1e293b;
+  color: var(--st-text-regular);
 }
 
 .week-day-pill.active .day-number {
@@ -1058,19 +1141,19 @@ onMounted(async () => {
 }
 
 .week-day-pill .day-dot.dot-green {
-  background-color: #10b981;
+  background-color: var(--st-success);
 }
 
 .week-day-pill .day-dot.dot-yellow {
-  background-color: #f59e0b;
+  background-color: var(--st-warning);
 }
 
 .week-day-pill .day-dot.dot-red {
-  background-color: #ef4444;
+  background-color: var(--st-danger);
 }
 
 .week-day-pill .day-dot.dot-gray {
-  background-color: #cbd5e1;
+  background-color: var(--st-border-bold);
 }
 
 /* 选中高亮状态下的状态指示点 */
@@ -1097,19 +1180,6 @@ onMounted(async () => {
 
 .progress-bar-wrapper {
   margin-bottom: 6px;
-}
-
-.all-done-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 8px 12px;
-  background-color: var(--st-success-light, #ecfdf5);
-  border-radius: var(--st-radius-sm, 6px);
-  font-size: var(--st-font-xs);
-  font-weight: 500;
-  color: var(--st-success-dark, #059669);
 }
 
 /* 学科快捷筛选胶囊栏 */
@@ -1182,9 +1252,9 @@ onMounted(async () => {
 .rollover-badge-tag {
   font-size: var(--st-font-xs);
   font-weight: 600;
-  color: #7c3aed;
-  background: #f5f3ff;
-  border: 1px solid #ddd6fe;
+  color: var(--st-purple);
+  background: var(--st-purple-light);
+  border: 1px solid var(--st-purple-light);
   padding: 2px 8px;
   border-radius: var(--st-radius-full, 9999px);
   display: inline-flex;
@@ -1228,20 +1298,20 @@ onMounted(async () => {
   gap: 12px;
   cursor: pointer;
   padding: 14px 16px;
-  border-radius: 16px;
-  border: 1px solid rgba(226, 232, 240, 0.7);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  border-radius: var(--st-radius-lg);
+  border: 1px solid var(--st-border);
+  box-shadow: var(--st-shadow-card);
   transition: transform 0.15s ease, background 0.15s ease;
-  background-color: #ffffff;
+  background-color: var(--st-bg-card);
 }
 
 .hw-card-face:active {
   transform: scale(0.985);
-  background-color: #f8fafc;
+  background-color: var(--st-bg-subtle);
 }
 
 .hw-card-face.is-done {
-  background-color: #fafbfc;
+  background-color: var(--st-bg-subtle);
   opacity: 0.88;
 }
 
@@ -1260,21 +1330,21 @@ onMounted(async () => {
 }
 
 .hw-subject-text {
-  font-size: 15px;
+  font-size: var(--st-font-lg);
   font-weight: 700;
-  color: #0f172a;
+  color: var(--st-text-primary);
 }
 
 .hw-title {
-  font-size: 13.5px;
+  font-size: var(--st-font-md);
   font-weight: 500;
-  color: #334155;
+  color: var(--st-text-regular);
   line-height: 1.4;
   word-break: break-all;
 }
 
 .hw-title.strike {
-  color: #94a3b8;
+  color: var(--st-text-muted);
   text-decoration: line-through;
 }
 
@@ -1282,24 +1352,40 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-muted);
   margin-top: 1px;
 }
 
 .hw-status-pill {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 2px;
   padding: 4px 10px;
   border-radius: 9999px;
-  font-size: 12px;
+  font-size: var(--st-font-xs);
   font-weight: 500;
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--st-bg-subtle);
+  color: var(--st-text-secondary);
   flex-shrink: 0;
   cursor: pointer;
   transition: transform 0.15s ease;
+  min-width: 58px;
+}
+
+.status-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-time {
+  font-size: var(--st-font-xs);
+  font-weight: 400;
+  color: var(--st-text-muted);
+  line-height: 1.1;
 }
 
 .hw-status-pill:active {
@@ -1307,9 +1393,13 @@ onMounted(async () => {
 }
 
 .hw-status-pill.is-done {
-  background: #ecfdf5;
-  color: #10b981;
+  background: var(--st-success-light);
+  color: var(--st-success);
   font-weight: 600;
+}
+
+.hw-status-pill.is-done .status-time {
+  color: var(--st-success-dark);
 }
 
 /* 左滑呼出的操作抽屉 */
@@ -1347,6 +1437,38 @@ onMounted(async () => {
 
 .empty-box {
   padding: 30px 0;
+}
+
+.custom-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px 16px;
+}
+
+.custom-empty-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--st-space-card);
+  border-radius: var(--st-radius-lg);
+  font-size: var(--st-font-xl);
+}
+
+.custom-empty-title {
+  font-size: var(--st-font-lg);
+  font-weight: 600;
+  color: var(--st-text-primary);
+  line-height: 1.4;
+  margin: 0 0 var(--st-space-2);
+}
+
+.custom-empty-subtitle {
+  font-size: var(--st-font-sm);
+  color: var(--st-text-secondary);
+  line-height: var(--st-leading-normal);
+  margin: 0;
+  max-width: 220px;
 }
 
 /* 顶部周历条容器 */
@@ -1392,7 +1514,7 @@ onMounted(async () => {
 /* 底部常驻悬浮栏 (居中大胶囊录入 + 专注圆钮，与 chatgpt.jpg 保持一致) */
 .floating-bottom-bar {
   position: fixed;
-  bottom: calc(52px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(50px + env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
   max-width: 500px;
@@ -1431,34 +1553,35 @@ onMounted(async () => {
 }
 
 .pomodoro-mini-btn {
-  width: 46px;
+  min-width: 74px;
   height: 46px;
-  border-radius: 50%;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #475569;
-  display: flex;
+  border-radius: 9999px;
+  border: 1px solid #93c5fd;
+  background: #eff6ff;
+  color: #2563eb;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  gap: 4px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   transition: all 0.15s ease;
   flex-shrink: 0;
+  padding: 0 14px;
 }
 
 .pomodoro-mini-btn:active {
   transform: scale(0.94);
-  background: #f1f5f9;
+  background: #dbeafe;
 }
 
 .pomodoro-mini-btn.is-running {
-  width: auto;
-  padding: 0 14px;
-  border-radius: 9999px;
   border-color: #ef4444;
   color: #ef4444;
   background: #fef2f2;
 }
+
+.floating-bottom-bar { display: none; }
 </style>
