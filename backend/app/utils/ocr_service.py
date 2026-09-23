@@ -180,6 +180,28 @@ class PaddleOCREngine(BaseOCREngine):
         return res
 
 
+def _detect_system_proxy() -> Optional[str]:
+    """在 Windows 服务模式（LocalSystem）下，自动探查当前活跃用户的系统代理设置（如 Clash/V2Ray）"""
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_USERS, "") as root:
+            for i in range(winreg.QueryInfoKey(root)[0]):
+                sub = winreg.EnumKey(root, i)
+                if sub.startswith("S-1-5-21-") and not sub.endswith("_Classes"):
+                    try:
+                        with winreg.OpenKey(winreg.HKEY_USERS, rf"{sub}\Software\Microsoft\Windows\CurrentVersion\Internet Settings") as k:
+                            en, _ = winreg.QueryValueEx(k, "ProxyEnable")
+                            if en:
+                                s, _ = winreg.QueryValueEx(k, "ProxyServer")
+                                if s:
+                                    return s if "://" in s else f"http://{s}"
+                    except Exception:
+                        pass
+    except Exception:
+        pass
+    return None
+
+
 # ---------------------------------------------------------------------------
 # 3) CloudVLM —— 云端大模型视觉兜底（需 Key，联网）
 # ---------------------------------------------------------------------------
@@ -191,6 +213,7 @@ class CloudVLMEngine(BaseOCREngine):
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
         model: Optional[str] = None,
+        proxy: Optional[str] = None,
     ) -> None:
         env = _read_env_file()
         self.api_key = api_key or os.getenv("OCR_CLOUD_API_KEY") or env.get("OCR_CLOUD_API_KEY")
@@ -199,6 +222,13 @@ class CloudVLMEngine(BaseOCREngine):
         )
         self.model = model or os.getenv("OCR_CLOUD_MODEL") or env.get(
             "OCR_CLOUD_MODEL", _CLOUD_DEFAULT_MODEL
+        )
+        self.proxy = (
+            proxy
+            or os.getenv("OCR_CLOUD_PROXY")
+            or env.get("OCR_CLOUD_PROXY")
+            or os.getenv("HTTPS_PROXY")
+            or os.getenv("HTTP_PROXY")
         )
 
     def available(self) -> bool:
@@ -246,12 +276,31 @@ class CloudVLMEngine(BaseOCREngine):
             },
             method="POST",
         )
+
+        def _do_request(proxy_url: Optional[str] = None):
+            if proxy_url:
+                opener = urllib.request.build_opener(
+                    urllib.request.ProxyHandler({"http": proxy_url, "https": proxy_url})
+                )
+                return opener.open(req, timeout=30)
+            return urllib.request.urlopen(req, timeout=30)
+
         try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
+            with _do_request(self.proxy) as resp:
                 body = json.loads(resp.read().decode("utf-8"))
             text = body["choices"][0]["message"]["content"].strip()
-        except Exception as e:  # 网络/接口异常 → 抛出让上层降级
-            raise RuntimeError(f"CloudVLM 调用失败: {e}") from e
+        except Exception as e:
+            # 当直连由于 Fake-IP / 本地代理环境超时阻断，且探查到本机运行有 VPN/代理时，自动切换代理重试
+            auto_proxy = _detect_system_proxy()
+            if auto_proxy and auto_proxy != self.proxy:
+                try:
+                    with _do_request(auto_proxy) as resp:
+                        body = json.loads(resp.read().decode("utf-8"))
+                    text = body["choices"][0]["message"]["content"].strip()
+                except Exception as retry_err:
+                    raise RuntimeError(f"CloudVLM 调用失败: {e}（自动代理重试亦失败: {retry_err}）") from retry_err
+            else:
+                raise RuntimeError(f"CloudVLM 调用失败: {e}") from e
 
         cost = int((time.time() - t0) * 1000)
         line = OcrLine(text=text, confidence=1.0)
