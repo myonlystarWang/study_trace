@@ -444,7 +444,7 @@ const handleCancel = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 16px;
+  padding: 0 var(--st-space-5);
   background: rgba(15, 23, 42, 0.95);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
@@ -460,13 +460,13 @@ const handleCancel = () => {
 .header-action-btn {
   background: transparent;
   border: none;
-  color: var(--st-text-muted);
+  color: #e2e8f0;
   font-size: var(--st-font-md);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 10px;
+  gap: var(--st-space-1);
+  padding: var(--st-space-3) var(--st-space-4);
   touch-action: manipulation;
 }
 
@@ -475,7 +475,7 @@ const handleCancel = () => {
 }
 
 .header-action-btn.text-btn {
-  color: #38bdf8;
+  color: var(--st-primary);
   font-weight: 500;
 }
 
@@ -487,14 +487,14 @@ const handleCancel = () => {
   align-items: center;
   justify-content: center;
   position: relative;
-  background: radial-gradient(circle at center, #172033 0%, #090d16 100%);
-  padding: 12px;
+  background: #111827;
+  padding: var(--st-space-4);
 }
 
 .canvas-container {
   position: relative;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-  border-radius: 4px;
+  border-radius: var(--st-radius-sm);
   overflow: hidden;
   touch-action: none;
 }
@@ -512,7 +512,7 @@ const handleCancel = () => {
   position: absolute;
   cursor: move;
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.62);
-  border: 2px solid #38bdf8;
+  border: 2px solid var(--st-primary);
   box-sizing: border-box;
   touch-action: none;
   z-index: 2;
@@ -646,31 +646,31 @@ const handleCancel = () => {
   flex-shrink: 0;
   background: #0f172a;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 12px 16px;
-  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  padding: var(--st-space-4) var(--st-space-5);
+  padding-bottom: calc(var(--st-space-4) + env(safe-area-inset-bottom, 0px));
 }
 
 .footer-tip {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--st-space-2);
   font-size: var(--st-font-xs);
   color: var(--st-text-muted);
-  margin-bottom: 12px;
+  margin-bottom: var(--st-space-4);
   line-height: var(--st-leading-tight);
 }
 
 .footer-tip .van-icon {
   font-size: var(--st-font-md);
-  color: #38bdf8;
+  color: var(--st-primary);
   flex-shrink: 0;
 }
 
 .crop-confirm-btn {
   font-weight: 600;
-  font-size: var(--st-font-lg);
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  font-size: var(--st-font-md);
+  background: var(--st-primary);
   border: none;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+  box-shadow: var(--st-shadow-float);
 }
 </style>

@@ -5,6 +5,7 @@
     :close-on-click-overlay="true"
     class="celebrate-popup"
     @update:show="val => emit('update:modelValue', val)"
+    @closed="onClosed"
   >
     <div class="celebrate-card">
       <button class="close-btn" @click="close" aria-label="关闭">
@@ -14,9 +15,7 @@
       <!-- 成功弹跳微动效勾选图标 -->
       <div class="icon-bubble">
         <div class="success-circle">
-          <svg class="checkmark-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
+          <van-icon name="success" class="success-icon" />
         </div>
       </div>
 
@@ -27,7 +26,7 @@
 
       <!-- 连续学习光晕胶囊 -->
       <div v-if="streak && streak > 0" class="streak-badge">
-        <span class="fire-emoji">🔥</span>
+        <span class="streak-icon"><van-icon name="fire-o" /></span>
         <span class="streak-text">连续学习 <strong>{{ streak }}</strong> 天</span>
       </div>
 
@@ -38,10 +37,9 @@
 
       <!-- 底部精致庆祝彩带与星光插画 -->
       <div class="bottom-celebration-graphic">
-        <div class="deco-star deco-star-1">★</div>
-        <div class="deco-star deco-star-2">✦</div>
-        <div class="deco-star deco-star-3">★</div>
-        <div class="deco-sprout">🌱</div>
+        <van-icon name="star-o" class="deco-star deco-star-1" />
+        <van-icon name="gem-o" class="deco-star deco-star-2" />
+        <van-icon name="star-o" class="deco-star deco-star-3" />
       </div>
     </div>
   </van-popup>
@@ -75,7 +73,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update:modelValue', 'confirm']);
+const emit = defineEmits(['update:modelValue', 'confirm', 'closeDetail']);
 
 const close = () => {
   emit('update:modelValue', false);
@@ -84,6 +82,10 @@ const close = () => {
 const handleConfirm = () => {
   emit('confirm');
   close();
+};
+
+const onClosed = () => {
+  emit('closeDetail');
 };
 </script>
 
@@ -97,9 +99,9 @@ const handleConfirm = () => {
 
 .celebrate-card {
   position: relative;
-  background: #ffffff;
-  border-radius: 20px;
-  padding: 32px 24px 20px;
+  background: var(--st-bg-card);
+  border-radius: var(--st-radius-xl);
+  padding: var(--st-space-6) var(--st-space-6) var(--st-space-5);
   text-align: center;
   box-shadow: 0 12px 36px rgba(15, 23, 42, 0.15);
 }
@@ -110,7 +112,7 @@ const handleConfirm = () => {
   right: 14px;
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: var(--st-text-muted);
   cursor: pointer;
   padding: 4px;
   display: flex;
@@ -121,14 +123,14 @@ const handleConfirm = () => {
 .icon-bubble {
   display: flex;
   justify-content: center;
-  margin-bottom: 16px;
+  margin-bottom: var(--st-space-5);
 }
 
 .success-circle {
   width: 64px;
   height: 64px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  border-radius: var(--st-radius-full);
+  background: var(--st-success);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -136,9 +138,8 @@ const handleConfirm = () => {
   animation: popBounce 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
 }
 
-.checkmark-svg {
-  width: 32px;
-  height: 32px;
+.success-icon {
+  font-size: 32px;
   color: #ffffff;
 }
 
@@ -157,54 +158,55 @@ const handleConfirm = () => {
 }
 
 .celebrate-title {
-  font-size: 20px;
+  font-size: var(--st-font-xl);
   font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 8px;
+  color: var(--st-text-primary);
+  margin: 0 0 var(--st-space-2);
 }
 
 .celebrate-desc {
-  font-size: 13px;
-  color: #64748b;
-  line-height: 1.5;
-  margin-bottom: 18px;
+  font-size: var(--st-font-sm);
+  color: var(--st-text-secondary);
+  line-height: var(--st-leading-normal);
+  margin: 0 0 var(--st-space-5);
 }
 
 .streak-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%);
-  border: 1px solid #fed7aa;
-  padding: 6px 16px;
-  border-radius: 9999px;
-  margin-bottom: 22px;
-  box-shadow: var(--st-shadow-achievement, 0 4px 14px rgba(245, 158, 11, 0.15));
+  gap: var(--st-space-2);
+  background: var(--st-warning-light);
+  border: 1px solid var(--st-warning);
+  padding: var(--st-space-2) var(--st-space-5);
+  border-radius: var(--st-radius-full);
+  margin-bottom: var(--st-space-5);
+  box-shadow: var(--st-shadow-achievement);
 }
 
-.fire-emoji {
-  font-size: 16px;
+.streak-icon {
+  color: var(--st-warning-dark);
+  font-size: var(--st-font-lg);
 }
 
 .streak-text {
-  font-size: 13px;
-  color: #c2410c;
+  font-size: var(--st-font-sm);
+  color: var(--st-warning-dark);
 }
 
 .streak-text strong {
   font-weight: 800;
-  font-size: 15px;
+  font-size: var(--st-font-lg);
 }
 
 .continue-btn {
   width: 100%;
-  height: 44px;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  height: 42px;
+  background: var(--st-gradient-primary-btn);
   color: #ffffff;
-  font-size: 15px;
+  font-size: var(--st-font-md);
   font-weight: 600;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--st-radius-full);
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
   transition: opacity 0.15s ease, transform 0.1s ease;
@@ -222,13 +224,13 @@ const handleConfirm = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: var(--st-space-4);
   user-select: none;
 }
 
 .deco-star {
-  font-size: 14px;
-  color: #facc15;
+  font-size: var(--st-font-md);
+  color: var(--st-warning);
   animation: twinkle 1.5s infinite ease-in-out alternate;
 }
 
@@ -237,17 +239,13 @@ const handleConfirm = () => {
 }
 
 .deco-star-2 {
-  font-size: 18px;
-  color: #38bdf8;
+  font-size: var(--st-font-lg);
+  color: var(--st-primary);
   animation-delay: 0.5s;
 }
 
 .deco-star-3 {
   animation-delay: 0.8s;
-}
-
-.deco-sprout {
-  font-size: 16px;
 }
 
 @keyframes twinkle {

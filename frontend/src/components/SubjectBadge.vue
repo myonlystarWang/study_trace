@@ -18,8 +18,11 @@
         <line x1="8" y1="11" x2="14" y2="11" />
       </svg>
 
-      <!-- 英语: 字母 Aa -->
-      <span v-else-if="normalizedSubject === 'english'" class="badge-text-aa">Aa</span>
+      <!-- 英语: 对话气泡 + 字母，避免与语文的书本轮廓混淆。 -->
+      <svg v-else-if="normalizedSubject === 'english'" class="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 4h14v11H10l-5 4V4z" />
+        <path d="M9 11l2-4 2 4M10 9.5h2" />
+      </svg>
 
       <!-- 物理: 灯泡与能量 -->
       <svg v-else-if="normalizedSubject === 'physics'" class="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -92,8 +95,9 @@ const props = defineProps({
 const normalizedSubject = computed(() => {
   const n = (props.name || '').trim();
   if (n.includes('数')) return 'math';
-  if (n.includes('语')) return 'chinese';
+  // “英语”包含“语”，必须先判断英语，否则会误落到语文图标。
   if (n.includes('英')) return 'english';
+  if (n.includes('语')) return 'chinese';
   if (n.includes('物')) return 'physics';
   if (n.includes('化')) return 'chemistry';
   if (n.includes('生')) return 'biology';
@@ -125,22 +129,6 @@ const displayFallbackChar = computed(() => {
 .badge-icon {
   width: 58%;
   height: 58%;
-}
-
-.badge-text-aa {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Rounded", Inter, sans-serif;
-  font-weight: 800;
-  font-size: 16px;
-  line-height: 1;
-  letter-spacing: -0.5px;
-}
-
-.st-subject-badge--sm .badge-text-aa {
-  font-size: 13px;
-}
-
-.st-subject-badge--lg .badge-text-aa {
-  font-size: 20px;
 }
 
 .badge-text-fallback {

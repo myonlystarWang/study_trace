@@ -3,8 +3,8 @@
     :show="modelValue"
     position="bottom"
     round
-    closeable
-    :style="{ maxHeight: '90vh', minHeight: '65vh' }"
+    :close-on-click-overlay="true"
+    :style="{ maxHeight: '90vh' }"
     class="hw-detail-popup"
     @update:show="val => emit('update:modelValue', val)"
   >
@@ -15,8 +15,8 @@
           <van-icon name="arrow-left" size="18" />
         </button>
         <span class="header-title">作业详情</span>
-        <button class="header-more-btn" @click="showActionMenu = true" aria-label="更多操作">
-          <van-icon name="ellipsis" size="20" />
+        <button class="header-close-btn" @click="close" aria-label="关闭">
+          <van-icon name="cross" size="18" />
         </button>
       </div>
 
@@ -39,27 +39,26 @@
         <!-- 3. 大号主任务标题 -->
         <h2 class="task-headline">{{ homework.content }}</h2>
 
-        <!-- 4. 时间元信息栏 (布置时间 & 截止/完成时间) -->
-        <div class="time-meta-grid">
-          <div class="time-meta-item">
-            <van-icon name="calendar-o" class="meta-icon" />
-            <span class="meta-label">布置时间</span>
-            <span class="meta-val">{{ formatDateTime(homework.created_at, homework.date) }}</span>
-          </div>
-          <div class="time-meta-item">
-            <van-icon name="clock-o" class="meta-icon" />
-            <span class="meta-label">{{ homework.is_completed ? '打卡时间' : '建议截止' }}</span>
-            <span class="meta-val">
-              {{ homework.is_completed && homework.completed_at ? formatDateTime(homework.completed_at) : (homework.date ? `${homework.date} 22:00` : '当日 22:00') }}
-            </span>
-          </div>
+        <!-- 4. 时间元信息栏 -->
+        <div class="time-meta-bar">
+          <van-icon name="underway-o" class="time-meta-icon" size="14" />
+          <span class="time-meta-text">
+            {{ formatDateTime(homework.created_at, homework.date) }} 布置
+            <span class="dot-separator">·</span>
+            {{ homework.is_completed && homework.completed_at ? formatDateTime(homework.completed_at) + ' 打卡' : (homework.date ? homework.date + ' 22:00' : '当日 22:00') }} 截止
+          </span>
         </div>
 
         <!-- 5. 作业内容详情卡片 -->
         <div class="st-card content-detail-card">
           <div class="card-section-title">
-            <van-icon name="notes-o" class="section-icon" />
-            <span>作业内容</span>
+            <div class="section-title-left">
+              <van-icon name="notes-o" class="section-icon" />
+              <span>作业内容</span>
+            </div>
+            <button class="section-more-btn" @click.stop="showActionMenu = true" aria-label="更多操作">
+              <van-icon name="ellipsis" size="16" />
+            </button>
           </div>
           <div class="content-text-box">
             {{ homework.content }}
@@ -84,18 +83,8 @@
             <span>完成记录</span>
           </div>
 
-          <!-- 未完成状态：空状态 + 大号打卡完成主按钮 -->
+          <!-- 未完成状态：直接打卡 -->
           <div v-if="!homework.is_completed" class="uncompleted-state-box">
-            <div class="empty-clipboard-icon">
-              <svg viewBox="0 0 48 48" fill="none" class="empty-svg">
-                <rect x="10" y="8" width="28" height="34" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2" />
-                <path d="M18 8V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2" stroke="#94a3b8" stroke-width="2" />
-                <line x1="16" y1="18" x2="32" y2="18" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" />
-                <line x1="16" y1="26" x2="28" y2="26" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" />
-              </svg>
-            </div>
-            <p class="empty-record-text">暂无完成记录</p>
-
             <button class="primary-checkin-btn" @click="handleToggle">
               <van-icon name="passed" size="18" />
               <span>打卡完成</span>
@@ -119,19 +108,6 @@
           </div>
         </div>
 
-        <!-- 7. 提醒设置卡片 -->
-        <div class="st-card reminder-card">
-          <div class="reminder-row">
-            <div class="reminder-left">
-              <van-icon name="bell" class="reminder-icon" />
-              <span class="reminder-title">作业提醒</span>
-            </div>
-            <div class="reminder-right">
-              <span class="reminder-status-text">每晚 20:30</span>
-              <van-switch v-model="reminderEnabled" size="20px" active-color="#2563eb" />
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- 底部更多操作 ActionSheet (编辑/转错题/删除) -->
@@ -171,12 +147,11 @@ const emit = defineEmits([
 ]);
 
 const showActionMenu = ref(false);
-const reminderEnabled = ref(true);
 
 const actionItems = [
-  { name: '编辑作业', icon: 'edit', color: '#0f172a' },
-  { name: '一键转入错题本', icon: 'notes-o', color: '#2563eb' },
-  { name: '删除作业', icon: 'delete-o', color: '#ef4444' }
+  { name: '编辑作业', icon: 'edit', color: 'var(--st-text-primary)' },
+  { name: '一键转入错题本', icon: 'notes-o', color: 'var(--st-primary)' },
+  { name: '删除作业', icon: 'delete-o', color: 'var(--st-danger)' }
 ];
 
 const close = () => {
@@ -237,17 +212,17 @@ const formatDateTime = (dtStr, fallbackDate) => {
 
 <style scoped>
 :deep(.van-popup.hw-detail-popup) {
-  border-top-left-radius: 24px;
-  border-top-right-radius: 24px;
-  background-color: #f8fafc;
+  border-top-left-radius: var(--st-radius-xl);
+  border-top-right-radius: var(--st-radius-xl);
+  background-color: var(--st-bg-page);
   overflow: hidden;
 }
 
 .hw-detail-container {
   display: flex;
   flex-direction: column;
-  height: 85vh;
-  background: #f8fafc;
+  max-height: 90vh;
+  background: var(--st-bg-page);
 }
 
 /* 1. 顶栏导航条 */
@@ -256,19 +231,19 @@ const formatDateTime = (dtStr, fallbackDate) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 18px 12px;
-  background: #ffffff;
-  border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+  padding: var(--st-space-4) var(--st-space-5) var(--st-space-3);
+  background: var(--st-bg-card);
+  border-bottom: 1px solid var(--st-border);
 }
 
 .header-back-btn,
-.header-more-btn {
+.header-close-btn {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: var(--st-radius-full);
   border: none;
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--st-bg-subtle);
+  color: var(--st-text-regular);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -277,23 +252,22 @@ const formatDateTime = (dtStr, fallbackDate) => {
 }
 
 .header-back-btn:active,
-.header-more-btn:active {
+.header-close-btn:active {
   transform: scale(0.92);
-  background: #e2e8f0;
+  background: var(--st-border);
 }
 
 .header-title {
-  font-size: 17px;
+  font-size: var(--st-font-xl);
   font-weight: 600;
-  color: #0f172a;
-  letter-spacing: -0.3px;
+  color: var(--st-text-primary);
 }
 
 /* 2. 详情内容滚动区 */
 .hw-detail-body {
   flex: 1;
   overflow-y: auto;
-  padding: 18px 16px 36px;
+  padding: var(--st-space-5) var(--st-space-4) var(--st-space-5);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -302,134 +276,152 @@ const formatDateTime = (dtStr, fallbackDate) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: var(--st-space-4);
 }
 
 .subject-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--st-space-3);
 }
 
 .subject-name-text {
-  font-size: 18px;
+  font-size: var(--st-font-xl);
   font-weight: 700;
-  color: #0f172a;
+  color: var(--st-text-primary);
 }
 
 .detail-status-pill {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 12px;
-  border-radius: 9999px;
-  font-size: 12px;
+  padding: var(--st-space-1) var(--st-space-4);
+  border-radius: var(--st-radius-full);
+  font-size: var(--st-font-xs);
   font-weight: 600;
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--st-bg-subtle);
+  color: var(--st-text-secondary);
 }
 
 .detail-status-pill.is-done {
-  background: #ecfdf5;
-  color: #10b981;
+  background: var(--st-success-light);
+  color: var(--st-success-dark);
 }
 
 /* 主标题 */
 .task-headline {
-  font-size: 20px;
+  font-size: var(--st-font-xl);
   font-weight: 800;
-  color: #0f172a;
+  color: var(--st-text-primary);
   line-height: 1.4;
-  margin: 0 0 16px 0;
+  margin: 0 0 var(--st-space-5);
   letter-spacing: -0.3px;
 }
 
 /* 时间元信息 */
-.time-meta-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.time-meta-item {
+.time-meta-bar {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #ffffff;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  margin-bottom: var(--st-space-5);
+  padding: var(--st-space-2) var(--st-space-4);
+  background: var(--st-bg-card);
+  border-radius: var(--st-radius-full);
+  border: 1px solid var(--st-border);
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
 }
 
-.meta-icon {
-  color: #64748b;
-  font-size: 14px;
+.time-meta-icon {
+  color: var(--st-text-muted);
+  flex-shrink: 0;
 }
 
-.meta-label {
-  font-size: 12px;
-  color: #94a3b8;
+.time-meta-text {
+  line-height: 1.4;
+  word-break: break-all;
 }
 
-.meta-val {
-  font-size: 12px;
-  font-weight: 600;
-  color: #334155;
-  margin-left: auto;
+.dot-separator {
+  margin: 0 var(--st-space-2);
+  color: var(--st-border-bold);
 }
 
 /* 作业内容卡片 */
 .content-detail-card,
-.record-card,
-.reminder-card {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 16px;
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+.record-card {
+  background: var(--st-bg-card);
+  border-radius: var(--st-radius-lg);
+  padding: var(--st-space-5);
+  margin-bottom: var(--st-space-4);
+  border: 1px solid var(--st-border);
+  box-shadow: var(--st-shadow-card);
 }
 
 .card-section-title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 15px;
+  justify-content: space-between;
+  font-size: var(--st-font-lg);
   font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 12px;
+  color: var(--st-text-primary);
+  margin-bottom: var(--st-space-4);
+}
+
+.section-title-left {
+  display: flex;
+  align-items: center;
+  gap: var(--st-space-2);
 }
 
 .section-icon {
-  color: #2563eb;
-  font-size: 16px;
+  color: var(--st-primary);
+  font-size: var(--st-font-lg);
+}
+
+.section-more-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--st-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.section-more-btn:active {
+  background: var(--st-bg-subtle);
+  color: var(--st-text-secondary);
 }
 
 .content-text-box {
-  font-size: 14px;
+  font-size: var(--st-font-md);
   line-height: 1.6;
-  color: #334155;
-  background: #f8fafc;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid #edf2f7;
+  color: var(--st-text-regular);
+  background: var(--st-bg-subtle);
+  padding: var(--st-space-4);
+  border-radius: var(--st-radius-md);
+  border: 1px solid var(--st-border);
   white-space: pre-wrap;
   word-break: break-all;
 }
 
 /* 图片附件预览 */
 .image-preview-wrapper {
-  margin-top: 12px;
+  margin-top: var(--st-space-4);
 }
 
 .image-preview-card {
   position: relative;
   width: 100%;
   max-height: 180px;
-  border-radius: 12px;
+  border-radius: var(--st-radius-md);
   overflow: hidden;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--st-border);
   cursor: pointer;
 }
 
@@ -445,53 +437,36 @@ const formatDateTime = (dtStr, fallbackDate) => {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 6px 12px;
+  padding: var(--st-space-2) var(--st-space-4);
   background: linear-gradient(transparent, rgba(15, 23, 42, 0.7));
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: var(--st-space-2);
+  font-size: var(--st-font-xs);
 }
 
 /* 完成记录 */
 .uncompleted-state-box {
   text-align: center;
-  padding: 16px 0 6px;
-}
-
-.empty-clipboard-icon {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 8px;
-}
-
-.empty-svg {
-  width: 48px;
-  height: 48px;
-}
-
-.empty-record-text {
-  font-size: 13px;
-  color: #94a3b8;
-  margin: 0 0 16px;
+  padding: 4px 0 2px;
 }
 
 .primary-checkin-btn {
   width: 100%;
   height: 46px;
-  border-radius: 9999px;
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  border-radius: var(--st-radius-full);
+  background: var(--st-gradient-primary-btn);
   color: #ffffff;
-  font-size: 15px;
+  font-size: var(--st-font-md);
   font-weight: 700;
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--st-space-3);
   box-shadow: 0 6px 18px rgba(37, 99, 235, 0.3);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -512,7 +487,7 @@ const formatDateTime = (dtStr, fallbackDate) => {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #10b981;
+  background: var(--st-success);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -524,67 +499,33 @@ const formatDateTime = (dtStr, fallbackDate) => {
 }
 
 .completed-title {
-  font-size: 15px;
+  font-size: var(--st-font-lg);
   font-weight: 700;
-  color: #0f172a;
+  color: var(--st-text-primary);
   margin: 0 0 2px;
 }
 
 .completed-time {
-  font-size: 12px;
-  color: #64748b;
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
   margin: 0;
 }
 
 .cancel-checkin-btn {
   padding: 6px 14px;
-  border-radius: 9999px;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #64748b;
-  font-size: 12px;
+  border-radius: var(--st-radius-full);
+  border: 1px solid var(--st-border-bold);
+  background: var(--st-bg-card);
+  color: var(--st-text-secondary);
+  font-size: var(--st-font-xs);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .cancel-checkin-btn:active {
-  background: #f1f5f9;
+  background: var(--st-bg-subtle);
   transform: scale(0.96);
 }
 
-/* 提醒设置 */
-.reminder-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.reminder-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.reminder-icon {
-  font-size: 16px;
-  color: #f59e0b;
-}
-
-.reminder-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #0f172a;
-}
-
-.reminder-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.reminder-status-text {
-  font-size: 13px;
-  color: #64748b;
-}
 </style>

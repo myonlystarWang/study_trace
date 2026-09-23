@@ -58,7 +58,7 @@ export default {
 
 /* KaTeX 渲染失败的片段：等宽退回原文本，避免红色报错惊到孩子 */
 .math-text :deep(.math-fallback) {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--st-font-mono, monospace);
 }
 
 /* 分数与整行中轴对齐：分数线压在数字中线上，不下沉 */

@@ -3,14 +3,22 @@
     :show="show"
     position="bottom"
     round
+    class="bottom-sheet-modal calendar-popup"
     :style="{ maxHeight: '80%' }"
     @update:show="$emit('update:show', $event)"
   >
     <div class="calendar-modal">
+      <div class="sheet-grabber"></div>
+      <div class="st-section-header calendar-title-row">
+        <span class="st-icon-badge st-icon-badge--primary">
+          <van-icon name="calendar-o" />
+        </span>
+        <span class="section-title">学习日历</span>
+      </div>
       <div class="calendar-header">
-        <van-button size="small" icon="arrow-left" plain round @click="prevMonth" />
+        <van-button class="calendar-nav-btn" size="small" icon="arrow-left" plain round @click="prevMonth" />
         <span class="current-month">{{ currentYear }}年 {{ currentMonth }}月</span>
-        <van-button size="small" icon="arrow" plain round @click="nextMonth" />
+        <van-button class="calendar-nav-btn" size="small" icon="arrow" plain round @click="nextMonth" />
       </div>
 
       <!-- 星期表头 -->
@@ -27,7 +35,7 @@
         <div v-for="blank in blankDays" :key="'blank-' + blank" class="day-cell blank"></div>
 
         <!-- 真实天数 -->
-        <div
+        <button
           v-for="d in daysData"
           :key="d.date"
           class="day-cell"
@@ -35,13 +43,15 @@
             'is-today': d.date === todayStr,
             'is-selected': d.date === selectedDate
           }"
+          type="button"
+          :aria-label="`${d.date}，${d.status === 'green' ? '全部完成' : d.status === 'yellow' ? '部分完成' : d.status === 'red' ? '未开始' : '无作业'}`"
           @click="selectDay(d.date)"
         >
           <span class="day-number">{{ parseInt(d.date.split('-')[2]) }}</span>
           <div class="status-dot-container">
             <span class="status-dot" :class="'dot-' + d.status"></span>
           </div>
-        </div>
+        </button>
       </div>
 
       <!-- 图例说明 -->
@@ -144,21 +154,40 @@ watch(
 
 <style scoped>
 .calendar-modal {
-  padding: 16px 12px 24px;
+  padding: var(--st-space-3) var(--st-space-4) calc(var(--st-space-6) + env(safe-area-inset-bottom, 0px));
+}
+
+.sheet-grabber {
+  width: 36px;
+  height: 4px;
+  margin: 0 auto var(--st-space-4);
+  border-radius: var(--st-radius-full);
+  background: var(--st-border-bold);
+}
+
+.calendar-title-row {
+  margin-bottom: var(--st-space-5);
 }
 
 .calendar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  padding: 0 8px;
+  margin-bottom: var(--st-space-5);
+  padding: 0 var(--st-space-1);
 }
 
 .current-month {
-  font-size: var(--st-font-xl);
-  font-weight: bold;
+  font-size: var(--st-font-lg);
+  font-weight: 600;
   color: var(--st-text-primary);
+}
+
+.calendar-nav-btn {
+  min-width: 34px;
+  border-color: var(--st-border) !important;
+  background: var(--st-bg-subtle) !important;
+  color: var(--st-text-regular) !important;
 }
 
 .weekdays-grid {
@@ -167,7 +196,7 @@ watch(
   text-align: center;
   font-size: var(--st-font-xs);
   color: var(--st-text-secondary);
-  margin-bottom: 8px;
+  margin-bottom: var(--st-space-3);
 }
 
 .calendar-loading {
@@ -180,8 +209,8 @@ watch(
 .days-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-  margin-bottom: 16px;
+  gap: var(--st-space-1);
+  margin-bottom: var(--st-space-5);
 }
 
 .day-cell {
@@ -190,24 +219,28 @@ watch(
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border: 1px solid transparent;
+  border-radius: var(--st-radius-sm);
+  padding: 0;
+  font: inherit;
   cursor: pointer;
-  background: #f9f9fb;
-  transition: all 0.2s ease;
+  background: var(--st-bg-subtle);
+  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .day-cell:active {
-  background: #eef2ff;
+  background: var(--st-primary-light);
   transform: scale(0.96);
 }
 
 .day-cell.is-today {
-  border: 1.5px solid #3b82f6;
-  background: #eff6ff;
+  border-color: var(--st-primary);
+  background: var(--st-primary-light);
 }
 
 .day-cell.is-selected {
-  background: #2563eb;
+  border-color: var(--st-primary);
+  background: var(--st-primary);
   color: #fff;
 }
 
@@ -218,7 +251,7 @@ watch(
 .day-number {
   font-size: var(--st-font-md);
   font-weight: 500;
-  color: #333;
+  color: var(--st-text-regular);
 }
 
 .status-dot-container {
@@ -237,33 +270,33 @@ watch(
 }
 
 .dot-green {
-  background-color: #10b981;
+  background-color: var(--st-success);
 }
 
 .dot-yellow {
-  background-color: #f59e0b;
+  background-color: var(--st-warning);
 }
 
 .dot-red {
-  background-color: #ef4444;
+  background-color: var(--st-danger);
 }
 
 .dot-gray {
-  background-color: #d1d5db;
+  background-color: var(--st-border-bold);
 }
 
 .legend-bar {
   display: flex;
   justify-content: space-around;
-  padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
+  padding-top: var(--st-space-4);
+  border-top: 1px solid var(--st-border);
   font-size: var(--st-font-xs);
-  color: #666;
+  color: var(--st-text-secondary);
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--st-space-1);
 }
 </style>

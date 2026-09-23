@@ -11,7 +11,7 @@
       <div class="sheet-grabber"></div>
       
       <div class="modal-header-row">
-        <div class="st-section-header" style="margin-bottom: 0;">
+        <div class="st-section-header quick-add-title-row">
           <span class="st-icon-badge st-icon-badge--primary">
             <van-icon name="plus" />
           </span>
@@ -195,6 +195,7 @@ import { showToast } from 'vant';
 import { homeworkApi, ocrApi, settingsApi } from '../api';
 import { compressImage } from '../utils/imageCompress';
 import ImageCropper from './ImageCropper.vue';
+import { parseHomeworkText, DEFAULT_FALLBACK_SUBJECTS } from '../utils/homeworkParser';
 
 const props = defineProps({
   show: Boolean,
@@ -202,19 +203,6 @@ const props = defineProps({
   dateStr: { type: String, default: () => new Date().toISOString().split('T')[0] }
 });
 const emit = defineEmits(['update:show', 'added']);
-
-// 预置核心学科安全兜底（防止任何网络延迟或父组件空传导致解析与界面停摆）
-const DEFAULT_FALLBACK_SUBJECTS = [
-  { id: 2, name: '语文', is_default: true },
-  { id: 1, name: '数学', is_default: true },
-  { id: 3, name: '英语', is_default: true },
-  { id: 4, name: '道法', is_default: true },
-  { id: 5, name: '历史', is_default: true },
-  { id: 6, name: '地理', is_default: true },
-  { id: 7, name: '生物', is_default: true },
-  { id: 8, name: '物理', is_default: true },
-  { id: 9, name: '化学', is_default: true }
-];
 
 const mode = ref('manual');
 const inputText = ref('');
@@ -288,151 +276,8 @@ const isSmartMode = computed(() => {
   return activeParsedGroups.value.length > 0;
 });
 
-// 学科同义词与别名分组矩阵（支持双向任意别名无缝互通）
-const aliasGroups = [
-  ['语文', '国文'],
-  ['数学'],
-  ['英语', '英文', '外语'],
-  ['道德与法治', '道法', '政治', '思想品德', '思品'],
-  ['历史'],
-  ['地理'],
-  ['生物', '生物学'],
-  ['物理'],
-  ['化学'],
-  ['科学']
-];
+// 智能多学科拆解解析由 ../utils/homeworkParser.js 统一提供
 
-// 为学科获取全部同义词与别名列表
-const getAliasesForSubject = (subjectName) => {
-  const clean = (subjectName || '').trim();
-  for (const group of aliasGroups) {
-    if (group.includes(clean) || group.some((alias) => clean.includes(alias) || alias.includes(clean))) {
-      return Array.from(new Set([...group, clean]));
-    }
-  }
-  return [clean];
-};
-
-// 识别行首学科标记
-const matchSubjectHeader = (line, subjectsList) => {
-  const trimmed = line.trim();
-  if (!trimmed) return null;
-
-  for (const sub of subjectsList) {
-    const aliases = getAliasesForSubject(sub.name);
-    for (const alias of aliases) {
-      // 匹配：语文：作业 / 【语文】作业 / 语文 练习册 / 语文:
-      const regex = new RegExp(`^[\\s【\\[（(]*(${alias})[\\s】\\]）)]*[:：\\s]\\s*(.*)$`);
-      const m = trimmed.match(regex);
-      if (m) {
-        return {
-          subject: sub,
-          remainder: m[2] ? m[2].trim() : ''
-        };
-      }
-      // 匹配独占一行的学科名：语文 / 【语文】
-      const exactRegex = new RegExp(`^[\\s【\\[（(]*(${alias})[\\s】\\]）)]*$`);
-      if (exactRegex.test(trimmed)) {
-        return {
-          subject: sub,
-          remainder: ''
-        };
-      }
-    }
-  }
-
-  // 匹配以学科名直接起头的内容
-  for (const sub of subjectsList) {
-    const aliases = getAliasesForSubject(sub.name);
-    for (const alias of aliases) {
-      if (trimmed.startsWith(alias)) {
-        const remainder = trimmed.slice(alias.length).replace(/^[:：\s]+/, '').trim();
-        return {
-          subject: sub,
-          remainder
-        };
-      }
-    }
-  }
-
-  return null;
-};
-
-// 清理单条作业文字（去除序号、日期标记与纯杂项前缀）
-const cleanTaskContent = (content) => {
-  if (!content) return '';
-  let cleaned = content.trim();
-  // 去除常见序号: 1. / 1、 / 1) / ① / (1) / - / ·
-  cleaned = cleaned.replace(/^(\d+[\.、\s\)\-]+|[①②③④⑤⑥⑦⑧⑨⑩]+|\(\d+\)|[-*·•]\s*)/, '').trim();
-  return cleaned;
-};
-
-// 是否是无意义杂质行（如 "9月4日 (周五)", "今日作业", "作业布置", "作业是："）
-const isNoiseLine = (line) => {
-  const trimmed = line.trim();
-  if (!trimmed) return true;
-  if (/^\d{1,2}月\d{1,2}日.*$/.test(trimmed)) return true; // 日期行
-  if (/^(今日作业|作业布置|家庭作业|各科作业|作业清单|作业是|作业如下|今日任务|作业)[:：\s]*$/.test(trimmed)) return true;
-  if (/^(大家好|收到请回复|家长您好|温馨提示).*$/.test(trimmed)) return true;
-  return false;
-};
-
-// 核心智能解析执行
-const parseHomeworkText = (text, subjectsList) => {
-  const cleanInput = (text || '')
-    .replace(/[\u00a0\u3000]/g, ' ') // 替换不间断空格和全角空格
-    .replace(/\r\n/g, '\n');
-  const rawLines = cleanInput.split('\n').map((l) => l.trim()).filter(Boolean);
-  if (rawLines.length === 0) {
-    return { groups: [], unassigned: [] };
-  }
-
-  const list = (subjectsList && subjectsList.length > 0) ? subjectsList : DEFAULT_FALLBACK_SUBJECTS;
-  const groupsMap = new Map();
-  const unassigned = [];
-  let currentSubject = null;
-  let detectedSubjectCount = 0;
-
-  for (const line of rawLines) {
-    if (isNoiseLine(line)) continue;
-
-    const matched = matchSubjectHeader(line, list);
-    if (matched) {
-      currentSubject = matched.subject;
-      if (!groupsMap.has(currentSubject.id)) {
-        groupsMap.set(currentSubject.id, {
-          subject: currentSubject,
-          items: []
-        });
-        detectedSubjectCount++;
-      }
-      if (matched.remainder) {
-        const cleaned = cleanTaskContent(matched.remainder);
-        if (cleaned) {
-          groupsMap.get(currentSubject.id).items.push(cleaned);
-        }
-      }
-    } else {
-      const cleaned = cleanTaskContent(line);
-      if (!cleaned) continue;
-
-      if (currentSubject) {
-        groupsMap.get(currentSubject.id).items.push(cleaned);
-      } else {
-        unassigned.push(cleaned);
-      }
-    }
-  }
-
-  const groups = Array.from(groupsMap.values()).filter((g) => g.items.length > 0);
-  
-  // 命中至少 1 个显式学科头时开启智能多科模式
-  if (detectedSubjectCount >= 1 && groups.length > 0) {
-    return { groups, unassigned };
-  }
-
-  return { groups: [], unassigned: [] };
-};
 
 // 监听输入文本实时解析
 watch(
@@ -672,16 +517,18 @@ const handleSubmit = () => {
 
 <style scoped>
 .quick-add {
-  padding: 1rem 1.25rem 1.75rem;
+  padding: var(--st-space-3) var(--st-space-5) calc(var(--st-space-6) + max(env(safe-area-inset-bottom, 0px), var(--st-keyboard-inset)));
 }
 
 .sheet-grabber {
   width: 36px;
   height: 4px;
-  border-radius: 2px;
-  background-color: var(--st-border-bold, #e2e8f0);
-  margin: 0 auto 12px;
+  border-radius: var(--st-radius-full);
+  background-color: var(--st-border-bold);
+  margin: 0 auto var(--st-space-4);
 }
+
+.quick-add-title-row { margin-bottom: 0; }
 
 .modal-header-row {
   display: flex;
@@ -692,18 +539,18 @@ const handleSubmit = () => {
 
 .mode-tabs {
   display: flex;
-  background-color: var(--st-bg-subtle, #f1f5f9);
-  border-radius: var(--st-radius-md, 10px);
-  padding: 3px;
-  gap: 4px;
-  margin-bottom: 12px;
+  background-color: var(--st-bg-subtle);
+  border-radius: var(--st-radius-md);
+  padding: var(--st-space-1);
+  gap: var(--st-space-1);
+  margin-bottom: var(--st-space-4);
 }
 
 .mode-tab {
   flex: 1;
   text-align: center;
-  padding: 6px 12px;
-  border-radius: var(--st-radius-sm, 6px);
+  padding: var(--st-space-2) var(--st-space-4);
+  border-radius: var(--st-radius-sm);
   font-size: var(--st-font-sm);
   font-weight: 500;
   color: var(--st-text-secondary);
@@ -716,7 +563,7 @@ const handleSubmit = () => {
 }
 
 .mode-tab.active {
-  background: #ffffff;
+  background: var(--st-bg-card);
   color: var(--st-text-primary);
   font-weight: 600;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
@@ -766,21 +613,21 @@ const handleSubmit = () => {
 }
 
 .homework-input-field {
-  background: #f8fafc;
-  border: 1px solid var(--st-border, #e2e8f0);
-  border-radius: var(--st-radius-sm, 8px);
-  padding: 8px 10px;
+  background: var(--st-bg-subtle);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-md);
+  padding: var(--st-space-3) var(--st-space-4);
   font-size: var(--st-font-sm);
   margin-bottom: 12px;
 }
 
 /* 智能多学科拆分展示 */
 .smart-parsed-section {
-  background: #f8fafc;
-  border: 1px solid var(--st-border, #e2e8f0);
-  border-radius: var(--st-radius-md, 10px);
-  padding: 10px 12px;
-  margin-bottom: 12px;
+  background: var(--st-bg-subtle);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-md);
+  padding: var(--st-space-3) var(--st-space-4);
+  margin-bottom: var(--st-space-4);
 }
 
 .smart-header {
@@ -814,7 +661,7 @@ const handleSubmit = () => {
 }
 
 .clear-text-btn:hover {
-  color: #ef4444;
+  color: var(--st-danger);
 }
 
 .smart-groups-container {
@@ -826,15 +673,15 @@ const handleSubmit = () => {
 }
 
 .smart-group-card {
-  background: #ffffff;
-  border: 1px solid var(--st-border, #e2e8f0);
-  border-radius: var(--st-radius-sm, 8px);
-  padding: 8px 10px;
+  background: var(--st-bg-card);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-sm);
+  padding: var(--st-space-3) var(--st-space-4);
 }
 
 .smart-group-card--unassigned {
-  background: #fffbeb;
-  border-color: #fde68a;
+  background: var(--st-warning-light);
+  border-color: var(--st-warning);
 }
 
 .smart-group-head {
@@ -860,7 +707,7 @@ const handleSubmit = () => {
 }
 
 .group-subject-tag--unassigned {
-  background: #f59e0b;
+  background: var(--st-warning);
 }
 
 .group-item-count {
@@ -877,16 +724,16 @@ const handleSubmit = () => {
 
 .assign-label {
   font-size: var(--st-font-xs);
-  color: #b45309;
+  color: var(--st-warning-dark);
 }
 
 .assign-select {
   font-size: var(--st-font-xs);
   padding: 2px 6px;
   border-radius: 4px;
-  border: 1px solid #fcd34d;
-  background: #ffffff;
-  color: #b45309;
+  border: 1px solid var(--st-warning);
+  background: var(--st-bg-card);
+  color: var(--st-warning-dark);
 }
 
 .smart-items-list {
@@ -915,7 +762,7 @@ const handleSubmit = () => {
 }
 
 .smart-item-dot--amber {
-  background: #f59e0b;
+  background: var(--st-warning);
 }
 
 .smart-item-text {
@@ -935,16 +782,16 @@ const handleSubmit = () => {
 }
 
 .smart-item-del:hover {
-  color: #ef4444;
+  color: var(--st-danger);
 }
 
 /* 传统单学科拆分预览 */
 .split-preview {
   margin-bottom: 12px;
-  background: #f8fafc;
-  border: 1px solid var(--st-border, #e2e8f0);
-  border-radius: var(--st-radius-sm, 8px);
-  padding: 8px 10px;
+  background: var(--st-bg-subtle);
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius-sm);
+  padding: var(--st-space-3) var(--st-space-4);
 }
 
 .split-head {
@@ -967,7 +814,7 @@ const handleSubmit = () => {
 
 .modal-btns {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--st-space-4);
   margin-top: 6px;
 }
 </style>

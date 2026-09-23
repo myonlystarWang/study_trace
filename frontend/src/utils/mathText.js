@@ -13,18 +13,29 @@
  *    绝不再把 \frac{1}{2} 这种源码直接摊给孩子看。
  */
 
+const SIMPLE_EXPR_RE = '[A-Za-z0-9]+(?:[+\\-*/][A-Za-z0-9]+)*'
+const PAREN_BASE_RE = `[（(]${SIMPLE_EXPR_RE}[）)]`
+
 // 单个数学 token：
 //  1) 已是 LaTeX 的命令：\frac{a}{b}、\sqrt{2}、\pi、\times …（命令后可跟一组花括号参数）
 //  2) 斜杠分数：17/2（分子/分母各 1~3 位数字）
-//  3) 上标：x^2、10^-3、x^(2n-1)、2^{10}、10^{-3}
+//  3) 上标：x^2、cd^2027、(cd)^2027、（cd）^2027、(a+b+cd)^2、10^-3、2^{10}
 const TOKEN_RE = new RegExp(
   [
     '\\\\[a-zA-Z]+\\s*(?:\\{[^{}]*\\})*', // LaTeX 命令（可带花括号参数）
     '([0-9]{1,3})/([0-9]{1,3})', // 斜杠分数（前面紧贴数字的情况在代码里排除，避免用 lookbehind 兼容旧 iOS Safari）
-    '([0-9]+|[A-Za-z])\\^\\s*(\\{[^{}]*\\}|\\([^)]*\\)|[-+]?[A-Za-z0-9]+)', // 上标（数字底数允许多位，如 10^-2 / 2^{10}）
+    `([0-9]+|[A-Za-z]+|${PAREN_BASE_RE})\\^\\s*(\\{[^{}]*\\}|\\([^)]*\\)|[-+]?[A-Za-z0-9]+)`, // 上标：支持字母连写与中英文括号底数
   ].join('|'),
   'g',
 )
+
+// 手机键盘、OCR 与聊天复制常把指数写为 Unicode 上标；先归一为 ^，再走同一渲染链路。
+const UNICODE_SUPERSCRIPT_RE = new RegExp(`(${PAREN_BASE_RE}|[0-9A-Za-z]+)([⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]+)`, 'g')
+const UNICODE_SUPERSCRIPT_MAP = {
+  '⁰': '0', '¹': '1', '²': '2', '³': '3', '⁴': '4',
+  '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9',
+  '⁺': '+', '⁻': '-',
+}
 
 // 分数黑名单：紧跟/前缀这些字样时视为日期、题号、比分等，不转分数
 const FRAC_CTX_DENY = /[年月日时分秒页题号名楼第班次：%:]/i
@@ -49,12 +60,19 @@ function isSafeFraction(num, den, raw, index, len) {
 }
 
 function toSuperscriptTex(base, expRaw) {
-  // x^2 → x^{2}；x^(2n-1) → x^{2n-1}；10^-3 → 10^{-3}；2^{10} → 2^{10}
+  // x^2 → x^{2}；（cd）^2027 → (cd)^{2027}；x^(2n-1) → x^{2n-1}
   let exp = expRaw.trim()
   if (exp.startsWith('{') && exp.endsWith('}')) exp = exp.slice(1, -1)
   if (exp.startsWith('(') && exp.endsWith(')')) exp = exp.slice(1, -1)
-  if (!/^[-+]?[A-Za-z0-9]+$/.test(exp)) return null // 含其它符号则不转
-  return `${base}^{${exp}}`
+  if (!new RegExp(`^${SIMPLE_EXPR_RE}$`).test(exp)) return null // 含其它符号则不转
+  return `${base.replace(/[（]/g, '(').replace(/[）]/g, ')')}^{${exp}}`
+}
+
+function normalizeUnicodeSuperscripts(s) {
+  return s.replace(UNICODE_SUPERSCRIPT_RE, (_, base, superscript) => {
+    const exponent = [...superscript].map((ch) => UNICODE_SUPERSCRIPT_MAP[ch] || ch).join('')
+    return `${base.replace(/[（]/g, '(').replace(/[）]/g, ')')}^${exponent}`
+  })
 }
 
 /**
@@ -86,6 +104,7 @@ export function normalizeMathSource(raw) {
   // 尺寸/排版命令与空白命令
   LAYOUT_CMDS.forEach((cmd) => { s = s.replace(new RegExp('\\\\' + cmd + '(?![a-zA-Z])', 'g'), '') })
   s = s.replace(/\\(?:quad|qquad|enspace|thinspace|medspace|thickspace)(?![a-zA-Z])/g, ' ')
+  s = normalizeUnicodeSuperscripts(s)
 
   return s
 }
