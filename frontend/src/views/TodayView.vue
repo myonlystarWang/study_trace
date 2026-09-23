@@ -78,11 +78,11 @@
           <div class="progress-copy">
             <div class="card-label-row">
               <span class="card-label">{{ totalCount > 0 && completionRate === 100 ? '今日目标已达成' : '今天的进度' }}</span>
-              <span v-if="totalCount > 0 && completionRate === 100" class="celebrate-badge">🎉 全部完成</span>
+              <!-- <span v-if="totalCount > 0 && completionRate === 100" class="celebrate-badge">🎉 全部完成</span> -->
             </div>
             <span class="progress-caption">
               <template v-if="totalCount === 0">还没有安排作业</template>
-              <template v-else-if="completionRate === 100">已完成全部 {{ completedCount }} 项作业，尽情享受轻松时光吧！</template>
+              <template v-else-if="completionRate === 100">已完成全部作业，尽情享受轻松时光吧！</template>
               <template v-else>已完成 {{ completedCount }} 项 · 还剩 {{ totalCount - completedCount }} 项待办</template>
             </span>
           </div>
@@ -232,15 +232,9 @@
               <button class="task-left" type="button" :aria-label="`查看${task.subject_name}作业详情`" @click="openTaskDetail(task)">
                 <SubjectBadge :name="task.subject_name" size="sm" />
                 <div class="task-details">
+                  <div class="task-subject-title">{{ task.subject_name }}</div>
                   <div class="task-content-text" :class="{ 'is-done': task.is_completed }">
                     {{ task.content }}
-                  </div>
-                  <div class="task-meta-row">
-                    <span class="task-meta-subject">{{ task.subject_name }}</span>
-                    <template v-if="task.target_score">
-                      <span class="task-meta-dot">·</span>
-                      <span class="task-meta-tag">目标 {{ task.target_score }}分</span>
-                    </template>
                   </div>
                 </div>
               </button>
@@ -1200,48 +1194,29 @@ onUnmounted(() => {
 .task-details {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   flex: 1;
   min-width: 0;
 }
 
-.task-content-text {
-  font-size: 13.5px;
+.task-subject-title {
+  font-size: var(--st-font-md);
   font-weight: 600;
   color: var(--st-text-primary);
+  line-height: 1.25;
+}
+
+.task-content-text {
+  font-size: var(--st-font-xs);
+  color: var(--st-text-secondary);
   line-height: 1.35;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: color 0.15s ease;
 }
 
 .task-content-text.is-done {
   color: var(--st-text-muted);
-  text-decoration: line-through;
-}
-
-.task-meta-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11.5px;
-  color: var(--st-text-secondary);
-  line-height: 1;
-}
-
-.task-meta-subject {
-  color: var(--st-text-secondary);
-  font-weight: 500;
-}
-
-.task-meta-dot {
-  color: var(--st-border-bold, #cbd5e1);
-}
-
-.task-meta-tag {
-  color: var(--st-primary, #3b82f6);
-  font-weight: 500;
 }
 
 .checkin-toggle-btn {
