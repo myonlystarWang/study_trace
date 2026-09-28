@@ -208,11 +208,11 @@
               :key="'rollover-' + item.id"
               class="hw-swipe-cell hw-swipe-cell--rollover"
             >
-              <!-- 卡片正面：iOS 规范三行排版，点击打开详情，右侧胶囊直接打卡 -->
+              <!-- 卡片正面：整张卡片点击直接打卡/撤销，左滑呼出详情与管理 -->
               <div
                 class="st-card hw-card-face"
                 :class="{ 'is-done': item.is_completed }"
-                @click="openDetail(item)"
+                @click="toggleComplete(item)"
               >
                 <!-- 学科徽标 -->
                 <SubjectBadge :name="item.subject_name" size="md" />
@@ -238,7 +238,6 @@
                 <div
                   class="hw-status-pill"
                   :class="{ 'is-done': item.is_completed }"
-                  @click.stop="toggleComplete(item)"
                   title="点击快捷打卡"
                 >
                   <div class="status-main">
@@ -251,9 +250,13 @@
                 </div>
               </div>
 
-              <!-- 左滑展开的抽屉操作按钮 (编辑 + 转错题 + 删除) -->
+              <!-- 左滑展开的抽屉操作按钮 (详情 + 编辑 + 转错题 + 删除) -->
               <template #right>
                 <div class="swipe-actions-box">
+                  <button class="swipe-action-btn btn-detail" @click.stop="openDetail(item)">
+                    <van-icon name="notes-o" size="15" />
+                    <span>详情</span>
+                  </button>
                   <button class="swipe-action-btn btn-edit" @click.stop="openEditModal(item)">
                     <van-icon name="edit" size="15" />
                     <span>编辑</span>
@@ -294,11 +297,11 @@
               :key="item.id"
               class="hw-swipe-cell"
             >
-              <!-- 卡片正面：iOS 规范三行排版，点击打开详情，右侧胶囊直接打卡 -->
+              <!-- 卡片正面：整张卡片点击直接打卡/撤销，左滑呼出详情与管理 -->
               <div
                 class="st-card hw-card-face"
                 :class="{ 'is-done': item.is_completed }"
-                @click="openDetail(item)"
+                @click="toggleComplete(item)"
               >
                 <!-- 学科徽标 -->
                 <SubjectBadge :name="item.subject_name" size="md" />
@@ -324,7 +327,6 @@
                 <div
                   class="hw-status-pill"
                   :class="{ 'is-done': item.is_completed }"
-                  @click.stop="toggleComplete(item)"
                   title="点击快捷打卡"
                 >
                   <div class="status-main">
@@ -337,9 +339,13 @@
                 </div>
               </div>
 
-              <!-- 左滑展开的抽屉操作按钮 (编辑 + 转错题 + 删除) -->
+              <!-- 左滑展开的抽屉操作按钮 (详情 + 编辑 + 转错题 + 删除) -->
               <template #right>
                 <div class="swipe-actions-box">
+                  <button class="swipe-action-btn btn-detail" @click.stop="openDetail(item)">
+                    <van-icon name="notes-o" size="15" />
+                    <span>详情</span>
+                  </button>
                   <button class="swipe-action-btn btn-edit" @click.stop="openEditModal(item)">
                     <van-icon name="edit" size="15" />
                     <span>编辑</span>
@@ -495,6 +501,7 @@ const selectedHomework = ref(null);
 const showDetailSheet = ref(false);
 const showDeletePin = ref(false);
 const pendingDeleteItem = ref(null);
+const taskToggling = ref(null);
 
 const openDetail = (item) => {
   selectedHomework.value = item;
@@ -760,6 +767,8 @@ const fetchHomework = async () => {
 };
 
 const toggleComplete = async (item) => {
+  if (taskToggling.value) return;
+  taskToggling.value = item.id;
   const targetStatus = !item.is_completed;
   item.justToggled = true;
   setTimeout(() => {
@@ -767,15 +776,20 @@ const toggleComplete = async (item) => {
   }, 250);
 
   try {
-    await homeworkApi.update(item.id, { is_completed: targetStatus });
+    await homeworkApi.update(item.id, {
+      is_completed: targetStatus,
+      content: item.content,
+      subject_id: item.subject_id
+    });
     item.is_completed = targetStatus;
     if (targetStatus) {
       item.completed_at = new Date().toISOString();
-      isAllDone.value = (completedCount.value + 1 >= totalCount.value && totalCount.value > 0);
-      showCelebrateModal.value = true;
+      completedCount.value += 1;
     } else {
       item.completed_at = null;
+      completedCount.value = Math.max(0, completedCount.value - 1);
     }
+    rate.value = totalCount.value > 0 ? Math.round((completedCount.value / totalCount.value) * 100) : 0;
 
     // 联动详情抽屉内部状态
     if (selectedHomework.value && selectedHomework.value.id === item.id) {
@@ -783,9 +797,28 @@ const toggleComplete = async (item) => {
       selectedHomework.value.completed_at = item.completed_at;
     }
 
+    // 轻量即时提示（无 Emoji，使用 Vant 原生矢量图标 passed / revoke）
+    if (targetStatus) {
+      const allDone = completedCount.value >= totalCount.value && totalCount.value > 0;
+      showToast({
+        message: allDone ? '今日作业已全部完成' : `${item.subject_name || '作业'}已打卡完成`,
+        icon: 'passed',
+        duration: 1500,
+      });
+    } else {
+      showToast({
+        message: `已撤销${item.subject_name || ''}作业打卡，恢复待办`,
+        icon: 'revoke',
+        duration: 1500,
+      });
+    }
+
     fetchHomework();
   } catch (e) {
-    showToast('更新失败');
+    showToast('更新状态失败，请重试');
+    item.is_completed = !targetStatus;
+  } finally {
+    taskToggling.value = null;
   }
 };
 
@@ -1388,7 +1421,7 @@ onUnmounted(() => window.removeEventListener('zhixueji:action', onGlobalAction))
   background: var(--st-bg-subtle);
   color: var(--st-text-secondary);
   flex-shrink: 0;
-  cursor: pointer;
+  pointer-events: none;
   transition: transform 0.15s ease;
   min-width: 58px;
 }
@@ -1404,10 +1437,6 @@ onUnmounted(() => window.removeEventListener('zhixueji:action', onGlobalAction))
   font-weight: 400;
   color: var(--st-text-muted);
   line-height: 1.1;
-}
-
-.hw-status-pill:active {
-  transform: scale(0.95);
 }
 
 .hw-status-pill.is-done {
@@ -1439,6 +1468,10 @@ onUnmounted(() => window.removeEventListener('zhixueji:action', onGlobalAction))
   font-size: var(--st-font-xs);
   font-weight: 500;
   cursor: pointer;
+}
+
+.swipe-action-btn.btn-detail {
+  background-color: var(--st-info, #0284c7);
 }
 
 .swipe-action-btn.btn-edit {
