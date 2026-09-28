@@ -31,6 +31,17 @@
             <span>月历</span>
           </button>
 
+          <!-- 打印当日清单：仅「今日作业」视图展示，锚定当前所选日期 -->
+          <button
+            v-if="subTab === 'today'"
+            class="calendar-pill-btn"
+            title="打印当日作业清单"
+            @click="goPrintList"
+          >
+            <van-icon name="printer" size="13" />
+            <span>打印</span>
+          </button>
+
           <button class="add-top-round-btn" @click="showAddModal = true" title="录入作业">
             <van-icon name="plus" size="15" />
           </button>
@@ -446,6 +457,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { showToast, showConfirmDialog } from 'vant';
 import { homeworkApi, settingsApi } from '../api';
 import QuickAddModal from '../components/QuickAddModal.vue';
@@ -456,6 +468,7 @@ import CheckinCelebrateModal from '../components/CheckinCelebrateModal.vue';
 import HomeworkDetailSheet from '../components/HomeworkDetailSheet.vue';
 import PinDeleteSheet from '../components/PinDeleteSheet.vue';
 
+const router = useRouter();
 const pomodoroRef = ref(null);
 const currentDate = ref(new Date().toISOString().split('T')[0]);
 const streak = ref(0);
@@ -662,6 +675,11 @@ const getSubjectTagClass = (name) => {
 const selectDay = (dateStr) => {
   currentDate.value = dateStr;
   fetchHomework();
+};
+
+// 跳转当日作业打印清单（A4 可打印视图，锚定当前所选日期）
+const goPrintList = () => {
+  router.push(`/homework/print?date=${currentDate.value}`);
 };
 
 const changeWeek = (offset) => {

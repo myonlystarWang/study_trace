@@ -4,6 +4,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 // 等较重模块仅在用户实际进入对应页面时下载，避免"今天"页为未访问功能付出启动成本。
 const TodayView = () => import('../views/TodayView.vue');
 const HomeworkView = () => import('../views/HomeworkView.vue');
+const HomeworkPrintView = () => import('../views/HomeworkPrintView.vue');
 const MistakeView = () => import('../views/MistakeView.vue');
 const SettingsView = () => import('../views/SettingsView.vue');
 const PaperCenterView = () => import('../views/PaperCenterView.vue');
@@ -22,6 +23,16 @@ const routes = [
     path: '/homework',
     name: 'homework',
     component: HomeworkView
+  },
+  {
+    // 当日作业打印清单：A4 可打印视图，纯前端 window.print() 出图/存 PDF
+    path: '/homework/print',
+    name: 'homework-print',
+    component: HomeworkPrintView,
+    meta: {
+      hideTabbar: true,
+      paperMode: true
+    }
   },
   {
     path: '/about',
