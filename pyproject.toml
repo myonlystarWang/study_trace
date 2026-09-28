@@ -18,6 +18,7 @@ dependencies = [
     "apscheduler>=3.10.4",
     "requests>=2.32.0",
     "httpx>=0.28.1",
+    "chinesecalendar>=1.11.0",
 ]
 
 [dependency-groups]

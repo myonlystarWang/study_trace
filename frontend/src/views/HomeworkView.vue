@@ -31,12 +31,12 @@
             <span>月历</span>
           </button>
 
-          <!-- 打印当日清单：仅「今日作业」视图展示，锚定当前所选日期 -->
+          <!-- 打印作业清单：仅「今日作业」视图展示，支持单日或多日合并打印 -->
           <button
             v-if="subTab === 'today'"
             class="calendar-pill-btn"
-            title="打印当日作业清单"
-            @click="goPrintList"
+            title="打印作业清单"
+            @click="showPrintModal = true"
           >
             <van-icon name="printer" size="13" />
             <span>打印</span>
@@ -436,6 +436,12 @@
     />
     <PinDeleteSheet v-model="showDeletePin" @verified="confirmPendingDelete" />
 
+    <!-- 作业打印模式与日期范围选择弹窗 -->
+    <HomeworkPrintSelectModal
+      v-model="showPrintModal"
+      :current-date="currentDate"
+    />
+
     <!-- 作业编辑弹窗 -->
     <van-dialog
       v-model:show="showEditModal"
@@ -473,6 +479,7 @@ import SubjectBadge from '../components/SubjectBadge.vue';
 import CheckinCelebrateModal from '../components/CheckinCelebrateModal.vue';
 import HomeworkDetailSheet from '../components/HomeworkDetailSheet.vue';
 import PinDeleteSheet from '../components/PinDeleteSheet.vue';
+import HomeworkPrintSelectModal from '../components/HomeworkPrintSelectModal.vue';
 
 const router = useRouter();
 const pomodoroRef = ref(null);
@@ -490,6 +497,7 @@ const showAddModal = ref(false);
 const showCalendar = ref(false);
 const showEditModal = ref(false);
 const showCelebrateModal = ref(false);
+const showPrintModal = ref(false);
 const isAllDone = ref(false);
 const editingItem = ref(null);
 const editContent = ref('');

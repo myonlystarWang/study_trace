@@ -11,6 +11,7 @@ from backend.app.schemas import (
     HomeworkItemCreate, HomeworkItemUpdate, HomeworkItemOut, MistakeRecordOut,
     MonthlyCalendarOut, CalendarDayStatus
 )
+from backend.app.utils.holidays import get_break_span, get_holiday_context, is_workday
 
 router = APIRouter(prefix="/api/homework", tags=["作业打卡"])
 
@@ -18,10 +19,11 @@ router = APIRouter(prefix="/api/homework", tags=["作业打卡"])
 def calculate_streak(student_id: int, db: Session) -> int:
     """
     实时聚合计算连续满打卡天数（Streak）：
-    - 平日（周一至周四）：当日所有作业完成计入 streak；
-    - 周末（周五至周日）：引入周末宽限期闭环。周五大作业持续顺延至周日晚；
-      若当前正值周六且周五作业存在，处于宽限期不中断 streak；
-      在周日晚前周五作业全部清零后，周五、周六、周日三天统一计为连续满卡。
+    - 工作日（含法定调休上班日）：当日所有作业完成计入 streak；
+    - 休息日（普通周末或国家法定长假）：引入连休宽限期闭环。
+      放假前最后一个工作日布置的大作业持续顺延至整个假期的最后一日晚；
+      若当前正值假期期间且放假前大作业存在，处于宽限期不中断 streak；
+      在假期结束前大作业全部清零后，假期各天统一计为连续满卡。
     """
     today = date.today()
 
@@ -33,37 +35,39 @@ def calculate_streak(student_id: int, db: Session) -> int:
             HomeworkItem.date == check_date
         ).all()
 
-        # 2. 周末宽限期处理
-        if check_date.weekday() in [5, 6]:  # 周六 (5) 或周日 (6)
-            days_to_fri = 1 if check_date.weekday() == 5 else 2
-            friday_date = check_date - timedelta(days=days_to_fri)
-            fri_items = db.query(HomeworkItem).filter(
+        # 2. 连休（周末或国家法定节假日长假）宽限期处理
+        break_span = get_break_span(check_date)
+        if break_span:
+            last_workday = break_span["last_workday"]
+            span_end = break_span["span_end"]
+            origin_items = db.query(HomeworkItem).filter(
                 HomeworkItem.student_id == student_id,
-                HomeworkItem.date == friday_date
+                HomeworkItem.date == last_workday
             ).all()
 
-            # 该日与上周五均无任何作业 —— 属于完全空白的周末休息日。
-            # 宽限期的本意是「周五作业顺延到周末完成」，若周五本身没有作业，
-            # 这个周末就不存在可闭环的任务，不能作为满卡日计入 streak，
-            # 否则连续打卡天数会在空周末凭空增加。
-            if not items and not fri_items:
+            # 该日与放假前最后一个工作日均无任何作业 —— 属于完全空白的休息日。
+            # 宽限期的本意是「放假前大作业顺延到假期完成」，若本身没有作业，
+            # 这个休息日就不存在可闭环的任务，不能作为满卡日计入 streak，
+            # 否则连续打卡天数会在空白假期凭空增加。
+            if not items and not origin_items:
                 return False
 
             own_completed = all(it.is_completed for it in items) if items else True
-            fri_completed = bool(fri_items and all(it.is_completed for it in fri_items))
+            origin_completed = bool(origin_items and all(it.is_completed for it in origin_items))
 
-            is_active_weekend = (today >= friday_date and today <= friday_date + timedelta(days=2))
+            is_active_break = (today >= last_workday and today <= span_end)
 
-            if is_active_weekend:
-                # 今天是周六：宽限期生效，只要周六自身任务完成，周五大作业允许继续推进
-                if check_date.weekday() == 5:
+            if is_active_break:
+                # 处于当前正在进行的假期宽限期内：
+                # 若今天尚未到达假期的最后一天，当天自身任务完成即可继续保持打卡状态，放假前大作业允许持续推进
+                if check_date < span_end:
                     return own_completed
-                # 今天是周日：看周五大作业和周日任务是否全数完成
-                elif check_date.weekday() == 6:
-                    return (fri_completed or not fri_items) and own_completed
+                else:
+                    # 假期的最后一天：看放假前大作业和该日任务是否全数闭环
+                    return (origin_completed or not origin_items) and own_completed
             else:
-                # 历史过往周末：周五大作业和周末自身任务必须最终全部完成
-                return (fri_completed or not fri_items) and own_completed
+                # 历史过往假期：放假前大作业和假期自身任务必须全部完成
+                return (origin_completed or not origin_items) and own_completed
 
         if not items:
             return False
@@ -96,14 +100,140 @@ def calculate_streak(student_id: int, db: Session) -> int:
     return streak
 
 
+@router.get("/holiday-info")
+def get_holiday_info_endpoint(
+    target_date: Optional[date] = Query(default=None, alias="date")
+):
+    """查询指定日期相关的节假日连休/长假信息（如国庆假、中秋假、周末连休）"""
+    d = target_date or date.today()
+    info = get_holiday_context(d)
+    return {
+        "date": str(info["date"]),
+        "is_workday": info["is_workday"],
+        "current_break": {
+            "span_start": str(info["current_break"]["span_start"]),
+            "span_end": str(info["current_break"]["span_end"]),
+            "last_workday": str(info["current_break"]["last_workday"]),
+            "holiday_name": info["current_break"]["holiday_name"],
+            "display_name": info["current_break"]["display_name"],
+            "days": info["current_break"]["days"],
+            "is_statutory": info["current_break"]["is_statutory"],
+        } if info["current_break"] else None,
+        "upcoming_break": {
+            "span_start": str(info["upcoming_break"]["span_start"]),
+            "span_end": str(info["upcoming_break"]["span_end"]),
+            "last_workday": str(info["upcoming_break"]["last_workday"]),
+            "holiday_name": info["upcoming_break"]["holiday_name"],
+            "display_name": info["upcoming_break"]["display_name"],
+            "days": info["upcoming_break"]["days"],
+            "is_statutory": info["upcoming_break"]["is_statutory"],
+        } if info["upcoming_break"] else None,
+    }
+
+
 @router.get("")
 def get_homework_list(
     target_date: Optional[date] = Query(default=None, alias="date"),
+    start_date: Optional[date] = Query(default=None),
+    end_date: Optional[date] = Query(default=None),
     scope: Optional[str] = Query(default=None, description="all | history | None"),
     student_id: int = 1,
     db: Session = Depends(get_db)
 ):
     streak = calculate_streak(student_id, db)
+
+    # 1. 多天区间合并查询（供长假期/多日作业合并打印与统计）
+    if start_date and end_date:
+        if start_date > end_date:
+            start_date, end_date = end_date, start_date
+
+        items = db.query(HomeworkItem).outerjoin(
+            Subject, HomeworkItem.subject_id == Subject.id
+        ).filter(
+            HomeworkItem.student_id == student_id,
+            HomeworkItem.date >= start_date,
+            HomeworkItem.date <= end_date
+        ).order_by(
+            HomeworkItem.date.asc(),
+            Subject.sort_order.asc(),
+            HomeworkItem.id.asc()
+        ).all()
+
+        # 检查 start_date 是否处于连休假期，若放假前最后一个工作日早于 start_date，自动将顺延大作业归入列表
+        rollover_items = []
+        break_span = get_break_span(start_date)
+        if break_span and break_span["last_workday"] < start_date:
+            last_workday = break_span["last_workday"]
+            rw_items = db.query(HomeworkItem).outerjoin(
+                Subject, HomeworkItem.subject_id == Subject.id
+            ).filter(
+                HomeworkItem.student_id == student_id,
+                HomeworkItem.date == last_workday
+            ).order_by(
+                Subject.sort_order.asc(),
+                HomeworkItem.id.asc()
+            ).all()
+            for it in rw_items:
+                rollover_items.append({
+                    "id": it.id,
+                    "student_id": it.student_id,
+                    "subject_id": it.subject_id,
+                    "subject_name": it.subject.name if it.subject else "",
+                    "date": str(it.date),
+                    "content": it.content,
+                    "is_completed": it.is_completed,
+                    "completed_at": it.completed_at.isoformat() if it.completed_at else None,
+                    "source_image_path": it.source_image_path,
+                    "created_at": it.created_at,
+                    "is_weekend_rollover": True,
+                    "rollover_label": f"{break_span['display_name']}顺延",
+                })
+
+        items_out = []
+        for item in items:
+            items_out.append({
+                "id": item.id,
+                "student_id": item.student_id,
+                "subject_id": item.subject_id,
+                "subject_name": item.subject.name if item.subject else "",
+                "date": str(item.date),
+                "content": item.content,
+                "is_completed": item.is_completed,
+                "completed_at": item.completed_at.isoformat() if item.completed_at else None,
+                "source_image_path": item.source_image_path,
+                "created_at": item.created_at,
+                "is_weekend_rollover": False,
+                "rollover_label": None,
+            })
+
+        total_items = rollover_items + items_out
+        total_count = len(total_items)
+        completed_count = sum(1 for it in total_items if it["is_completed"])
+        rate = int((completed_count / total_count) * 100) if total_count > 0 else 0
+
+        break_info = None
+        if break_span:
+            break_info = {
+                "holiday_name": break_span["holiday_name"],
+                "display_name": break_span["display_name"],
+                "span_start": str(break_span["span_start"]),
+                "span_end": str(break_span["span_end"]),
+                "days": break_span["days"],
+                "is_statutory": break_span["is_statutory"],
+            }
+
+        return {
+            "start_date": str(start_date),
+            "end_date": str(end_date),
+            "is_multi_day": True,
+            "total": total_count,
+            "completed": completed_count,
+            "rate": rate,
+            "streak": streak,
+            "items": items_out,
+            "rollover_items": rollover_items,
+            "break_info": break_info
+        }
 
     if scope == "all":
         # 获取全部未完成/待办作业（跨日期，按日期倒序与学科顺序排列）
@@ -125,13 +255,14 @@ def get_homework_list(
                 "student_id": item.student_id,
                 "subject_id": item.subject_id,
                 "subject_name": item.subject.name if item.subject else "",
-                "date": item.date,
+                "date": str(item.date),
                 "content": item.content,
                 "is_completed": item.is_completed,
                 "completed_at": item.completed_at.isoformat() if item.completed_at else None,
                 "source_image_path": item.source_image_path,
                 "created_at": item.created_at,
                 "is_weekend_rollover": False,
+                "rollover_label": None,
             })
         return {
             "date": date.today(),
@@ -165,13 +296,14 @@ def get_homework_list(
                 "student_id": item.student_id,
                 "subject_id": item.subject_id,
                 "subject_name": item.subject.name if item.subject else "",
-                "date": item.date,
+                "date": str(item.date),
                 "content": item.content,
                 "is_completed": item.is_completed,
                 "completed_at": item.completed_at.isoformat() if item.completed_at else None,
                 "source_image_path": item.source_image_path,
                 "created_at": item.created_at,
                 "is_weekend_rollover": False,
+                "rollover_label": None,
             })
         return {
             "date": date.today(),
@@ -209,60 +341,70 @@ def get_homework_list(
             "student_id": item.student_id,
             "subject_id": item.subject_id,
             "subject_name": item.subject.name if item.subject else "",
-            "date": item.date,
+            "date": str(item.date),
             "content": item.content,
             "is_completed": item.is_completed,
             "completed_at": item.completed_at.isoformat() if item.completed_at else None,
             "source_image_path": item.source_image_path,
             "created_at": item.created_at,
             "is_weekend_rollover": False,
+            "rollover_label": None,
         }
         items_out.append(item_dict)
 
-    # 周末跨天顺延透视：周六 (5) 或周日 (6) 自动透视对应周五的作业
+    # 跨天连休大作业顺延透视：周末或国家法定节假日长假期间，自动透视放假前最后一个工作日的大作业
     weekend_rollover = None
-    if query_date.weekday() in [5, 6]:
-        days_to_fri = 1 if query_date.weekday() == 5 else 2
-        friday_date = query_date - timedelta(days=days_to_fri)
-        friday_items = db.query(HomeworkItem).outerjoin(
+    break_span = get_break_span(query_date)
+    if break_span and break_span["last_workday"] < query_date:
+        origin_date = break_span["last_workday"]
+        origin_items = db.query(HomeworkItem).outerjoin(
             Subject, HomeworkItem.subject_id == Subject.id
         ).filter(
             HomeworkItem.student_id == student_id,
-            HomeworkItem.date == friday_date
+            HomeworkItem.date == origin_date
         ).order_by(
             Subject.sort_order.asc(),
             HomeworkItem.id.asc()
         ).all()
 
-        if friday_items:
-            fri_completed = sum(1 for it in friday_items if it.is_completed)
-            fri_total = len(friday_items)
-            fri_rate = int((fri_completed / fri_total) * 100) if fri_total > 0 else 0
-            fri_items_out = []
-            for it in friday_items:
-                fri_items_out.append({
+        if origin_items:
+            orig_completed = sum(1 for it in origin_items if it.is_completed)
+            orig_total = len(origin_items)
+            orig_rate = int((orig_completed / orig_total) * 100) if orig_total > 0 else 0
+            orig_items_out = []
+            for it in origin_items:
+                orig_items_out.append({
                     "id": it.id,
                     "student_id": it.student_id,
                     "subject_id": it.subject_id,
                     "subject_name": it.subject.name if it.subject else "",
-                    "date": it.date,
+                    "date": str(it.date),
                     "content": it.content,
                     "is_completed": it.is_completed,
                     "completed_at": it.completed_at.isoformat() if it.completed_at else None,
                     "source_image_path": it.source_image_path,
                     "created_at": it.created_at,
                     "is_weekend_rollover": True,
+                    "rollover_label": f"{break_span['display_name']}顺延",
                 })
 
             weekend_rollover = {
-                "source_date": str(friday_date),
-                "total": fri_total,
-                "completed": fri_completed,
-                "rate": fri_rate,
-                "items": fri_items_out
+                "source_date": str(origin_date),
+                "total": orig_total,
+                "completed": orig_completed,
+                "rate": orig_rate,
+                "items": orig_items_out,
+                "break_info": {
+                    "holiday_name": break_span["holiday_name"],
+                    "display_name": break_span["display_name"],
+                    "span_start": str(break_span["span_start"]),
+                    "span_end": str(break_span["span_end"]),
+                    "days": break_span["days"],
+                    "is_statutory": break_span["is_statutory"],
+                }
             }
 
-    # 如果存在周末顺延作业，则综合计算周末全局总数与完成率
+    # 如果存在顺延作业，则综合计算全局总数与完成率
     effective_total = total
     effective_completed = completed
     effective_rate = rate
@@ -280,8 +422,17 @@ def get_homework_list(
         "items": items_out,
         "today_total": total,
         "today_completed": completed,
-        "weekend_rollover": weekend_rollover
+        "weekend_rollover": weekend_rollover,
+        "break_info": {
+            "holiday_name": break_span["holiday_name"],
+            "display_name": break_span["display_name"],
+            "span_start": str(break_span["span_start"]),
+            "span_end": str(break_span["span_end"]),
+            "days": break_span["days"],
+            "is_statutory": break_span["is_statutory"],
+        } if break_span else None
     }
+
 
 
 @router.post("", response_model=HomeworkItemOut)

@@ -22,6 +22,7 @@ export const homeworkApi = {
     return api.get('/homework', { params });
   },
   getCalendar: (monthStr) => api.get('/homework/calendar', { params: { month: monthStr } }),
+  getHolidayInfo: (dateStr) => api.get('/homework/holiday-info', { params: { date: dateStr } }),
   create: (data) => api.post('/homework', data),
   update: (id, data) => api.put(`/homework/${id}`, data),
   delete: (id) => api.delete(`/homework/${id}`),
