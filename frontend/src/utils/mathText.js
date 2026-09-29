@@ -14,27 +14,38 @@
  */
 
 const SIMPLE_EXPR_RE = '[A-Za-z0-9]+(?:[+\\-*/][A-Za-z0-9]+)*'
+const BRACED_ARG = '\\{(?:[^{}]|\\{(?:[^{}]|\\{[^{}]*\\})*\\})*\\}'
+const BRACKET_ARG = '\\[[^\\[\\]]*\\]'
 const PAREN_BASE_RE = `[（(](?:[^{}()（）\\r\\n]|\\{[^{}]*\\})+[）)]`
+const BASE_RE = `(?:[0-9]+|[A-Za-z]+|${PAREN_BASE_RE})`
+const SCRIPT_ARG = `(?:${BRACED_ARG}|\\([^)]*\\)|[-+]?[A-Za-z0-9]+)`
 
 // 单个数学 token：
-//  1) 上标：优先匹配带底数的幂（支持字母连写与中英文括号底数，含括号内含分数/负数如 (-\frac{3}{2})^2、(cd)^2027）
-//  2) 已是 LaTeX 的命令：\frac{a}{b}、\sqrt{2}、\pi、\times …（命令后可跟一组花括号参数）
+//  1) 上下标：支持 a_{1}、a_1、m^2、x_1^2、(cd)^2027 等（含中英文括号底数）
+//  2) 已是 LaTeX 的命令：\frac{1}{1-a_{1}}、\sqrt[3]{2}、\pi^2、\times …（支持多层嵌套花括号与上下标）
 //  3) 斜杠分数：17/2（分子/分母各 1~3 位数字）
 const TOKEN_RE = new RegExp(
   [
-    `([0-9]+|[A-Za-z]+|${PAREN_BASE_RE})\\^\\s*(\\{[^{}]*\\}|\\([^)]*\\)|[-+]?[A-Za-z0-9]+)`, // 上标（优先匹配，避免被 \frac 拆碎）
-    '\\\\[a-zA-Z]+\\s*(?:\\{[^{}]*\\})*', // LaTeX 命令（可带花括号参数）
-    '([0-9]{1,3})/([0-9]{1,3})', // 斜杠分数（前面紧贴数字的情况在代码里排除，避免用 lookbehind 兼容旧 iOS Safari）
+    `(${BASE_RE})((?:\\s*[_^]\\s*${SCRIPT_ARG})+)`, // 1) 上下标（优先匹配）
+    `(\\\\[a-zA-Z]+(?:\\s*${BRACKET_ARG})*(?:\\s*${BRACED_ARG})*(?:\\s*[_^]\\s*${SCRIPT_ARG})*)`, // 2) LaTeX 命令（含嵌套花括号及上下标）
+    '([0-9]{1,3})/([0-9]{1,3})', // 3) 斜杠分数
   ].join('|'),
   'g',
 )
 
-// 手机键盘、OCR 与聊天复制常把指数写为 Unicode 上标；先归一为 ^，再走同一渲染链路。
+// 手机键盘、OCR 与聊天复制常把指数与下标写为 Unicode 字符；先归一，再走同一渲染链路。
 const UNICODE_SUPERSCRIPT_RE = new RegExp(`(${PAREN_BASE_RE}|[0-9A-Za-z]+)([⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻]+)`, 'g')
 const UNICODE_SUPERSCRIPT_MAP = {
   '⁰': '0', '¹': '1', '²': '2', '³': '3', '⁴': '4',
   '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9',
   '⁺': '+', '⁻': '-',
+}
+
+const UNICODE_SUBSCRIPT_RE = new RegExp(`(${PAREN_BASE_RE}|[0-9A-Za-z]+)([₀₁₂₃₄₅₆₇₈₉₊₋]+)`, 'g')
+const UNICODE_SUBSCRIPT_MAP = {
+  '₀': '0', '₁': '1', '₂': '2', '₃': '3', '₄': '4',
+  '₅': '5', '₆': '6', '₇': '7', '₈': '8', '₉': '9',
+  '₊': '+', '₋': '-',
 }
 
 // 分数黑名单：紧跟/前缀这些字样时视为日期、题号、比分等，不转分数
@@ -59,19 +70,36 @@ function isSafeFraction(num, den, raw, index, len) {
   return true
 }
 
-function toSuperscriptTex(base, expRaw) {
-  // x^2 → x^{2}；（cd）^2027 → (cd)^{2027}；x^(2n-1) → x^{2n-1}
-  let exp = expRaw.trim()
-  if (exp.startsWith('{') && exp.endsWith('}')) exp = exp.slice(1, -1)
-  if (exp.startsWith('(') && exp.endsWith(')')) exp = exp.slice(1, -1)
-  if (!new RegExp(`^${SIMPLE_EXPR_RE}$`).test(exp)) return null // 含其它符号则不转
-  return `${base.replace(/[（]/g, '(').replace(/[）]/g, ')')}^{${exp}}`
+function toScriptTex(base, scriptsRaw) {
+  // 分解每一个 _ 或 ^ 及其参数（支持 a_{1}、a_1、x^2、a_{1}^2 等）
+  const scriptItemRe = new RegExp(`([_^])\\s*(${BRACED_ARG}|\\([^)]*\\)|[-+]?[A-Za-z0-9]+)`, 'g')
+  let cleanBase = base.replace(/[（]/g, '(').replace(/[）]/g, ')')
+  let result = cleanBase
+  let match
+  let count = 0
+  while ((match = scriptItemRe.exec(scriptsRaw)) !== null) {
+    count++
+    const op = match[1] // '_' or '^'
+    let content = match[2].trim()
+    if (content.startsWith('{') && content.endsWith('}')) content = content.slice(1, -1)
+    if (content.startsWith('(') && content.endsWith(')')) content = content.slice(1, -1)
+    if (!new RegExp(`^${SIMPLE_EXPR_RE}$`).test(content)) return null
+    result += `${op}{${content}}`
+  }
+  return count > 0 ? result : null
 }
 
 function normalizeUnicodeSuperscripts(s) {
   return s.replace(UNICODE_SUPERSCRIPT_RE, (_, base, superscript) => {
     const exponent = [...superscript].map((ch) => UNICODE_SUPERSCRIPT_MAP[ch] || ch).join('')
     return `${base.replace(/[（]/g, '(').replace(/[）]/g, ')')}^${exponent}`
+  })
+}
+
+function normalizeUnicodeSubscripts(s) {
+  return s.replace(UNICODE_SUBSCRIPT_RE, (_, base, subscript) => {
+    const sub = [...subscript].map((ch) => UNICODE_SUBSCRIPT_MAP[ch] || ch).join('')
+    return `${base.replace(/[（]/g, '(').replace(/[）]/g, ')')}_{${sub}}`
   })
 }
 
@@ -105,6 +133,7 @@ export function normalizeMathSource(raw) {
   LAYOUT_CMDS.forEach((cmd) => { s = s.replace(new RegExp('\\\\' + cmd + '(?![a-zA-Z])', 'g'), '') })
   s = s.replace(/\\(?:quad|qquad|enspace|thinspace|medspace|thickspace)(?![a-zA-Z])/g, ' ')
   s = normalizeUnicodeSuperscripts(s)
+  s = normalizeUnicodeSubscripts(s)
 
   return s
 }
@@ -123,14 +152,14 @@ export function buildSegments(raw) {
   while ((m = TOKEN_RE.exec(source)) !== null) {
     let tex = null
     if (m[1] !== undefined) {
-      tex = toSuperscriptTex(m[1], m[2])
+      tex = toScriptTex(m[1], m[2])
       if (!tex) continue
-    } else if (m[0].startsWith('\\')) {
-      tex = m[0].replace(/\s+/, '') // \frac {17}{2} → \frac{17}{2}
     } else if (m[3] !== undefined) {
+      tex = m[3].replace(/\s+/, '') // \frac {17}{2} → \frac{17}{2}
+    } else if (m[4] !== undefined) {
       // 斜杠分数：过黑名单才转
-      if (!isSafeFraction(m[3], m[4], source, m.index, m[0].length)) continue
-      tex = `\\frac{${m[3]}}{${m[4]}}`
+      if (!isSafeFraction(m[4], m[5], source, m.index, m[0].length)) continue
+      tex = `\\frac{${m[4]}}{${m[5]}}`
     }
     if (!tex) continue
     if (m.index > last) out.push({ type: 'text', value: source.slice(last, m.index) })
@@ -149,6 +178,27 @@ function replaceCmd(s, name, ch) {
   return s.replace(new RegExp('\\\\' + name + '(?![a-zA-Z])', 'g'), ch)
 }
 
+function extractBracedArg(str, startIndex) {
+  let i = startIndex
+  while (i < str.length && /\s/.test(str[i])) i++
+  if (str[i] !== '{') return null
+  let depth = 0
+  const start = i + 1
+  for (; i < str.length; i++) {
+    if (str[i] === '{') depth++
+    else if (str[i] === '}') {
+      depth--
+      if (depth === 0) {
+        return {
+          content: str.slice(start, i),
+          nextIndex: i + 1,
+        }
+      }
+    }
+  }
+  return null
+}
+
 /**
  * KaTeX 渲染失败时的降级：把 LaTeX 转成「看得懂的中文数学写法」。
  *
@@ -158,9 +208,35 @@ function replaceCmd(s, name, ch) {
 export function texToReadable(tex) {
   let s = String(tex || '')
   s = s.replace(/\\begin\{[^}]*\}/g, '').replace(/\\end\{[^}]*\}/g, '')
-  s = s.replace(/\\(?:d|t|c)?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, '($1)/($2)')
-  s = s.replace(/\\sqrt\s*\{([^{}]*)\}/g, '√($1)')
+
+  // 循环提取嵌套 \frac
+  const fracRe = /\\(?:d|t|c)?frac/g
+  let fracMatch
+  while ((fracMatch = fracRe.exec(s)) !== null) {
+    const startPos = fracMatch.index
+    const arg1 = extractBracedArg(s, fracMatch.index + fracMatch[0].length)
+    if (!arg1) break
+    const arg2 = extractBracedArg(s, arg1.nextIndex)
+    if (!arg2) break
+    const readable = `(${texToReadable(arg1.content)})/(${texToReadable(arg2.content)})`
+    s = s.slice(0, startPos) + readable + s.slice(arg2.nextIndex)
+    fracRe.lastIndex = startPos + readable.length
+  }
+
+  // 循环提取 \sqrt
+  const sqrtRe = /\\sqrt/g
+  let sqrtMatch
+  while ((sqrtMatch = sqrtRe.exec(s)) !== null) {
+    const startPos = sqrtMatch.index
+    const arg = extractBracedArg(s, sqrtMatch.index + sqrtMatch[0].length)
+    if (!arg) break
+    const readable = `√(${texToReadable(arg.content)})`
+    s = s.slice(0, startPos) + readable + s.slice(arg.nextIndex)
+    sqrtRe.lastIndex = startPos + readable.length
+  }
+
   s = s.replace(/\^\{([^{}]*)\}/g, '^$1')
+  s = s.replace(/_\{([^{}]*)\}/g, '_$1')
   const sym = {
     times: '×', div: '÷', cdot: '·', pm: '±', mp: '∓',
     leq: '≤', le: '≤', geq: '≥', ge: '≥', neq: '≠', ne: '≠',

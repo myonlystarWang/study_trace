@@ -125,6 +125,25 @@ def _normalize_unicode_superscripts(text: str) -> str:
     return _UNICODE_SUPERSCRIPT_RE.sub(_replace, text)
 
 
+_UNICODE_SUBSCRIPT_RE = re.compile(
+    rf"({_PAREN_BASE_RE}|[A-Za-z0-9]+)([₀₁₂₃₄₅₆₇₈₉₊₋]+)"
+)
+_UNICODE_SUBSCRIPT_MAP = str.maketrans({
+    "₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4",
+    "₅": "5", "₆": "6", "₇": "7", "₈": "8", "₉": "9",
+    "₊": "+", "₋": "-",
+})
+
+
+def _normalize_unicode_subscripts(text: str) -> str:
+    """将 OCR 常见的 Unicode 下标统一为 _{...} 形式。"""
+    def _replace(match: re.Match) -> str:
+        base = match.group(1).replace("（", "(").replace("）", ")")
+        return f"{base}_{{{match.group(2).translate(_UNICODE_SUBSCRIPT_MAP)}}}"
+
+    return _UNICODE_SUBSCRIPT_RE.sub(_replace, text)
+
+
 def _strip_wrappers(text: str) -> str:
     """把 \\text{...} 这类「内容即正文」的包装剥掉，保留花括号内的内容。"""
     for cmd in _TEXT_WRAPPER_CMDS:
@@ -168,8 +187,9 @@ def normalize_math_text(text: str | None) -> str:
     for cmd in _SPACE_CMDS:
         out = re.sub(r"\\" + cmd + r"(?![a-zA-Z])", " ", out)
 
-    # 5.1) OCR / 手机输入的 Unicode 上标统一成 ^ 形式
+    # 5.1) OCR / 手机输入的 Unicode 上下标统一形式
     out = _normalize_unicode_superscripts(out)
+    out = _normalize_unicode_subscripts(out)
 
     # 6) 白名单之外的反斜杠命令：只丢反斜杠，命令名留作普通文字，避免裸「\」进入题干
     def _keep_or_strip(m: re.Match) -> str:
