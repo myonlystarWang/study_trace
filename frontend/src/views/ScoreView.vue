@@ -129,8 +129,26 @@
 
         <!-- 折线图 DOM -->
         <div ref="trendChartRef" class="echarts-container"></div>
-        <div v-if="trendItems.length === 1" class="chart-footnote">
-          <van-notice-bar left-icon="info-o" :scrollable="false" text="当前仅有 1 次考试数据，已作为独立参考点呈现，后续录入将自动生成连贯走势。" />
+        <div v-if="trendItems.length === 0" class="chart-empty-tip">
+          暂无该科目的考试记录
+        </div>
+      </div>
+
+      <!-- 排名走势图卡片 (班级排名 / 年级排名) -->
+      <div class="st-card chart-card">
+        <div class="chart-card-header">
+          <div class="card-title-group">
+            <span class="st-icon-badge st-icon-badge--warning">
+              <van-icon name="medal-o" />
+            </span>
+            <span class="section-title">排名走势</span>
+          </div>
+          <span class="card-sub">{{ selectedSubjectName }}{{ selectedSubjectId === null ? ' 总名次' : ' 单科名次' }}</span>
+        </div>
+
+        <div ref="rankChartRef" class="echarts-container"></div>
+        <div v-if="rankItemsMissing" class="chart-footnote">
+          <van-notice-bar left-icon="info-o" :scrollable="false" text="部分考试未公布排名，相关节点已断开连接，仅展示有数据的考试。" />
         </div>
         <div v-else-if="trendItems.length === 0" class="chart-empty-tip">
           暂无该科目的考试记录
@@ -251,13 +269,22 @@
                   class="sub-score-chip"
                   :class="{ 'chip-absent': s.is_absent }"
                 >
-                  <SubjectBadge :name="s.subject_name" size="sm" />
-                  <span class="chip-name">{{ s.subject_name }}</span>
-                  <span v-if="s.is_absent" class="chip-score absent-text">缺考</span>
-                  <span v-else class="chip-score">
-                    <b>{{ s.score }}</b>
-                    <small>/{{ s.full_score }}</small>
-                  </span>
+                  <div class="chip-main">
+                    <div class="chip-subject">
+                      <SubjectBadge :name="s.subject_name" size="xs" />
+                      <span class="chip-name">{{ s.subject_name }}</span>
+                    </div>
+                    <div v-if="s.is_absent" class="chip-score absent-text">缺考</div>
+                    <div v-else class="chip-score">
+                      <b>{{ s.score }}</b><small>/{{ s.full_score }}</small>
+                    </div>
+                  </div>
+                  <div
+                    v-if="!s.is_absent && (s.class_rank != null || s.grade_rank != null)"
+                    class="chip-rank"
+                  >
+                    班{{ s.class_rank != null ? s.class_rank : '—' }} · 年{{ s.grade_rank != null ? s.grade_rank : '—' }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -357,7 +384,7 @@
                 rows="3"
                 autosize
                 type="textarea"
-                placeholder="直接粘贴微信群或短信成绩通知，例如：&#10;“期中考试成绩：语文108/120 数学116/120 英语112/120 道法89 历史92 地理85 生物缺考，班排第5名，校排第28名”"
+                placeholder="直接粘贴微信群或短信成绩通知，例如：&#10;“语文88分，班级排名43，年级排名121&#10;数学97分，班级排名30，年级排名63&#10;总分380分，班级排名41，年级排名104”"
                 class="smart-parse-textarea"
               />
             </div>
@@ -474,6 +501,25 @@
                   class="full-input-field"
                 />
               </div>
+
+              <div class="sub-inputs-row sub-rank-row">
+                <van-field
+                  v-model.number="s.class_rank"
+                  type="digit"
+                  label="班级排名"
+                  placeholder="选填"
+                  :disabled="s.is_absent"
+                  class="rank-input-field"
+                />
+                <van-field
+                  v-model.number="s.grade_rank"
+                  type="digit"
+                  label="年级排名"
+                  placeholder="选填"
+                  :disabled="s.is_absent"
+                  class="rank-input-field"
+                />
+              </div>
             </div>
           </van-cell-group>
 
@@ -533,6 +579,16 @@ const selectedSubjectId = ref(null);
 const selectedSubjectName = ref('全科总分');
 const trendItems = ref([]);
 
+// 排名走势图状态
+const rankChartRef = ref(null);
+let rankChartInstance = null;
+const rankItemsMissing = computed(() => {
+  if (trendItems.value.length === 0) return false;
+  const anyRank = trendItems.value.some(i => i.class_rank != null || i.grade_rank != null);
+  const anyMissing = trendItems.value.some(i => i.class_rank == null || i.grade_rank == null);
+  return anyRank && anyMissing;
+});
+
 // 雷达图状态
 const radarChartRef = ref(null);
 let radarChartInstance = null;
@@ -566,14 +622,12 @@ const rawScoreText = ref('');
 
 const fillSampleText = () => {
   rawScoreText.value = `各位家长好，初一上学期期中考试成绩已出：
-语文：108/120
-数学：116/120
-英语：112/120
-道法：89/100
-历史：92/100
-地理：85/100
-生物：90/100
-班级排名：5，年级排名：28`;
+语文88分，班级排名43，年级排名121
+数学97分，班级排名30，年级排名63
+英语93分，班级排名41，年级排名116
+历史46分，班级排名44，年级排名124
+道德与法治56分，班级排名39，年级排名111
+总分380分，班级排名41，年级排名104`;
 };
 
 const handleParseAndFill = () => {
@@ -603,6 +657,8 @@ const handleParseAndFill = () => {
       targetItem.is_absent = !!ps.is_absent;
       targetItem.score = ps.score;
       if (ps.full_score) targetItem.full_score = ps.full_score;
+      targetItem.class_rank = ps.class_rank != null ? ps.class_rank : null;
+      targetItem.grade_rank = ps.grade_rank != null ? ps.grade_rank : null;
       fillCount++;
     }
   });
@@ -695,11 +751,13 @@ onUnmounted(() => {
   window.removeEventListener('zhixueji:action', onGlobalAction);
   if (trendChartInstance) trendChartInstance.dispose();
   if (radarChartInstance) radarChartInstance.dispose();
+  if (rankChartInstance) rankChartInstance.dispose();
 });
 
 const handleResize = () => {
   if (trendChartInstance) trendChartInstance.resize();
   if (radarChartInstance) radarChartInstance.resize();
+  if (rankChartInstance) rankChartInstance.resize();
 };
 
 // 数据加载
@@ -754,6 +812,7 @@ const fetchTrendData = async () => {
     const res = await examApi.getTrends(selectedSubjectId.value);
     trendItems.value = res.data?.items || [];
     renderTrendChart();
+    renderRankChart();
   } catch (err) {
     console.error('获取走势数据失败', err);
   }
@@ -844,6 +903,111 @@ const renderTrendChart = () => {
     };
 
     trendChartInstance.setOption(option, true);
+  });
+};
+
+// 排名走势图渲染（班级排名 + 年级排名双折线，y 轴反向：名次越低越靠上）
+const renderRankChart = () => {
+  nextTick(() => {
+    if (!rankChartRef.value) return;
+    if (!rankChartInstance) {
+      rankChartInstance = echarts.init(rankChartRef.value);
+    }
+
+    if (trendItems.value.length === 0) {
+      rankChartInstance.clear();
+      return;
+    }
+
+    const xDates = trendItems.value.map(i => `${i.exam_date}\n(${i.exam_type})`);
+    const classRanks = trendItems.value.map(i => (i.class_rank != null ? i.class_rank : null));
+    const gradeRanks = trendItems.value.map(i => (i.grade_rank != null ? i.grade_rank : null));
+
+    const option = {
+      tooltip: {
+        trigger: 'axis',
+        textStyle: { fontSize: 12 },
+        formatter: (params) => {
+          const item = trendItems.value[params[0].dataIndex];
+          const cr = item.class_rank != null ? `第 ${item.class_rank} 名` : '未公布';
+          const gr = item.grade_rank != null ? `第 ${item.grade_rank} 名` : '未公布';
+          return `<b>${item.title}</b><br/>日期：${item.exam_date}<br/>班级排名：${cr}<br/>年级排名：${gr}`;
+        }
+      },
+      legend: {
+        data: ['班级排名', '年级排名'],
+        top: 0,
+        textStyle: { fontSize: 12, color: '#475569' }
+      },
+      grid: {
+        top: 36,
+        right: 20,
+        bottom: 48,
+        left: 52
+      },
+      xAxis: {
+        type: 'category',
+        data: xDates,
+        axisLabel: {
+          fontSize: 12,
+          interval: 'auto',
+          color: '#64748b'
+        },
+        axisLine: { lineStyle: { color: '#e2e8f0' } }
+      },
+      yAxis: {
+        type: 'value',
+        name: '名次',
+        inverse: true,
+        min: 0,
+        axisLabel: {
+          formatter: '第{value}名',
+          fontSize: 12,
+          color: '#64748b'
+        },
+        splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } }
+      },
+      series: [
+        {
+          name: '班级排名',
+          type: 'line',
+          data: classRanks,
+          connectNulls: false,
+          smooth: true,
+          showSymbol: true,
+          symbolSize: 8,
+          itemStyle: { color: '#2563eb' },
+          lineStyle: { width: 3, color: '#2563eb' },
+          label: {
+            show: true,
+            position: 'top',
+            formatter: (p) => (p.value != null ? `班${p.value}` : ''),
+            fontSize: 11,
+            color: '#1e293b'
+          }
+        },
+        {
+          name: '年级排名',
+          type: 'line',
+          data: gradeRanks,
+          connectNulls: false,
+          smooth: true,
+          showSymbol: true,
+          symbolSize: 8,
+          itemStyle: { color: '#f59e0b' },
+          lineStyle: { width: 3, color: '#f59e0b' },
+          label: {
+            show: true,
+            position: 'bottom',
+            formatter: (p) => (p.value != null ? `年${p.value}` : ''),
+            fontSize: 11,
+            color: '#1e293b'
+          }
+        }
+      ]
+    };
+
+    rankChartInstance.setOption(option, true);
   });
 };
 
@@ -985,6 +1149,8 @@ const openCreateModal = () => {
     subject_name: sub.name,
     score: null,
     full_score: ['语文', '数学', '英语'].includes(sub.name) ? 120 : (sub.full_score || 100),
+    class_rank: null,
+    grade_rank: null,
     is_absent: false
   }));
 
@@ -1030,6 +1196,8 @@ const openEditModal = (exam) => {
       subject_name: sub.name,
       score: exist && !exist.is_absent ? exist.score : null,
       full_score: exist ? exist.full_score : (['语文', '数学', '英语'].includes(sub.name) ? 120 : 100),
+      class_rank: exist ? exist.class_rank : null,
+      grade_rank: exist ? exist.grade_rank : null,
       is_absent: exist ? !!exist.is_absent : false
     };
   });
@@ -1068,12 +1236,18 @@ const submitExamForm = async () => {
   try {
     const validScores = formData.value.scores
       .filter(s => s.is_absent || (s.score !== null && s.score !== '' && !isNaN(Number(s.score))))
-      .map(s => ({
-        subject_id: s.subject_id,
-        score: s.is_absent ? null : Number(s.score),
-        full_score: Number(s.full_score || 100),
-        is_absent: !!s.is_absent
-      }));
+      .map(s => {
+        const isAbs = !!s.is_absent;
+        const toRank = (v) => (!isAbs && v !== null && v !== '' && !isNaN(Number(v))) ? Number(v) : null;
+        return {
+          subject_id: s.subject_id,
+          score: isAbs ? null : Number(s.score),
+          full_score: Number(s.full_score || 100),
+          class_rank: toRank(s.class_rank),
+          grade_rank: toRank(s.grade_rank),
+          is_absent: isAbs
+        };
+      });
 
     if (validScores.length === 0) {
       showToast('请至少录入一门科目的成绩或缺考状态');
@@ -1650,39 +1824,72 @@ const onGlobalAction = (event) => {
 
 .subject-chips-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
 }
 
 .sub-score-chip {
   background: var(--st-bg-subtle);
   border-radius: var(--st-radius-sm);
-  padding: 4px var(--st-space-2);
+  padding: 6px 8px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: var(--st-font-xs);
+  flex-direction: column;
+  gap: 2px;
 }
 
 .sub-score-chip.chip-absent {
   background: #fef2f2;
 }
 
+.chip-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.chip-subject {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
 .chip-name {
   color: var(--st-text-secondary);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chip-score {
   color: var(--st-text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.2;
 }
 
 .chip-score small {
   color: var(--st-text-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.chip-rank {
+  color: var(--st-text-muted);
+  font-size: 11px;
+  line-height: 1.2;
+  padding-left: 25px;
+  white-space: nowrap;
 }
 
 .absent-text {
   color: #ef4444;
   font-weight: 500;
+  font-size: 13px;
 }
 
 .empty-ledger-box {
