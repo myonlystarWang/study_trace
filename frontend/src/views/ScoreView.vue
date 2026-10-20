@@ -557,11 +557,16 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { showToast, showConfirmDialog } from 'vant';
 import { examApi, settingsApi } from '../api';
 import echarts from '../utils/echarts';
 import { parseScoreText } from '../utils/scoreParser';
+import { consumeActionQuery } from '../utils/routeAction';
 import SubjectBadge from '../components/SubjectBadge.vue';
+
+const router = useRouter();
+const route = useRoute();
 
 // 页面基础状态
 const examList = ref([]);
@@ -743,7 +748,11 @@ onMounted(async () => {
 
   window.addEventListener('resize', handleResize);
   window.addEventListener('zhixueji:action', onGlobalAction);
-  if (new URLSearchParams(window.location.search).get('action') === 'add') openCreateModal();
+  if (route.query.action === 'add') {
+    openCreateModal();
+    // 弹窗已打开，action 用完即摘，避免刷新页面重复弹窗
+    consumeActionQuery(router, route);
+  }
 });
 
 onUnmounted(() => {

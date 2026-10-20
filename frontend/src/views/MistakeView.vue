@@ -4,7 +4,15 @@
     <header class="mistake-fixed-header">
       <van-nav-bar
         :title="isBatchMode ? `批量管理 (已选 ${selectedIds.length}/${mistakes.length} 项)` : '错题复习本'"
-      />
+      >
+        <!-- 错题页唯一的录入入口：今日复习 / 错题总库两个标签下都在，随手可补录一题 -->
+        <template #right>
+          <button v-if="!isBatchMode" type="button" class="nav-add-btn" @click="startAddSession">
+            <van-icon name="plus" size="15" />
+            <span>录入</span>
+          </button>
+        </template>
+      </van-nav-bar>
 
       <div class="mistake-fixed-inner">
         <!-- 顶部主标签页切换 -->
@@ -322,37 +330,6 @@
           @click="handleBatchDelete"
         >
           批量删除 ({{ selectedIds.length }})
-        </van-button>
-      </div>
-    </div>
-
-    <!-- 常规模式：底部三合一操作栏 [+ 录入新错题] [批量管理] [周末组卷] -->
-    <div class="floating-bottom-bar st-frosted-bar" v-else-if="false">
-      <div class="mistake-bottom-actions">
-        <van-button
-          type="primary"
-          round
-          icon="plus"
-          class="action-btn-primary st-action-btn st-action-btn--primary"
-          @click="showAddModal = true"
-        >
-          录入新错题
-        </van-button>
-        <van-button
-          round
-          icon="apps-o"
-          class="action-btn-secondary st-action-btn st-action-btn--secondary"
-          @click="toggleBatchMode"
-        >
-          批量管理
-        </van-button>
-        <van-button
-          round
-          icon="notes-o"
-          class="action-btn-secondary action-btn-paper st-action-btn st-action-btn--accent"
-          @click="router.push('/paper')"
-        >
-          组卷
         </van-button>
       </div>
     </div>
@@ -724,6 +701,7 @@ import ImageCropper from '../components/ImageCropper.vue';
 import MathText from '../components/MathText.vue';
 import SubjectBadge from '../components/SubjectBadge.vue';
 import PinDeleteSheet from '../components/PinDeleteSheet.vue';
+import { consumeActionQuery } from '../utils/routeAction';
 
 const router = useRouter();
 const route = useRoute();
@@ -859,6 +837,8 @@ const performBatchDelete = () => {
 };
 
 const showAddModal = ref(false);
+// 本轮连续录入已保存的题数：用于「已录入 N 道错题」的提示与继续录入判断
+const sessionAddedCount = ref(0);
 const showDeletePin = ref(false);
 const pendingDelete = ref(null);
 const submitting = ref(false);
@@ -1562,9 +1542,11 @@ const submitAddMistake = async () => {
       thumbnail_path: newMistake.value.thumbnail_path,
       cropped_diagram_path: newMistake.value.cropped_diagram_path
     });
-    showToast({ message: '错题录入成功！', icon: 'success' });
+    sessionAddedCount.value += 1;
+    // 先关抽屉清空表单，再问「要不要继续」：选继续时拿到的就是一张干净的新表单
     closeAddModal();
     fetchMistakes();
+    promptContinueAdd();
   } catch (e) {
     const msg = e.response?.data?.detail || '错题录入失败，请检查填写内容';
     showToast(msg);
@@ -1599,6 +1581,38 @@ const closeAddModal = () => {
   };
 };
 
+/**
+ * 从页面入口打开录入抽屉。
+ * closeAddModal 先清掉上一次的残留（图片、轮询、裁剪态）并归零本轮计数，
+ * 保证每次从入口进来都是「第 1 题」的干净状态。
+ */
+const startAddSession = () => {
+  closeAddModal();
+  sessionAddedCount.value = 0;
+  showAddModal.value = true;
+};
+
+/**
+ * 保存成功后不直接甩回列表，而是给一次「继续录入 / 完成」的选择：
+ * 错题页此前没有任何 + 号，录完一题想再录一题只能重找入口。
+ * 表单在保存时已由 closeAddModal 清空，选继续直接开新的一题。
+ */
+const promptContinueAdd = async () => {
+  const count = sessionAddedCount.value;
+  try {
+    await showConfirmDialog({
+      title: `已录入 ${count} 道错题`,
+      message: '继续录入下一题吗？',
+      confirmButtonText: '继续录入',
+      cancelButtonText: '完成'
+    });
+    showAddModal.value = true;
+  } catch (e) {
+    // 选择「完成」→ 保持抽屉关闭，计数归零，下次从入口重新开始
+    sessionAddedCount.value = 0;
+  }
+};
+
 const previewImage = (url) => {
   if (url) {
     previewUrl.value = url;
@@ -1631,7 +1645,7 @@ const confirmPendingDelete = () => {
 };
 
 const onGlobalAction = (event) => {
-  if (event.detail === 'mistake') showAddModal.value = true;
+  if (event.detail === 'mistake') startAddSession();
 };
 
 onMounted(async () => {
@@ -1639,7 +1653,9 @@ onMounted(async () => {
     activeTab.value = route.query.tab;
   }
   if (route.query.action === 'add') {
-    showAddModal.value = true;
+    startAddSession();
+    // 抽屉已打开，action 用完即摘，否则刷新页面会再弹一次
+    consumeActionQuery(router, route);
   }
   await fetchSubjects();
   await fetchMistakes();
@@ -1672,6 +1688,25 @@ onBeforeUnmount(() => {
   background-color: var(--st-bg-page);
   z-index: 10;
   border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+/* 导航栏右上角「+ 录入」：错题页唯一的录入入口，只在常规模式出现 */
+.nav-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  padding: 6px 2px;
+  color: var(--st-primary);
+  font-size: var(--st-font-sm);
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.nav-add-btn:active {
+  opacity: 0.65;
 }
 
 .mistake-fixed-inner {

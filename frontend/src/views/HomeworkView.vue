@@ -469,7 +469,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { showToast, showConfirmDialog } from 'vant';
 import { homeworkApi, settingsApi } from '../api';
 import QuickAddModal from '../components/QuickAddModal.vue';
@@ -480,8 +480,10 @@ import CheckinCelebrateModal from '../components/CheckinCelebrateModal.vue';
 import HomeworkDetailSheet from '../components/HomeworkDetailSheet.vue';
 import PinDeleteSheet from '../components/PinDeleteSheet.vue';
 import HomeworkPrintSelectModal from '../components/HomeworkPrintSelectModal.vue';
+import { consumeActionQuery } from '../utils/routeAction';
 
 const router = useRouter();
+const route = useRoute();
 const pomodoroRef = ref(null);
 const currentDate = ref(new Date().toISOString().split('T')[0]);
 const streak = ref(0);
@@ -897,7 +899,11 @@ onMounted(async () => {
   await fetchSubjects();
   await fetchHomework();
   await fetchWeekStatus();
-  if (new URLSearchParams(window.location.search).get('action') === 'add') showAddModal.value = true;
+  if (route.query.action === 'add') {
+    showAddModal.value = true;
+    // 弹窗一旦打开，action 就失效：留在 URL 上会让刷新页面重复弹窗
+    consumeActionQuery(router, route);
+  }
   window.addEventListener('zhixueji:action', onGlobalAction);
 });
 

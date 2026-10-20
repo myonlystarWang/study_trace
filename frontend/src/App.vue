@@ -31,6 +31,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import GlobalActionSheet from './components/GlobalActionSheet.vue';
+import { consumeActionQuery } from './utils/routeAction';
 
 const router = useRouter();
 const route = useRoute();
@@ -58,10 +59,10 @@ onUnmounted(() => {
   }
   document.documentElement.style.setProperty('--st-keyboard-inset', '0px');
 });
-// 单题复习是一个明确的专注场景，悬浮录入入口会抢占底部的主操作。
-// 错题总库与其他页面仍保留全局快速操作。
+// 错题页自带「+ 录入」入口（导航栏右上角），不再叠加全局悬浮 + ，
+// 避免同一屏出现两个录入按钮、也避免压住复习的主操作。
 const showGlobalAdd = computed(() =>
-  !route.meta?.hideTabbar && !(route.name === 'mistakes' && route.query.tab !== 'all')
+  !route.meta?.hideTabbar && route.name !== 'mistakes'
 );
 
 const handleAction = async (action) => {
@@ -74,6 +75,9 @@ const handleAction = async (action) => {
   };
   await router.push(targets[action]);
   window.dispatchEvent(new CustomEvent('zhixueji:action', { detail: action }));
+  // 动作已经下发给页面，立刻把 action 从地址栏摘掉：
+  // 否则用户刷新页面时 onMounted 会重新读一次，弹窗又冒出来。
+  consumeActionQuery(router, route);
 };
 </script>
 
