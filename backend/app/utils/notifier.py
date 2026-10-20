@@ -107,7 +107,7 @@ async def send_wechat_sandbox(
     open_ids: str,
     title: str,
     content: str,
-    url: str = "https://study.raddishlab.tech"
+    url: str = "https://study.raddishlab.com"
 ) -> Tuple[bool, str]:
     """
     微信公众平台接口测试号 (Sandbox 官方直推通道)

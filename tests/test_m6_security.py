@@ -11,7 +11,7 @@ def test_m6_ports_and_origins_config():
     """验证 M6 决议：端口配置为 28000 (prod) / 28001 (dev)，CORS 收紧包含正式域名"""
     assert settings.PORT == 28000
     assert settings.DEV_PORT == 28001
-    assert "https://study.raddishlab.tech" in settings.ALLOWED_ORIGINS
+    assert "https://study.raddishlab.com" in settings.ALLOWED_ORIGINS
     assert "http://127.0.0.1:28000" in settings.ALLOWED_ORIGINS
     assert "http://127.0.0.1:28001" in settings.ALLOWED_ORIGINS
     assert settings.SECRET_KEY != ""

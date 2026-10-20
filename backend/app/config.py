@@ -72,6 +72,7 @@ class Settings(BaseSettings):
 
     # CORS 域名白名单（收紧生产暴露面）
     ALLOWED_ORIGINS: list[str] = [
+        "https://study.raddishlab.com",
         "https://study.raddishlab.tech",
         "http://127.0.0.1:28000",
         "http://localhost:28000",

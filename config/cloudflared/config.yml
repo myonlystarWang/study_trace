@@ -5,6 +5,6 @@ credentials-file: D:\工作\ww\personal_work\study_trace\config\cloudflared\b0a8
 protocol: http2
 
 ingress:
-  - hostname: study.raddishlab.tech
+  - hostname: study.raddishlab.com
     service: http://127.0.0.1:28000
   - service: http_status:404
