@@ -498,8 +498,19 @@ strong {
   margin-right: auto !important;
   width: 100% !important;
   bottom: var(--st-keyboard-inset) !important;
+  /* 软键盘弹起时弹层整体上移，高度必须同步扣掉键盘高度。
+     安卓 Chrome 下 fixed 元素的百分比 max-height 按布局视口计算（不含键盘），
+     只上移不缩高会让弹层顶部被挤出屏幕上方，用户连输入框都滚不到。 */
+  max-height: calc(100vh - var(--st-keyboard-inset, 0px) - 16px);
   box-shadow: 0 -8px 30px rgba(15, 23, 42, 0.15) !important;
-  transition: bottom 0.15s ease;
+  transition: bottom 0.15s ease, max-height 0.15s ease;
+}
+
+@supports (height: 100dvh) {
+  .van-popup--bottom.bottom-sheet-modal,
+  .bottom-sheet-modal {
+    max-height: calc(100dvh - var(--st-keyboard-inset, 0px) - 16px);
+  }
 }
 
 /* 8. 大厂移动端规范：底部常驻悬浮栏与统一按钮胶囊系统 (Unified Action System) */

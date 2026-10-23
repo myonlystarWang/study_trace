@@ -340,7 +340,6 @@
       position="bottom"
       round
       class="bottom-sheet-modal"
-      :style="{ maxHeight: '85%' }"
     >
       <div class="add-modal-body">
         <div class="sheet-grabber"></div>
@@ -503,7 +502,6 @@
       position="bottom"
       round
       class="bottom-sheet-modal"
-      :style="{ maxHeight: '85%' }"
     >
       <div class="add-modal-body" v-if="editingMistake">
         <div class="sheet-grabber"></div>
@@ -2635,6 +2633,8 @@ onBeforeUnmount(() => {
   display: flex;
   gap: var(--st-space-4);
   margin-top: var(--st-space-5);
-  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--st-keyboard-inset));
+  /* 弹层已整体上移到键盘上沿，这里只补 iPhone 底部安全区；
+     再叠加 --st-keyboard-inset 会双重补偿，把内容挤出可视区。 */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 </style>

@@ -37,15 +37,83 @@ const router = useRouter();
 const route = useRoute();
 const showActions = ref(false);
 let visualViewport = null;
+let lastInset = -1;
+let insetRaf = 0;
+
+const applyKeyboardInset = () => {
+  if (!visualViewport) return;
+  const raw = window.innerHeight - visualViewport.height - visualViewport.offsetTop;
+  const inset = Math.max(0, Math.round(raw));
+  // 键盘动画期间 scroll/resize 会高频触发，变化小于 2px 时不动 DOM，避免弹层来回抖。
+  if (Math.abs(inset - lastInset) < 2) return;
+  lastInset = inset;
+  document.documentElement.style.setProperty('--st-keyboard-inset', `${inset}px`);
+  // 键盘高度落定后弹层才真正缩高（还带 0.15s 过渡），前后各校正一次，别等 focusin 的定时器轮空。
+  [80, 260].forEach((ms) => window.setTimeout(ensureActiveElementVisible, ms));
+};
 
 const syncKeyboardInset = () => {
-  if (!visualViewport) return;
-  const inset = Math.max(0, window.innerHeight - visualViewport.height - visualViewport.offsetTop);
-  document.documentElement.style.setProperty('--st-keyboard-inset', `${inset}px`);
+  if (insetRaf) return;
+  insetRaf = requestAnimationFrame(() => {
+    insetRaf = 0;
+    applyKeyboardInset();
+  });
+};
+
+/**
+ * 焦点元素是否被软键盘/滚动容器挡住，挡住就滚回来。
+ * 安卓 Chrome 键盘弹起时布局视口不变（fixed 弹层仍按整屏算），
+ * 弹层内的输入框很容易落在键盘下方，浏览器自己不会帮忙滚。
+ */
+const FOCUSABLE_TAGS = /^(INPUT|TEXTAREA|SELECT)$/;
+
+const findScrollableAncestor = (el) => {
+  let node = el.parentElement;
+  while (node && node !== document.body && node !== document.documentElement) {
+    const style = getComputedStyle(node);
+    if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
+};
+
+const ensureActiveElementVisible = () => {
+  const el = document.activeElement;
+  if (!el || !FOCUSABLE_TAGS.test(el.tagName)) return;
+  if (el.getBoundingClientRect().height === 0) return; // 已随弹层关闭而隐藏
+
+  const vv = window.visualViewport;
+  const viewTop = vv ? vv.offsetTop : 0;
+  const viewBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+  const scroller = findScrollableAncestor(el);
+  const scrollerRect = scroller ? scroller.getBoundingClientRect() : null;
+
+  const topLimit = Math.max(viewTop, scrollerRect ? scrollerRect.top : 0);
+  const bottomLimit = Math.min(viewBottom, scrollerRect ? scrollerRect.bottom : viewBottom);
+  const margin = 20;
+  const rect = el.getBoundingClientRect();
+
+  let delta = 0;
+  if (rect.bottom > bottomLimit - margin) delta = rect.bottom - (bottomLimit - margin);
+  else if (rect.top < topLimit + margin) delta = rect.top - (topLimit + margin);
+  if (!delta) return;
+
+  const target = scroller || window;
+  if (target.scrollBy) target.scrollBy({ top: delta, behavior: 'smooth' });
+};
+
+const onFocusIn = (event) => {
+  const el = event.target;
+  if (!el || !FOCUSABLE_TAGS.test(el.tagName)) return;
+  // 键盘弹起动画 + 弹层 max-height 收缩需要时间，分三次校正，谁生效算谁的。
+  [120, 320, 560].forEach((ms) => window.setTimeout(ensureActiveElementVisible, ms));
 };
 
 onMounted(() => {
   visualViewport = window.visualViewport;
+  document.addEventListener('focusin', onFocusIn);
   if (!visualViewport) return;
   syncKeyboardInset();
   visualViewport.addEventListener('resize', syncKeyboardInset);
@@ -53,6 +121,8 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  document.removeEventListener('focusin', onFocusIn);
+  if (insetRaf) cancelAnimationFrame(insetRaf);
   if (visualViewport) {
     visualViewport.removeEventListener('resize', syncKeyboardInset);
     visualViewport.removeEventListener('scroll', syncKeyboardInset);

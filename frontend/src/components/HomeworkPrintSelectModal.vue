@@ -4,7 +4,6 @@
     position="bottom"
     round
     class="bottom-sheet-modal hw-print-select-popup"
-    :style="{ maxHeight: '85%' }"
     @update:show="$emit('update:modelValue', $event)"
   >
     <div class="print-select-container">

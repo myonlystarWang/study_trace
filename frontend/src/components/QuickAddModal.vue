@@ -4,7 +4,6 @@
     position="bottom"
     round
     class="bottom-sheet-modal"
-    :style="{ maxHeight: '88%' }"
     @update:show="(v) => emit('update:show', v)"
   >
     <div class="quick-add">
@@ -517,7 +516,7 @@ const handleSubmit = () => {
 
 <style scoped>
 .quick-add {
-  padding: var(--st-space-3) var(--st-space-5) calc(var(--st-space-6) + max(env(safe-area-inset-bottom, 0px), var(--st-keyboard-inset)));
+  padding: var(--st-space-3) var(--st-space-5) calc(var(--st-space-6) + env(safe-area-inset-bottom, 0px));
 }
 
 .sheet-grabber {
