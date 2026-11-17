@@ -2428,4 +2428,127 @@ onUnmounted(() => {
   margin-top: var(--st-space-4);
   text-align: center;
 }
+
+/* 电脑端响应式增强 (>= 768px) */
+@media (min-width: 768px) {
+  .settings-view .van-nav-bar {
+    display: none !important;
+  }
+
+  .settings-container {
+    max-width: 1100px !important;
+    margin: 0 auto !important;
+    padding: var(--st-space-5) 0 40px !important;
+    display: grid !important;
+    grid-template-columns: 290px 1fr !important;
+    gap: var(--st-space-5) !important;
+    align-items: start !important;
+  }
+
+  /* 左侧：档案名片卡 */
+  .user-profile-card {
+    margin-bottom: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 24px 20px !important;
+    background: #ffffff !important;
+    border: 1px solid var(--st-border) !important;
+  }
+
+  .user-profile-main {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    padding-bottom: 20px !important;
+    border-bottom: 1px solid var(--st-border) !important;
+  }
+
+  .user-avatar-wrap {
+    width: 68px !important;
+    height: 68px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .user-name-row {
+    justify-content: center !important;
+    margin-bottom: 6px !important;
+  }
+
+  .user-motto {
+    font-size: 12px !important;
+    color: var(--st-text-muted) !important;
+  }
+
+  .user-nav-cells {
+    margin-top: 16px !important;
+  }
+
+  .user-nav-item {
+    border-radius: var(--st-radius-md) !important;
+    padding: 10px 12px !important;
+    background: var(--st-bg-subtle) !important;
+  }
+
+  /* 右侧面板：未解锁时 */
+  .pin-gate-card {
+    margin: 0 !important;
+    max-width: 100% !important;
+    padding: 56px 40px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    min-height: 380px !important;
+    justify-content: center !important;
+    background: #ffffff !important;
+    border: 1px solid var(--st-border) !important;
+  }
+
+  .gate-icon-circle {
+    width: 64px !important;
+    height: 64px !important;
+    border-radius: 50% !important;
+    background: #fef3c7 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-bottom: 16px !important;
+  }
+
+  .pin-gate-card h3 {
+    font-size: 20px !important;
+    font-weight: 600 !important;
+    margin: 0 0 8px !important;
+  }
+
+  .gate-tip {
+    max-width: 440px !important;
+    margin: 0 0 24px !important;
+    font-size: 13px !important;
+    line-height: 1.6 !important;
+    color: var(--st-text-muted) !important;
+  }
+
+  .pin-field {
+    max-width: 320px !important;
+    border: 1px solid var(--st-border-bold, #cbd5e1) !important;
+    border-radius: var(--st-radius-md) !important;
+    margin-bottom: 16px !important;
+    padding: 8px 12px !important;
+  }
+
+  .pin-unlock-btn {
+    max-width: 320px !important;
+    height: 42px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+  }
+
+  /* 右侧面板：解锁后 */
+  .unlocked-content {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--st-space-4) !important;
+  }
+}
 </style>

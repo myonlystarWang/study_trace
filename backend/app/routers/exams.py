@@ -399,7 +399,13 @@ def get_exam_radar(
             absent_subjects.append(sub_name)
         else:
             rate = _calc_rate(s.score, s.full_score) or 0.0
-            indicators.append(RadarIndicatorOut(subject_id=s.subject_id, name=sub_name, max=100.0))
+            indicators.append(RadarIndicatorOut(
+                subject_id=s.subject_id,
+                name=sub_name,
+                max=100.0,
+                score=s.score,
+                full_score=s.full_score
+            ))
             values.append(rate)
 
     msg = None

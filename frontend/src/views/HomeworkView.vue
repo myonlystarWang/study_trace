@@ -234,6 +234,25 @@
                   </div>
                 </div>
 
+                <!-- 桌面端直出操作栏 -->
+                <div class="hw-desktop-actions">
+                  <button type="button" class="hw-desk-btn" title="查看详情" @click.stop="openDetail(item)">
+                    <van-icon name="notes-o" size="13" />
+                    <span>详情</span>
+                  </button>
+                  <button type="button" class="hw-desk-btn" title="编辑作业" @click.stop="openEditModal(item)">
+                    <van-icon name="edit" size="13" />
+                    <span>编辑</span>
+                  </button>
+                  <button type="button" class="hw-desk-btn hw-desk-btn--mistake" title="转录为错题" @click.stop="handleToMistake(item)">
+                    <van-icon name="plus" size="13" />
+                    <span>转错题</span>
+                  </button>
+                  <button type="button" class="hw-desk-btn hw-desk-btn--del" title="删除作业" @click.stop="handleDelete(item)">
+                    <van-icon name="delete-o" size="13" />
+                  </button>
+                </div>
+
                 <!-- 状态指示胶囊 -->
                 <div
                   class="hw-status-pill"
@@ -321,6 +340,25 @@
                       布置时间: {{ formatSimpleTime(item.created_at || item.date) }}
                     </span>
                   </div>
+                </div>
+
+                <!-- 桌面端直出操作栏 -->
+                <div class="hw-desktop-actions">
+                  <button type="button" class="hw-desk-btn" title="查看详情" @click.stop="openDetail(item)">
+                    <van-icon name="notes-o" size="13" />
+                    <span>详情</span>
+                  </button>
+                  <button type="button" class="hw-desk-btn" title="编辑作业" @click.stop="openEditModal(item)">
+                    <van-icon name="edit" size="13" />
+                    <span>编辑</span>
+                  </button>
+                  <button type="button" class="hw-desk-btn hw-desk-btn--mistake" title="转录为错题" @click.stop="handleToMistake(item)">
+                    <van-icon name="plus" size="13" />
+                    <span>转错题</span>
+                  </button>
+                  <button type="button" class="hw-desk-btn hw-desk-btn--del" title="删除作业" @click.stop="handleDelete(item)">
+                    <van-icon name="delete-o" size="13" />
+                  </button>
                 </div>
 
                 <!-- 状态指示胶囊 -->
@@ -535,6 +573,7 @@ const formatSimpleTime = (t) => {
 
 const switchSubTab = (tab) => {
   subTab.value = tab;
+  router.replace({ query: { ...route.query, tab } });
   if (tab === 'today') {
     fetchHomework();
   } else if (tab === 'all') {
@@ -897,7 +936,13 @@ const onGlobalAction = (event) => {
 
 onMounted(async () => {
   await fetchSubjects();
-  await fetchHomework();
+  if (route.query.tab === 'all' || route.query.tab === 'history') {
+    subTab.value = route.query.tab;
+    if (route.query.tab === 'all') await fetchAllHomework();
+    else await fetchHistoryHomework();
+  } else {
+    await fetchHomework();
+  }
   await fetchWeekStatus();
   if (route.query.action === 'add') {
     showAddModal.value = true;
@@ -1649,4 +1694,164 @@ onUnmounted(() => window.removeEventListener('zhixueji:action', onGlobalAction))
 }
 
 .floating-bottom-bar { display: none; }
+
+/* 桌面端直出操作栏 */
+.hw-desktop-actions {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .homework-view {
+    height: calc(100vh - var(--st-header-height, 60px)) !important;
+    height: calc(100dvh - var(--st-header-height, 60px)) !important;
+  }
+
+  .homework-fixed-header {
+    padding: var(--st-space-4) 0 4px !important;
+  }
+
+  .homework-sub-tabs {
+    max-width: 420px;
+    margin-bottom: var(--st-space-3);
+  }
+
+  .subject-chips-bar {
+    overflow-x: visible !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding-bottom: 2px !important;
+  }
+
+  .homework-cards {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .hw-swipe-cell {
+    margin-bottom: 0 !important;
+    width: 100% !important;
+    border-radius: var(--st-radius-md) !important;
+  }
+
+  .hw-card-face {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    height: auto !important;
+    min-height: 58px !important;
+    padding: 10px 18px !important;
+    border-radius: var(--st-radius-md) !important;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    background-color: var(--st-bg-card) !important;
+    border: 1px solid var(--st-border) !important;
+  }
+
+  .hw-card-face:hover {
+    border-color: #93c5fd !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06) !important;
+    background-color: #f8faff !important;
+  }
+
+  .hw-card-face.is-done {
+    background-color: var(--st-bg-subtle, #f8fafc) !important;
+    opacity: 0.82 !important;
+  }
+
+  .hw-content {
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 16px !important;
+    margin: 0 16px !important;
+  }
+
+  .hw-meta-row {
+    display: none !important;
+  }
+
+  .hw-title {
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    font-weight: 500 !important;
+    color: var(--st-text-main) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .hw-title.strike {
+    color: var(--st-text-muted) !important;
+  }
+
+  .hw-time-meta {
+    flex-shrink: 0 !important;
+    margin-top: 0 !important;
+    color: var(--st-text-muted) !important;
+    font-size: 12px !important;
+  }
+
+  .swipe-hint {
+    display: none !important;
+  }
+
+  .hw-desktop-actions {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-shrink: 0 !important;
+    margin-right: 12px !important;
+    opacity: 0.88;
+    transition: opacity 0.15s ease;
+  }
+
+  .hw-card-face:hover .hw-desktop-actions {
+    opacity: 1;
+  }
+
+  .hw-desk-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 28px;
+    padding: 0 9px;
+    border-radius: var(--st-radius-sm);
+    border: 1px solid var(--st-border);
+    background: #ffffff;
+    color: var(--st-text-regular);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .hw-desk-btn:hover {
+    color: var(--st-primary);
+    border-color: var(--st-primary);
+    background: var(--st-primary-light);
+  }
+
+  .hw-desk-btn--mistake {
+    color: var(--st-primary);
+    border-color: rgba(37, 99, 235, 0.25);
+    background: var(--st-primary-light);
+  }
+
+  .hw-desk-btn--del:hover {
+    color: var(--st-danger);
+    border-color: var(--st-danger);
+    background: var(--st-danger-light);
+  }
+
+  .hw-status-pill {
+    flex-shrink: 0 !important;
+    min-width: 80px !important;
+    padding: 5px 12px !important;
+    border-radius: 9999px !important;
+  }
+}
 </style>

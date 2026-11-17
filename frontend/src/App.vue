@@ -1,6 +1,11 @@
 <template>
   <div class="app-container" :class="{ 'app-container--wide': $route.meta?.paperMode }">
-    <router-view />
+    <!-- 桌面端顶部导航栏：>= 768px 显示 -->
+    <DesktopNavbar v-if="!$route.meta?.hideTabbar" @open-actions="showActions = true" />
+
+    <div class="app-main-layout">
+      <router-view />
+    </div>
 
     <div v-if="showGlobalAdd" class="global-add-anchor">
       <button class="global-add-button" type="button" aria-label="快速操作" @click="showActions = true">
@@ -9,11 +14,12 @@
     </div>
     <GlobalActionSheet v-model:visible="showActions" :route-name="$route.name" @select="handleAction" />
 
-    <!-- 底部导航栏：首页、作业、错题、数据、我的 -->
+    <!-- 底部导航栏：首页、作业、错题、数据、我的（移动端专享） -->
     <van-tabbar
       v-show="!$route.meta?.hideTabbar"
       :placeholder="!$route.meta?.hideTabbar"
       route
+      class="mobile-tabbar"
       active-color="var(--st-primary)"
       inactive-color="var(--st-text-muted)"
     >
@@ -30,6 +36,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import DesktopNavbar from './components/DesktopNavbar.vue';
 import GlobalActionSheet from './components/GlobalActionSheet.vue';
 import { consumeActionQuery } from './utils/routeAction';
 
@@ -175,7 +182,8 @@ body {
 }
 
 .app-container {
-  max-width: 390px;
+  width: 100%;
+  max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
   min-height: 100dvh;
@@ -184,6 +192,14 @@ body {
   position: relative;
   background-color: var(--st-bg-page);
   box-shadow: 0 0 30px rgba(15, 23, 42, 0.08);
+}
+
+.app-main-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
 }
 
 /* 底部 TabBar：磨砂毛玻璃背景 + 顶部细分割线 + 品牌蓝激活 */
@@ -195,8 +211,67 @@ body {
   box-shadow: 0 -1px 0 rgba(15, 23, 42, 0.03);
 }
 
-.global-add-anchor { position: fixed; left: 0; right: 0; bottom: calc(54px + env(safe-area-inset-bottom, 0px)); z-index: 48; display: flex; justify-content: flex-end; width: min(100%, 390px); margin: 0 auto; padding: 0 var(--st-space-5); pointer-events: none; }
-.global-add-button { display: grid; width: 48px; height: 48px; place-items: center; border: 0; border-radius: var(--st-radius-full); background: var(--st-primary); color: #fff; box-shadow: var(--st-shadow-float); pointer-events: auto; }
-.global-add-button:active { transform: scale(.94); background: var(--st-primary-dark); }
-@media (min-width: 600px) { .app-container { border-left: 1px solid var(--st-border); border-right: 1px solid var(--st-border); } }
+.global-add-anchor {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(54px + env(safe-area-inset-bottom, 0px));
+  z-index: 48;
+  display: flex;
+  justify-content: flex-end;
+  width: min(100%, 430px);
+  margin: 0 auto;
+  padding: 0 var(--st-space-5);
+  pointer-events: none;
+}
+.global-add-button {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 0;
+  border-radius: var(--st-radius-full);
+  background: var(--st-primary);
+  color: #fff;
+  box-shadow: var(--st-shadow-float);
+  pointer-events: auto;
+}
+.global-add-button:active {
+  transform: scale(.94);
+  background: var(--st-primary-dark);
+}
+
+@media (min-width: 600px) and (max-width: 767px) {
+  .app-container {
+    border-left: 1px solid var(--st-border);
+    border-right: 1px solid var(--st-border);
+  }
+}
+
+/* 电脑端响应式现代 Web 外壳 (>= 768px) */
+@media (min-width: 768px) {
+  .app-container {
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    background-color: var(--st-bg-page);
+  }
+
+  .app-main-layout {
+    width: 100%;
+    max-width: var(--st-content-max-width, 1200px);
+    margin: 0 auto;
+    padding: 0 var(--st-space-6, 24px);
+    box-sizing: border-box;
+  }
+
+  /* 桌面端隐藏移动端底栏与悬浮加号（加号已内置于顶部导航） */
+  .app-container .van-tabbar,
+  .app-container .van-tabbar-placeholder,
+  .global-add-anchor {
+    display: none !important;
+  }
+}
 </style>

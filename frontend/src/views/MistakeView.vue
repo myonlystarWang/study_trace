@@ -105,9 +105,22 @@
                       {{ item.source_reference }}
                     </span>
                   </div>
-                  <span class="st-status-tag" :class="getMasteryStatusTagClass(item.mastery_status)">
-                    {{ item.mastery_status }}
-                  </span>
+                  <div class="header-right">
+                    <!-- 桌面端直出操作按钮 -->
+                    <div class="mistake-desktop-actions" v-if="!isBatchMode">
+                      <button type="button" class="mst-desk-btn" title="编辑错题" @click.stop="openEditMistake(item)">
+                        <van-icon name="edit" size="13" />
+                        <span>编辑</span>
+                      </button>
+                      <button type="button" class="mst-desk-btn mst-desk-btn--del" title="删除错题" @click.stop="handleSingleDelete(item)">
+                        <van-icon name="delete-o" size="13" />
+                        <span>删除</span>
+                      </button>
+                    </div>
+                    <span class="st-status-tag" :class="getMasteryStatusTagClass(item.mastery_status)">
+                      {{ item.mastery_status }}
+                    </span>
+                  </div>
                 </div>
 
                 <!-- 专注复习将队列进度收进当前题，避免顶部再叠一张功能卡。 -->
@@ -195,23 +208,23 @@
                       plain
                       type="danger"
                       icon="cross"
-                      class="rev-action-btn"
+                      class="rev-action-btn rev-action-btn--forgot"
                       :loading="reviewSubmitting"
                       :disabled="reviewSubmitting"
                       @click.stop="submitReview(item.id, 'forgotten')"
                     >
-                      又忘了
+                      又忘了 <span class="desk-key-hint">(1)</span>
                     </van-button>
                     <van-button
                       size="small"
                       type="success"
                       icon="passed"
-                      class="rev-action-btn"
+                      class="rev-action-btn rev-action-btn--mastered"
                       :loading="reviewSubmitting"
                       :disabled="reviewSubmitting"
                       @click.stop="submitReview(item.id, 'remembered')"
                     >
-                      掌握啦
+                      掌握啦 <span class="desk-key-hint">(2)</span>
                     </van-button>
                     <van-button
                       size="small"
@@ -221,7 +234,7 @@
                       :icon="openedAnswerIds.includes(item.id) ? 'eye-o' : 'closed-eye'"
                       @click.stop="toggleAnswer(item.id)"
                     >
-                      {{ openedAnswerIds.includes(item.id) ? '收起答案' : '查看答案' }}
+                      {{ openedAnswerIds.includes(item.id) ? '收起答案' : '查看答案' }} <span class="desk-key-hint">(空格)</span>
                     </van-button>
                   </div>
                 </div>
@@ -1646,6 +1659,25 @@ const onGlobalAction = (event) => {
   if (event.detail === 'mistake') startAddSession();
 };
 
+const handleKeydown = (e) => {
+  if (activeTab.value !== 'review' || isBatchMode.value || !currentReviewItem.value || reviewSubmitting.value) {
+    return;
+  }
+  const tag = (e.target?.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea') return;
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    toggleAnswer(currentReviewItem.value.id);
+  } else if (e.key === '1') {
+    e.preventDefault();
+    submitReview(currentReviewItem.value.id, 'forgotten');
+  } else if (e.key === '2') {
+    e.preventDefault();
+    submitReview(currentReviewItem.value.id, 'remembered');
+  }
+};
+
 onMounted(async () => {
   if (route.query.tab === 'review' || route.query.tab === 'all') {
     activeTab.value = route.query.tab;
@@ -1658,6 +1690,7 @@ onMounted(async () => {
   await fetchSubjects();
   await fetchMistakes();
   window.addEventListener('zhixueji:action', onGlobalAction);
+  window.addEventListener('keydown', handleKeydown);
 });
 
 onBeforeUnmount(() => {
@@ -1666,6 +1699,7 @@ onBeforeUnmount(() => {
     pollTimerM = null;
   }
   window.removeEventListener('zhixueji:action', onGlobalAction);
+  window.removeEventListener('keydown', handleKeydown);
 });
 </script>
 
@@ -2636,5 +2670,183 @@ onBeforeUnmount(() => {
   /* 弹层已整体上移到键盘上沿，这里只补 iPhone 底部安全区；
      再叠加 --st-keyboard-inset 会双重补偿，把内容挤出可视区。 */
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mistake-desktop-actions {
+  display: none;
+}
+
+.desk-key-hint {
+  display: none;
+}
+
+/* 电脑端响应式卡片网格 (>= 768px) */
+@media (min-width: 768px) {
+  .mistake-view {
+    height: calc(100vh - var(--st-header-height, 60px)) !important;
+    height: calc(100dvh - var(--st-header-height, 60px)) !important;
+  }
+
+  .mistake-fixed-header {
+    background: var(--st-bg-page) !important;
+    padding: var(--st-space-4) 0 4px !important;
+  }
+
+  .mistake-scroll-container {
+    padding: 0 !important;
+  }
+
+  .mistake-list:not(.review-focus-list) {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)) !important;
+    gap: var(--st-space-4) !important;
+    padding-bottom: 40px !important;
+  }
+
+  .desk-key-hint {
+    display: inline;
+    font-size: 11px;
+    opacity: 0.8;
+    margin-left: 2px;
+  }
+
+  .review-focus-list {
+    max-width: 760px !important;
+    margin: 16px auto 32px !important;
+  }
+
+  .review-focus-card {
+    border-radius: var(--st-radius-lg) !important;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06) !important;
+    border: 1px solid var(--st-border) !important;
+    padding: 24px 28px !important;
+    min-height: auto !important;
+  }
+
+  .review-focus-card .card-image-box img,
+  .review-focus-card .card-diagram-box img {
+    max-height: 360px !important;
+    object-fit: contain !important;
+    margin: 0 auto !important;
+  }
+
+  .review-focus-card .review-action-bar {
+    margin-top: 24px !important;
+    padding-top: 16px !important;
+    border-top: 1px solid var(--st-border) !important;
+  }
+
+  .review-focus-card .review-buttons-row {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 16px !important;
+  }
+
+  .review-focus-card .rev-action-btn {
+    min-height: 38px !important;
+    height: 38px !important;
+    font-size: 13px !important;
+    flex: none !important;
+    padding: 0 18px !important;
+    border-radius: 8px !important;
+    transition: all 0.15s ease !important;
+  }
+
+  .review-focus-card .btn-answer {
+    order: 1 !important;
+    min-width: 140px !important;
+    color: var(--st-text-regular) !important;
+    border-color: var(--st-border-bold, #cbd5e1) !important;
+    background: #ffffff !important;
+  }
+
+  .review-focus-card .btn-answer:hover {
+    color: var(--st-primary) !important;
+    border-color: var(--st-primary) !important;
+    background: var(--st-primary-light) !important;
+  }
+
+  .review-focus-card .rev-action-btn--forgot {
+    order: 2 !important;
+    min-width: 130px !important;
+    background: #fee2e2 !important;
+    border: 1px solid #fca5a5 !important;
+    color: #dc2626 !important;
+  }
+
+  .review-focus-card .rev-action-btn--forgot:hover {
+    background: #fecaca !important;
+    border-color: #f87171 !important;
+  }
+
+  .review-focus-card .rev-action-btn--mastered {
+    order: 3 !important;
+    min-width: 130px !important;
+    background: #10b981 !important;
+    border: 1px solid #10b981 !important;
+    color: #ffffff !important;
+  }
+
+  .review-focus-card .rev-action-btn--mastered:hover {
+    background: #059669 !important;
+    border-color: #059669 !important;
+  }
+
+  .mistake-swipe-cell {
+    margin-bottom: 0 !important;
+  }
+
+  .mistake-card {
+    height: 100% !important;
+    box-sizing: border-box !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .mistake-card:hover {
+    border-color: var(--st-border-focus) !important;
+    box-shadow: var(--st-shadow-hover) !important;
+  }
+
+  .mistake-desktop-actions {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 4px;
+    margin-right: 6px;
+  }
+
+  .mst-desk-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 28px;
+    padding: 0 9px;
+    border-radius: var(--st-radius-sm);
+    border: 1px solid var(--st-border);
+    background: #ffffff;
+    color: var(--st-text-regular);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .mst-desk-btn:hover {
+    color: var(--st-primary);
+    border-color: var(--st-primary);
+    background: var(--st-primary-light);
+  }
+
+  .mst-desk-btn--del:hover {
+    color: var(--st-danger);
+    border-color: var(--st-danger);
+    background: var(--st-danger-light);
+  }
 }
 </style>

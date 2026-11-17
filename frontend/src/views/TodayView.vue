@@ -187,144 +187,178 @@
             </div>
           </button>
         </div>
+
+        <!-- 桌面专享：今日复习 KPI 卡片 (移动端隐藏) -->
+        <button
+          class="st-card mini-stat-card desktop-review-kpi-card"
+          type="button"
+          aria-label="进入今日错题复习"
+          @click="goToMistakesReview"
+        >
+          <div class="stat-card-inner">
+            <div class="stat-icon-box stat-icon-target">
+              <svg viewBox="0 0 24 24" class="stat-svg-icon" fill="none" stroke="#8b5cf6" stroke-width="2.2">
+                <circle cx="12" cy="12" r="10" />
+                <circle cx="12" cy="12" r="6" />
+                <circle cx="12" cy="12" r="2" fill="#8b5cf6" />
+              </svg>
+            </div>
+            <div class="stat-content">
+              <div class="stat-label-row">
+                <span class="stat-label">待复习错题</span>
+                <van-icon name="arrow" class="stat-chevron" />
+              </div>
+              <div class="stat-value-row">
+                <span class="stat-num" :class="{ 'text-muted': reviewQueueCount === 0 }">{{ reviewQueueCount }}</span>
+                <span class="stat-unit">道</span>
+              </div>
+            </div>
+          </div>
+        </button>
       </section>
 
-      <!-- 3. 今日任务整体卡片容器 (严格复刻 Image 4 单一白底卡片 + 14px/12px 小巧精致字号) -->
-      <section class="today-tasks-section">
-        <div class="section-top-bar">
-          <h2 class="section-title">今日任务</h2>
-          <button class="view-all-btn" @click="$router.push('/homework')">
-            查看全部 <van-icon name="arrow" />
-          </button>
-        </div>
-
-        <!-- 整合到统一白底大卡片中 -->
-        <div class="st-card tasks-grouped-card">
-          <!-- 任务列表为空状态 -->
-          <div v-if="loading" class="tasks-loading-box" aria-label="正在加载今日作业">
-            <van-skeleton title :row="2" />
-          </div>
-          <div v-else-if="todayLoadError" class="tasks-state-box" role="status">
-            <van-icon name="warning-o" class="tasks-state-icon" />
-            <p class="empty-title">今日作业暂时未能加载</p>
-            <p class="empty-subtitle">请检查网络后重新加载。</p>
-            <button class="empty-focus-button" type="button" @click="fetchTodayHomework">重新加载</button>
-          </div>
-          <div v-else-if="tasks.length === 0" class="empty-tasks-box">
-            <van-icon name="underway-o" class="empty-focus-icon" />
-            <p class="empty-title">今天安排得很从容</p>
-            <p class="empty-subtitle">留出 25 分钟，做一次安静的专注吧。</p>
-            <button class="empty-focus-button" type="button" @click="openPomodoro">开始专注</button>
+      <!-- 双模工作区布局 (移动端 display: contents，桌面端左右双栏) -->
+      <div class="today-workspace-layout">
+        <!-- 3. 今日任务整体卡片容器 (严格复刻 Image 4 单一白底卡片 + 14px/12px 小巧精致字号) -->
+        <section class="today-tasks-section">
+          <div class="section-top-bar">
+            <h2 class="section-title">今日任务</h2>
+            <button class="view-all-btn" @click="$router.push('/homework')">
+              查看全部 <van-icon name="arrow" />
+            </button>
           </div>
 
-          <!-- 任务列表行 -->
-          <div v-else class="tasks-rows-list">
-            <div
-              v-for="(task, index) in displayedTasks"
-              :key="task.id"
-              class="task-row-item"
-              :class="{
-                'is-completed': task.is_completed,
-                'is-last': index === displayedTasks.length - 1 && (tasks.length <= PREVIEW_LIMIT)
-              }"
-              :aria-label="task.is_completed ? `撤销${task.subject_name}作业打卡` : `打卡${task.subject_name}作业`"
-              @click="toggleTaskCheck(task)"
-            >
-              <div class="task-left">
-                <SubjectBadge :name="task.subject_name" size="sm" />
-                <div class="task-details">
-                  <div class="task-subject-title">{{ task.subject_name }}</div>
-                  <div class="task-content-text" :class="{ 'is-done': task.is_completed }">
-                    {{ task.content }}
+          <!-- 整合到统一白底大卡片中 -->
+          <div class="st-card tasks-grouped-card">
+            <!-- 任务列表为空状态 -->
+            <div v-if="loading" class="tasks-loading-box" aria-label="正在加载今日作业">
+              <van-skeleton title :row="2" />
+            </div>
+            <div v-else-if="todayLoadError" class="tasks-state-box" role="status">
+              <van-icon name="warning-o" class="tasks-state-icon" />
+              <p class="empty-title">今日作业暂时未能加载</p>
+              <p class="empty-subtitle">请检查网络后重新加载。</p>
+              <button class="empty-focus-button" type="button" @click="fetchTodayHomework">重新加载</button>
+            </div>
+            <div v-else-if="tasks.length === 0" class="empty-tasks-box">
+              <van-icon name="underway-o" class="empty-focus-icon" />
+              <p class="empty-title">今天安排得很从容</p>
+              <p class="empty-subtitle">留出 25 分钟，做一次安静的专注吧。</p>
+              <div class="empty-actions-row">
+                <button class="empty-focus-button" type="button" @click="openPomodoro">开始专注</button>
+                <button class="empty-add-button" type="button" @click="showAddModal = true">安排作业</button>
+              </div>
+            </div>
+
+            <!-- 任务列表行 -->
+            <div v-else class="tasks-rows-list">
+              <div
+                v-for="(task, index) in displayedTasks"
+                :key="task.id"
+                class="task-row-item"
+                :class="{
+                  'is-completed': task.is_completed,
+                  'is-last': index === displayedTasks.length - 1 && (tasks.length <= PREVIEW_LIMIT)
+                }"
+                :aria-label="task.is_completed ? `撤销${task.subject_name}作业打卡` : `打卡${task.subject_name}作业`"
+                @click="toggleTaskCheck(task)"
+              >
+                <div class="task-left">
+                  <SubjectBadge :name="task.subject_name" size="sm" />
+                  <div class="task-details">
+                    <div class="task-subject-title">{{ task.subject_name }}</div>
+                    <div class="task-content-text" :class="{ 'is-done': task.is_completed }">
+                      {{ task.content }}
+                    </div>
                   </div>
+                </div>
+
+                <!-- 右侧打卡状态标识 -->
+                <div
+                  class="checkin-toggle-btn"
+                  :class="{ 'checked': task.is_completed }"
+                >
+                  <template v-if="task.is_completed">
+                    <!-- 绿色圆点勾勾 + 已完成文字 -->
+                    <span class="completed-pill">
+                      <svg viewBox="0 0 16 16" class="completed-check-dot" fill="none">
+                        <circle cx="8" cy="8" r="7" fill="#10b981" />
+                        <path d="M5 8.2L7 10.2L11 6" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                      <span>已完成</span>
+                    </span>
+                  </template>
+                  <template v-else>
+                    <!-- 18px 浅灰细圈 -->
+                    <span class="uncompleted-circle"></span>
+                  </template>
                 </div>
               </div>
 
-              <!-- 右侧打卡状态标识 -->
-              <div
-                class="checkin-toggle-btn"
-                :class="{ 'checked': task.is_completed }"
-              >
-                <template v-if="task.is_completed">
-                  <!-- 绿色圆点勾勾 + 已完成文字 -->
-                  <span class="completed-pill">
-                    <svg viewBox="0 0 16 16" class="completed-check-dot" fill="none">
-                      <circle cx="8" cy="8" r="7" fill="#10b981" />
-                      <path d="M5 8.2L7 10.2L11 6" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    <span>已完成</span>
+              <!-- 多任务展开/收起胶囊（超过 PREVIEW_LIMIT 时展示，取消滚动条，展示高度适中） -->
+              <div v-if="tasks.length > PREVIEW_LIMIT" class="tasks-expand-wrapper">
+                <button class="tasks-expand-pill" type="button" @click="isTasksExpanded = !isTasksExpanded">
+                  <span v-if="!isTasksExpanded">
+                    展开更多 {{ uncompletedHiddenCount > 0 ? `(还有 ${uncompletedHiddenCount} 项待办)` : `(还有 ${tasks.length - PREVIEW_LIMIT} 项)` }}
                   </span>
-                </template>
-                <template v-else>
-                  <!-- 18px 浅灰细圈 -->
-                  <span class="uncompleted-circle"></span>
-                </template>
+                  <span v-else>收起任务</span>
+                  <van-icon :name="isTasksExpanded ? 'arrow-up' : 'arrow-down'" size="11" />
+                </button>
               </div>
             </div>
+          </div>
+        </section>
 
-            <!-- 多任务展开/收起胶囊（超过 PREVIEW_LIMIT 时展示，取消滚动条，展示高度适中） -->
-            <div v-if="tasks.length > PREVIEW_LIMIT" class="tasks-expand-wrapper">
-              <button class="tasks-expand-pill" type="button" @click="isTasksExpanded = !isTasksExpanded">
-                <span v-if="!isTasksExpanded">
-                  展开更多 {{ uncompletedHiddenCount > 0 ? `(还有 ${uncompletedHiddenCount} 项待办)` : `(还有 ${tasks.length - PREVIEW_LIMIT} 项)` }}
-                </span>
-                <span v-else>收起任务</span>
-                <van-icon :name="isTasksExpanded ? 'arrow-up' : 'arrow-down'" size="11" />
-              </button>
+        <!-- 4. 今日错题复习入口横幅 (移动端展示，桌面端收敛到顶部 KPI) -->
+        <button class="mistake-review-banner st-card" type="button" aria-label="进入今日错题复习" @click="goToMistakesReview">
+          <div class="banner-left">
+            <div class="banner-target-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="12" cy="12" r="10" />
+                <circle cx="12" cy="12" r="6" />
+                <circle cx="12" cy="12" r="2" fill="currentColor" />
+              </svg>
+            </div>
+            <div class="banner-text">
+              <h3 class="banner-title">今日错题复习</h3>
+              <p class="banner-subtitle">
+                {{ reviewQueueCount > 0 ? `还有 ${reviewQueueCount} 道题需要复习` : '今日错题已全部清空，太棒了！' }}
+              </p>
             </div>
           </div>
-        </div>
-      </section>
+          <span class="banner-action-btn">
+            {{ reviewQueueCount > 0 ? '开始复习' : '去错题本' }} <van-icon name="arrow" />
+          </span>
+        </button>
 
-      <!-- 4. 今日错题复习入口横幅 -->
-      <button class="mistake-review-banner st-card" type="button" aria-label="进入今日错题复习" @click="goToMistakesReview">
-        <div class="banner-left">
-          <div class="banner-target-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <circle cx="12" cy="12" r="10" />
-              <circle cx="12" cy="12" r="6" />
-              <circle cx="12" cy="12" r="2" fill="currentColor" />
-            </svg>
+        <!-- 5. 学习时长分布卡片 (动态联动) -->
+        <section class="study-distribution-card st-card">
+          <div class="dist-header">
+            <h3 class="dist-title">学习时长分布</h3>
+            <span class="dist-total">{{ formattedStudyDuration }}</span>
           </div>
-          <div class="banner-text">
-            <h3 class="banner-title">今日错题复习</h3>
-            <p class="banner-subtitle">
-              {{ reviewQueueCount > 0 ? `还有 ${reviewQueueCount} 道题需要复习` : '今日错题已全部清空，太棒了！' }}
-            </p>
-          </div>
-        </div>
-        <span class="banner-action-btn">
-          {{ reviewQueueCount > 0 ? '开始复习' : '去错题本' }} <van-icon name="arrow" />
-        </span>
-      </button>
 
-      <!-- 5. 学习时长分布卡片 (动态联动) -->
-      <section class="study-distribution-card st-card">
-        <div class="dist-header">
-          <h3 class="dist-title">学习时长分布</h3>
-          <span class="dist-total">{{ formattedStudyDuration }}</span>
-        </div>
-
-        <div class="dist-bars-list">
-          <div
-            v-for="item in subjectDistribution"
-            :key="item.name"
-            class="dist-row"
-          >
-            <div class="dist-subject">
-              <span class="dist-color-dot" :style="{ backgroundColor: item.color }"></span>
-              <span class="dist-subject-name">{{ item.name }}</span>
+          <div class="dist-bars-list">
+            <div
+              v-for="item in subjectDistribution"
+              :key="item.name"
+              class="dist-row"
+            >
+              <div class="dist-subject">
+                <span class="dist-color-dot" :style="{ backgroundColor: item.color }"></span>
+                <span class="dist-subject-name">{{ item.name }}</span>
+              </div>
+              <div class="dist-bar-track">
+                <div
+                  class="dist-bar-fill"
+                  :style="{ width: `${item.percentage}%`, backgroundColor: item.color }"
+                ></div>
+              </div>
+              <span class="dist-duration">{{ item.durationText }}</span>
             </div>
-            <div class="dist-bar-track">
-              <div
-                class="dist-bar-fill"
-                :style="{ width: `${item.percentage}%`, backgroundColor: item.color }"
-              ></div>
-            </div>
-            <span class="dist-duration">{{ item.durationText }}</span>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
 
     <!-- 6. 底部双悬浮快速录入操作胶囊 (精细复刻配图蓝色微质感胶囊与防漂移定位) -->
@@ -1508,5 +1542,158 @@ onUnmounted(() => {
   width: 20px;
   height: 20px;
   flex-shrink: 0;
+}
+
+.desktop-review-kpi-card {
+  display: none;
+}
+
+.today-workspace-layout {
+  display: contents;
+}
+
+.empty-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.empty-actions-row .empty-focus-button,
+.empty-actions-row .empty-add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px !important;
+  min-height: 40px !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 20px !important;
+  border-radius: 9999px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  vertical-align: middle;
+}
+
+.empty-actions-row .empty-focus-button {
+  background: var(--st-primary);
+  color: #ffffff;
+  border: 1px solid var(--st-primary) !important;
+}
+
+.empty-actions-row .empty-focus-button:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8 !important;
+}
+
+.empty-actions-row .empty-add-button {
+  display: none;
+  background: #ffffff;
+  color: var(--st-primary);
+  border: 1px solid var(--st-primary) !important;
+}
+
+.empty-actions-row .empty-add-button:hover {
+  background: var(--st-primary-light);
+}
+
+/* 电脑端响应式双栏仪表盘 (>= 768px) */
+@media (min-width: 768px) {
+  .today-view {
+    padding: var(--st-space-5) 0 var(--st-space-6);
+  }
+
+  .greeting-header {
+    margin-bottom: var(--st-space-4);
+  }
+
+  .today-content {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--st-space-4) !important;
+  }
+
+  .overview-grid {
+    display: grid !important;
+    grid-template-columns: 1.35fr 1fr 1.05fr 1fr !important;
+    gap: var(--st-space-3) !important;
+    margin-bottom: 0 !important;
+  }
+
+  .donut-card {
+    min-height: 96px !important;
+    height: 100% !important;
+    padding: 14px 18px !important;
+  }
+
+  .stats-column {
+    display: contents !important;
+  }
+
+  .mini-stat-card {
+    min-height: 96px !important;
+    height: 100% !important;
+    margin-bottom: 0 !important;
+    padding: 14px 16px !important;
+  }
+
+  .desktop-review-kpi-card {
+    display: flex !important;
+    background: var(--st-bg-card);
+    border-radius: var(--st-radius-lg);
+    border: 1px solid var(--st-border);
+    box-shadow: var(--st-shadow-card);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+  }
+
+  .desktop-review-kpi-card:hover {
+    border-color: #c4b5fd;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.08);
+  }
+
+  .stat-icon-target {
+    background: #f5f3ff;
+  }
+
+  .today-workspace-layout {
+    display: grid !important;
+    grid-template-columns: 1fr 380px !important;
+    gap: var(--st-space-4) !important;
+    align-items: start !important;
+  }
+
+  .today-tasks-section {
+    margin-bottom: 0 !important;
+  }
+
+  .tasks-grouped-card {
+    min-height: 270px;
+  }
+
+  .empty-tasks-box {
+    padding: 44px 24px !important;
+  }
+
+  .empty-actions-row .empty-add-button {
+    display: inline-flex !important;
+  }
+
+  .study-distribution-card {
+    margin-bottom: 0 !important;
+  }
+
+  .mistake-review-banner {
+    display: none !important;
+  }
+
+  .floating-bottom-bar {
+    display: none !important;
+  }
 }
 </style>

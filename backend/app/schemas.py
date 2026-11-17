@@ -410,6 +410,8 @@ class RadarIndicatorOut(BaseModel):
     subject_id: int
     name: str
     max: float = 100.0
+    score: Optional[float] = None
+    full_score: Optional[float] = None
 
 
 class ExamRadarOut(BaseModel):

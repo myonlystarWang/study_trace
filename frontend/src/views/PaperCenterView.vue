@@ -267,6 +267,15 @@
                 >
                   去打卡
                 </van-button>
+                <button
+                  type="button"
+                  class="history-card-del-btn"
+                  title="删除试卷"
+                  @click.stop="confirmDeletePaper(item)"
+                >
+                  <van-icon name="delete-o" size="13" />
+                  <span>删除</span>
+                </button>
               </div>
             </div>
             <template #right>
@@ -1017,5 +1026,31 @@ onMounted(async () => {
 .history-card-footer :deep(.van-button) {
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.history-card-del-btn {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .history-card-del-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: var(--st-radius-sm, 4px);
+    border: 1px solid var(--st-border-bold, #cbd5e1);
+    background: #ffffff;
+    color: var(--st-danger, #ef4444);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .history-card-del-btn:hover {
+    background: var(--st-danger-light, #fef2f2);
+    border-color: var(--st-danger, #ef4444);
+  }
 }
 </style>

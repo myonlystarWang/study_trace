@@ -66,4 +66,18 @@ const choose = (key) => {
 .action-icon--blue { color: var(--st-primary); background: var(--st-primary-light); }.action-icon--purple { color: var(--st-purple); background: var(--st-purple-light); }.action-icon--orange { color: var(--st-warning-dark); background: var(--st-warning-light); }.action-icon--green { color: var(--st-success-dark); background: var(--st-success-light); }.action-icon--gray { color: var(--st-neutral); background: var(--st-neutral-light); }
 .action-item:active, .action-sheet-close:active { transform: scale(.97); }
 @media (max-width: 340px) { .action-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 768px) {
+  .action-sheet-layer {
+    align-items: center;
+    justify-content: center;
+  }
+  .action-sheet {
+    width: 480px;
+    border-radius: var(--st-radius-xl);
+    padding: var(--st-space-6);
+  }
+  .action-sheet-handle {
+    display: none;
+  }
+}
 </style>

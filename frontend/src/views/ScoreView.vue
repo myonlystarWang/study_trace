@@ -95,98 +95,104 @@
         <span class="good-text">各科基础扎实，目前未触发薄弱预警，继续保持！</span>
       </div>
 
-      <!-- 走势折线图卡片 -->
-      <div class="st-card chart-card">
-        <div class="chart-card-header">
-          <div class="card-title-group">
-            <span class="st-icon-badge st-icon-badge--primary">
-              <van-icon name="chart-trending-o" />
-            </span>
-            <span class="section-title">成绩走势分析</span>
+      <!-- 图表区域：电脑端响应式双栏并列 -->
+      <div class="score-charts-grid">
+        <!-- 走势折线图卡片 -->
+        <div class="st-card chart-card">
+          <div class="chart-card-header">
+            <div class="card-title-group">
+              <span class="st-icon-badge st-icon-badge--primary">
+                <van-icon name="chart-trending-o" />
+              </span>
+              <span class="section-title">成绩走势分析</span>
+            </div>
+            <span class="card-sub">{{ selectedSubjectName }} 满分率变动</span>
           </div>
-          <span class="card-sub">{{ selectedSubjectName }} 满分率变动</span>
+
+          <!-- 科目筛选切换 Chips -->
+          <div class="subject-pills-scroll st-scroll-x">
+            <span
+              class="st-chip"
+              :class="{ active: selectedSubjectId === null }"
+              @click="changeTrendSubject(null, '全科总分')"
+            >
+              全科总分
+            </span>
+            <span
+              v-for="sub in coreSubjects"
+              :key="sub.id"
+              class="st-chip"
+              :class="{ active: selectedSubjectId === sub.id }"
+              @click="changeTrendSubject(sub.id, sub.name)"
+            >
+              {{ sub.name }}
+            </span>
+          </div>
+
+          <!-- 折线图 DOM -->
+          <div ref="trendChartRef" class="echarts-container"></div>
+          <div v-if="trendItems.length === 0" class="chart-empty-tip">
+            暂无该科目的考试记录
+          </div>
         </div>
 
-        <!-- 科目筛选切换 Chips -->
-        <div class="subject-pills-scroll st-scroll-x">
-          <span
-            class="st-chip"
-            :class="{ active: selectedSubjectId === null }"
-            @click="changeTrendSubject(null, '全科总分')"
-          >
-            全科总分
+        <!-- 排名走势图卡片 (班级排名 / 年级排名) -->
+        <div class="st-card chart-card">
+          <div class="chart-card-header">
+            <div class="card-title-group">
+              <span class="st-icon-badge st-icon-badge--warning">
+                <van-icon name="medal-o" />
+              </span>
+              <span class="section-title">排名走势</span>
+            </div>
+            <span class="card-sub">{{ selectedSubjectName }}{{ selectedSubjectId === null ? ' 总名次' : ' 单科名次' }}</span>
+          </div>
+
+          <div ref="rankChartRef" class="echarts-container"></div>
+          <div v-if="rankItemsMissing" class="chart-footnote">
+            <van-notice-bar left-icon="info-o" :scrollable="false" text="部分考试未公布排名，相关节点已断开连接，仅展示有数据的考试。" />
+          </div>
+          <div v-else-if="trendItems.length === 0" class="chart-empty-tip">
+            暂无该科目的考试记录
+          </div>
+        </div>
+
+        <!-- 7科均衡学力雷达图卡片 -->
+        <div class="st-card chart-card">
+          <div class="chart-card-header">
+            <div class="card-title-group">
+              <span class="st-icon-badge st-icon-badge--info">
+                <van-icon name="aim" />
+              </span>
+              <span class="section-title">均衡学力雷达</span>
+            </div>
+            <div class="radar-exam-selector">
+              <select v-model="selectedRadarExamId" @change="fetchRadarData" class="custom-select">
+                <option v-for="ex in examList" :key="ex.id" :value="ex.id">
+                  {{ ex.title }} ({{ ex.exam_date }})
+                </option>
+              </select>
+            </div>
+          </div>
+          <span class="card-sub" style="margin-left: var(--st-space-4); margin-bottom: 4px; display: block;">
+            以各科得分率 (0-100%) 归一化呈现 · 消除语数英 120分 与小科 50/60/100分 满分差异
           </span>
-          <span
-            v-for="sub in coreSubjects"
-            :key="sub.id"
-            class="st-chip"
-            :class="{ active: selectedSubjectId === sub.id }"
-            @click="changeTrendSubject(sub.id, sub.name)"
-          >
-            {{ sub.name }}
-          </span>
-        </div>
 
-        <!-- 折线图 DOM -->
-        <div ref="trendChartRef" class="echarts-container"></div>
-        <div v-if="trendItems.length === 0" class="chart-empty-tip">
-          暂无该科目的考试记录
-        </div>
-      </div>
+          <!-- 雷达图 DOM -->
+          <div v-show="!radarMessage" ref="radarChartRef" class="echarts-container radar-height"></div>
 
-      <!-- 排名走势图卡片 (班级排名 / 年级排名) -->
-      <div class="st-card chart-card">
-        <div class="chart-card-header">
-          <div class="card-title-group">
-            <span class="st-icon-badge st-icon-badge--warning">
-              <van-icon name="medal-o" />
-            </span>
-            <span class="section-title">排名走势</span>
+          <!-- 缺考特别标注 -->
+          <div v-if="radarAbsentSubjects.length > 0" class="absent-warning-banner">
+            <van-icon name="warning" color="#ef4444" style="margin-right: 4px;" />
+            <span><b>{{ radarAbsentSubjects.join('、') }}</b> 缺考，已按规则排除在雷达轴外，避免图形失真</span>
           </div>
-          <span class="card-sub">{{ selectedSubjectName }}{{ selectedSubjectId === null ? ' 总名次' : ' 单科名次' }}</span>
-        </div>
 
-        <div ref="rankChartRef" class="echarts-container"></div>
-        <div v-if="rankItemsMissing" class="chart-footnote">
-          <van-notice-bar left-icon="info-o" :scrollable="false" text="部分考试未公布排名，相关节点已断开连接，仅展示有数据的考试。" />
-        </div>
-        <div v-else-if="trendItems.length === 0" class="chart-empty-tip">
-          暂无该科目的考试记录
-        </div>
-      </div>
-
-      <!-- 7科均衡学力雷达图卡片 -->
-      <div class="st-card chart-card">
-        <div class="chart-card-header">
-          <div class="card-title-group">
-            <span class="st-icon-badge st-icon-badge--info">
-              <van-icon name="aim" />
-            </span>
-            <span class="section-title">均衡学力雷达</span>
+          <!-- 不足 3 科 Fallback 友好提示 -->
+          <div v-if="radarMessage" class="radar-fallback-box">
+            <van-icon name="info-o" color="#94a3b8" size="24" style="margin-bottom: 4px;" />
+            <p class="fallback-title">{{ radarMessage }}</p>
+            <p class="fallback-sub">至少需要 3 门科目实考成绩才可构建闭合多边形</p>
           </div>
-          <div class="radar-exam-selector">
-            <select v-model="selectedRadarExamId" @change="fetchRadarData" class="custom-select">
-              <option v-for="ex in examList" :key="ex.id" :value="ex.id">
-                {{ ex.title }} ({{ ex.exam_date }})
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <!-- 雷达图 DOM -->
-        <div v-show="!radarMessage" ref="radarChartRef" class="echarts-container radar-height"></div>
-
-        <!-- 缺考特别标注 -->
-        <div v-if="radarAbsentSubjects.length > 0" class="absent-warning-banner">
-          <van-icon name="warning" color="#ef4444" style="margin-right: 4px;" />
-          <span><b>{{ radarAbsentSubjects.join('、') }}</b> 缺考，已按规则排除在雷达轴外，避免图形失真</span>
-        </div>
-
-        <!-- 不足 3 科 Fallback 友好提示 -->
-        <div v-if="radarMessage" class="radar-fallback-box">
-          <van-icon name="info-o" color="#94a3b8" size="24" style="margin-bottom: 4px;" />
-          <p class="fallback-title">{{ radarMessage }}</p>
-          <p class="fallback-sub">至少需要 3 门科目实考成绩才可构建闭合多边形</p>
         </div>
       </div>
 
@@ -224,6 +230,17 @@
                 <div class="exam-meta">
                   <span class="exam-type-badge">{{ exam.exam_type }}</span>
                   <span class="exam-title">{{ exam.title }}</span>
+                </div>
+                <!-- 桌面端直出操作栏 (移动端隐藏，靠左滑) -->
+                <div class="exam-desktop-actions">
+                  <button type="button" class="exam-desk-btn" title="编辑考试" @click.stop="handleRequestEdit(exam)">
+                    <van-icon name="edit" size="13" />
+                    <span>编辑</span>
+                  </button>
+                  <button type="button" class="exam-desk-btn exam-desk-btn--del" title="删除考试" @click.stop="handleDeleteExam(exam)">
+                    <van-icon name="delete-o" size="13" />
+                    <span>删除</span>
+                  </button>
                 </div>
               </div>
 
@@ -1049,17 +1066,31 @@ const renderRadarChart = (data) => {
       return;
     }
 
-    const indicatorOptions = data.indicators.map(ind => ({
-      name: ind.name,
-      max: 100
-    }));
+    const indicatorOptions = data.indicators.map((ind, i) => {
+      const val = data.values && data.values[i] !== undefined ? data.values[i] : null;
+      return {
+        name: val !== null ? `${ind.name} ${val}%` : ind.name,
+        max: 100
+      };
+    });
 
     const option = {
       tooltip: {
         trigger: 'item',
         formatter: (params) => {
-          const list = data.indicators.map((ind, i) => `${ind.name}: ${params.value[i]}%`);
-          return `<b>${data.exam_title || '学力均衡'}</b><br/>${list.join('<br/>')}`;
+          const list = data.indicators.map((ind, i) => {
+            const val = params.value[i];
+            const detail = ind.score !== null && ind.score !== undefined && ind.full_score
+              ? ` (${ind.score}分 / 满分${ind.full_score}分)`
+              : '';
+            return `<b>${ind.name}</b>: ${val}%${detail}`;
+          });
+          return `<div style="font-size: 13px; line-height: 1.6;">
+            <div style="font-weight: 700; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 2px;">
+              ${data.exam_title || '学力均衡'}
+            </div>
+            ${list.join('<br/>')}
+          </div>`;
         }
       },
       radar: {
@@ -1067,9 +1098,12 @@ const renderRadarChart = (data) => {
         radius: '68%',
         splitNumber: 4,
         axisName: {
-          color: '#334155',
+          color: '#1e293b',
           fontSize: 12,
-          fontWeight: 500
+          fontWeight: 600,
+          backgroundColor: '#f1f5f9',
+          borderRadius: 4,
+          padding: [3, 6]
         },
         splitLine: {
           lineStyle: { color: ['#e2e8f0', '#cbd5e1'] }
@@ -2281,4 +2315,63 @@ const onGlobalAction = (event) => {
 }
 
 .floating-bottom-bar { display: none; }
+
+.exam-desktop-actions {
+  display: none;
+}
+
+/* 电脑端响应式网格 (>= 768px) */
+@media (min-width: 768px) {
+  .score-view .van-nav-bar {
+    display: none !important;
+  }
+
+  .score-content {
+    padding: var(--st-space-6) 0 40px !important;
+  }
+
+  .score-charts-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: var(--st-space-5) !important;
+    margin-bottom: var(--st-space-5);
+  }
+
+  .score-charts-grid .chart-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .exam-desktop-actions {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .exam-desk-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: var(--st-radius-sm, 6px);
+    border: 1px solid var(--st-border-bold, #cbd5e1);
+    background: #ffffff;
+    color: var(--st-text-regular, #334155);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .exam-desk-btn:hover {
+    color: var(--st-primary, #2563eb);
+    border-color: var(--st-primary, #2563eb);
+    background: var(--st-primary-light, #eff6ff);
+  }
+
+  .exam-desk-btn--del:hover {
+    color: var(--st-danger, #ef4444);
+    border-color: var(--st-danger, #ef4444);
+    background: var(--st-danger-light, #fef2f2);
+  }
+}
 </style>

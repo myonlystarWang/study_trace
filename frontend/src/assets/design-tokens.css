@@ -107,6 +107,11 @@
   --st-radius-xl: 20px;
   --st-radius-full: 9999px;
 
+  /* 6.1 响应式布局与外壳令牌 (Responsive Layout Tokens) */
+  --st-content-max-width: 1200px;
+  --st-header-height: 0px;
+  --st-tabbar-height: calc(50px + env(safe-area-inset-bottom, 0px));
+
   /* 软键盘弹起时由 App.vue 根据 Visual Viewport 写入，默认不产生额外位移。 */
   --st-keyboard-inset: 0px;
 
@@ -131,6 +136,13 @@
   --van-progress-pivot-font-size: var(--st-font-xs);  /* 默认 10px -> 同上 */
   /* 占位符：Vant 默认 --van-gray-5(#c8c9cc) 在白底仅 1.6:1，提亮到可辨识 */
   --van-text-color-3: #7c8ba1;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --st-header-height: 60px;
+    --st-tabbar-height: 0px;
+  }
 }
 
 /* ==========================================================================
@@ -513,6 +525,21 @@ strong {
   }
 }
 
+@media (min-width: 768px) {
+  .van-popup--bottom.bottom-sheet-modal,
+  .bottom-sheet-modal {
+    inset: 0 !important;
+    margin: auto !important;
+    width: min(90vw, 620px) !important;
+    max-width: 620px !important;
+    height: fit-content !important;
+    max-height: 85vh !important;
+    border-radius: var(--st-radius-xl) !important;
+    box-shadow: 0 20px 48px rgba(15, 23, 42, 0.2) !important;
+    border: 1px solid var(--st-border) !important;
+  }
+}
+
 /* 8. 大厂移动端规范：底部常驻悬浮栏与统一按钮胶囊系统 (Unified Action System) */
 .floating-bottom-bar,
 .st-floating-bar {
@@ -531,6 +558,18 @@ strong {
   gap: 8px;
   z-index: 40;
   box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .floating-bottom-bar,
+  .st-floating-bar {
+    bottom: 24px !important;
+    max-width: var(--st-content-max-width, 1200px) !important;
+    border-radius: var(--st-radius-lg) !important;
+    border: 1px solid var(--st-border) !important;
+    box-shadow: var(--st-shadow-float) !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+  }
 }
 
 /* 统一移动端操作胶囊按钮规范 (42px 高度, 9999px 药丸圆角, 13.5~14px 字号) */
